@@ -314,6 +314,10 @@ namespace AIS
 		case AIS::KEY_SETTING_STATION_ID:
 			station = Util::Parse::Integer(arg);
 			break;
+		case AIS::KEY_SETTING_SENSITIVITY_HIGH:
+			if (Util::Parse::Switch(arg))
+				Warning() << getName() << ": setting \"sensitivity_high\" has no effect on this engine";
+			break;
 		case AIS::KEY_SETTING_DUMP:
 			wavA.setOptionKey(AIS::KEY_SETTING_FILE, arg + "_A.wav");
 			wavB.setOptionKey(AIS::KEY_SETTING_FILE, arg + "_B.wav");
@@ -376,6 +380,9 @@ namespace AIS
 		V2_a.setWeights(dd_train, dd_weight);
 		V2_b.setWeights(dd_train, dd_weight);
 
+		V2_a.setHighSensitivity(sensitivity_high);
+		V2_b.setHighSensitivity(sensitivity_high);
+
 		*C_a >> V2_a;
 		*C_b >> V2_b;
 
@@ -396,6 +403,9 @@ namespace AIS
 		case AIS::KEY_SETTING_DD_WEIGHT:
 			dd_weight = Util::Parse::Float(arg, 0.0, 1.0);
 			break;
+		case AIS::KEY_SETTING_SENSITIVITY_HIGH:
+			sensitivity_high = Util::Parse::Switch(arg);
+			break;
 		// v1's own settings: accepted, so a command line or config written for v1 still starts
 		case AIS::KEY_SETTING_PS_EMA:
 		case AIS::KEY_SETTING_AFC_WIDE:
@@ -410,7 +420,7 @@ namespace AIS
 
 	std::string ModelEngineV2::Get()
 	{
-		return "dd_train " + Util::Convert::toString(dd_train) + " dd_weight " + Util::Convert::toString(dd_weight) + " " + ModelFrontend::Get();
+		return "dd_train " + Util::Convert::toString(dd_train) + " dd_weight " + Util::Convert::toString(dd_weight) + " sensitivity_high " + Util::Convert::toString(sensitivity_high) + " " + ModelFrontend::Get();
 	}
 
 	void ModelStandard::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)

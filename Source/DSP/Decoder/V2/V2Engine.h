@@ -70,7 +70,7 @@ namespace V2
 		float weight = 0.86f;
 		float weight_train = 0.75f;
 
-		int Run(CFLOAT32 z, bool training);
+		int Run(CFLOAT32 z, bool training, float *quality = nullptr);
 
 	private:
 		CFLOAT32 Rotate90(CFLOAT32 z);
@@ -131,6 +131,19 @@ namespace V2
 		float ppm = 0.0f, ppm_prev = 0.0f;
 		int ppm_split = 0;
 
+		static const int MAX_CANDIDATES = 8;
+		float quality[5][MAX_AIS_FRAME_LENGTH];
+		int fixed[5] = {0, 0, 0, 0, 0};
+		int fixed_len[5];
+		float fixed_level[5];
+		int pending = 0;
+		int fix_candidates = 5, fix_flips = 1, fix_agree = 2;
+
+		void flipDecisions(int j, const int *pos, unsigned set);
+		bool tryCorrection(int j, int len);
+		void voteCorrected(TAG &tag);
+		void clearCorrected();
+
 		bool midWins(const CFLOAT32 *input) const;
 		void CGF(const CFLOAT32 *input, CFLOAT32 *output, bool busy);
 		void learnSlotPhase(const AIS::Decoder &d);
@@ -147,6 +160,13 @@ namespace V2
 				trk[i].weight_train = train;
 				trk[i].weight = track;
 			}
+		}
+
+		void setHighSensitivity(bool b)
+		{
+			fix_candidates = b ? MAX_CANDIDATES : 5;
+			fix_flips = b ? 2 : 1;
+			fix_agree = b ? 1 : 2;
 		}
 
 		void setOrigin(char channel, int station, int own_mmsi)

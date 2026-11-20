@@ -284,6 +284,7 @@ namespace AIS
 	private:
 		V2::Engine V2_a, V2_b;
 		float dd_train = 0.75f, dd_weight = 0.86f;
+		bool sensitivity_high = true;
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);

@@ -655,6 +655,14 @@ export const receiverSchema = {
                 type: "toggle",
                 types: ["v1_base", "v1_high", "v2_base"],
                 tooltip: "Less CPU on small devices"
+            },
+            {
+                name: "sensitivity_high",
+                label: "High sensitivity",
+                type: "toggle",
+                defaultValue: true,
+                types: ["auto", "v2_base"],
+                tooltip: "More aggressive decoding (slightly more false decodes)"
             }
         ]
     },

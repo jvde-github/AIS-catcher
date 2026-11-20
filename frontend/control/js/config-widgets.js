@@ -284,8 +284,9 @@ export const Renderer = {
                         .filter(st => !st.types || st.types.includes(type))
                         .forEach(st => {
                             const own = entry.settings || {};
-                            const toggle = Renderer.createInput({ type: 'toggle' }, own[st.name], on => {
-                                if (on) (entry.settings = entry.settings || {})[st.name] = true;
+                            const usual = !!st.defaultValue;
+                            const toggle = Renderer.createInput({ type: 'toggle' }, own[st.name] ?? usual, on => {
+                                if (on !== usual) (entry.settings = entry.settings || {})[st.name] = on;
                                 else if (entry.settings) {
                                     delete entry.settings[st.name];
                                     if (!Object.keys(entry.settings).length) delete entry.settings;

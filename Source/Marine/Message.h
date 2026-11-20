@@ -294,6 +294,8 @@ namespace AIS
 			return data[i >> 3] & (1 << (i & 7));
 		}
 
+		bool sameBits(const Message &other, int len) const { return memcmp(data, other.data, (len + 7) / 8) == 0; }
+
 		char getLetter(int pos) const;
 		void setLetter(int pos, char c);
 		void appendPayload(const char *src, int count);

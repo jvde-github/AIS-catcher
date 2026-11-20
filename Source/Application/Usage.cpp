@@ -114,7 +114,7 @@ void printUsage()
 	Info() << "";
 	Info() << "\tModel specific settings:";
 	Info() << "";
-	Info() << "\t[-go Model: AFC_WIDE [on/off] FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SRC [on/off] DD_TRAIN [weight] DD_WEIGHT [weight] ]";
+	Info() << "\t[-go Model: AFC_WIDE [on/off] FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SRC [on/off] DD_TRAIN [weight] DD_WEIGHT [weight] SENSITIVITY_HIGH [on/off] ]";
 }
 
 void printBuildConfiguration()
