@@ -15,7 +15,6 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 #include "Tracker.h"
 
 #include <cerrno>
@@ -36,7 +35,7 @@ namespace
 Tracker::Tracker()
 {
 	router.tracker = this;
-	intake.tracker = gps_intake.tracker = adsb_intake.tracker = this;
+	intake.tracker = gps_intake.tracker = metric_intake.tracker = adsb_intake.tracker = this;
 	db >> router;
 	db.events >> events;
 	// called with the ship table locked: the figures' lock is never taken the other way round
@@ -122,15 +121,8 @@ void Tracker::Router::Receive(const JSON::JSON *data, int len, TAG &tag)
 		if (id >= 0)
 		{
 			tracker->last_heard[id] = std::time(nullptr);
-			auto it = tracker->station_figures.find(id);
-			// figures of its own for a listed station: a feed naming hundreds stays bounded
-			if (it == tracker->station_figures.end() && tracker->listed.count(id) && tracker->station_figures.size() < MAX_STATIONS)
-			{
-				it = tracker->station_figures.emplace(id, std::unique_ptr<Figures>(new Figures())).first;
-				it->second->setCutoff(tracker->cutoff);
-			}
-			if (it != tracker->station_figures.end())
-				it->second->Receive(data, len, tag);
+			if (Figures *f = tracker->stationFigures(id))
+				f->Receive(data, len, tag);
 		}
 	}
 }
@@ -194,10 +186,74 @@ void Tracker::GpsIntake::Receive(const AIS::GPS *data, int len, TAG &tag)
 {
 	if (!len)
 		return;
+	if (data[0].sky)
+	{
+		std::lock_guard<std::mutex> lock(tracker->sky_mtx);
+		if (tracker->skies.count(tag.station_id) || tracker->skies.size() < MAX_STATIONS)
+			tracker->skies[tag.station_id] = std::make_pair(std::time(nullptr), *data[0].sky);
+	}
+	if (!data[0].hasPosition())
+		return;
 	std::vector<int> ids;
 	tracker->table->moveByGPS(tag.station_id, data[0].getLat(), data[0].getLon(), ids);
 	for (int id : ids)
 		tracker->moved(id);
+}
+
+bool Tracker::skyOf(const std::vector<int> &ids, AIS::Sky &out, int &age)
+{
+	std::lock_guard<std::mutex> lock(sky_mtx);
+	const std::time_t now = std::time(nullptr);
+	const std::pair<std::time_t, AIS::Sky> *newest = nullptr;
+	for (const auto &s : skies)
+		if ((ids.empty() || std::find(ids.begin(), ids.end(), s.first) != ids.end()) && (!newest || s.second.first > newest->first))
+			newest = &s.second;
+	if (!newest)
+		return false;
+	out = newest->second;
+	age = (int)(now - newest->first);
+	return true;
+}
+
+Figures *Tracker::stationFigures(int id)
+{
+	auto it = station_figures.find(id);
+	if (it == station_figures.end() && listed.count(id) && station_figures.size() < MAX_STATIONS)
+	{
+		it = station_figures.emplace(id, std::unique_ptr<Figures>(new Figures())).first;
+		it->second->setCutoff(cutoff);
+	}
+	return it == station_figures.end() ? nullptr : it->second.get();
+}
+
+void Tracker::MetricIntake::Receive(const AIS::Metric *data, int len, TAG &tag)
+{
+	std::lock_guard<std::mutex> lock(tracker->figures_mtx);
+	for (int i = 0; i < len; i++)
+	{
+		const int id = data[i].station >= 0 && tracker->listed.count(data[i].station) ? data[i].station : tag.station_id;
+		MetricTable::Row row;
+		Figures *f = tracker->metric_table.set(id, data[i], row) && MetricHistory::kept(row.key) ? tracker->stationFigures(id) : nullptr;
+		if (!f)
+			continue;
+		if (!f->reception)
+			f->reception.reset(new MetricHistory());
+		f->reception->add(row);
+	}
+}
+
+std::unique_ptr<MetricHistory> Tracker::receptionOf(const std::vector<int> &ids)
+{
+	std::lock_guard<std::mutex> lock(figures_mtx);
+	const MetricHistory *one = nullptr;
+	for (const auto &s : station_figures)
+		if (s.second->reception && (ids.empty() || std::find(ids.begin(), ids.end(), s.first) != ids.end()))
+		{
+			if (one)
+				return nullptr;
+			one = s.second->reception.get();
+		}
+	return std::unique_ptr<MetricHistory>(one ? new MetricHistory(*one) : nullptr);
 }
 
 void Tracker::AdsbIntake::Receive(const Plane::ADSB *data, int len, TAG &tag)
@@ -274,8 +330,6 @@ void Tracker::remeasure()
 		return true;
 	});
 }
-
-
 
 bool Tracker::save(const std::string &file)
 {

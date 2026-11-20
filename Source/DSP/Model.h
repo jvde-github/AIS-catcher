@@ -71,7 +71,6 @@ namespace AIS
 		MODEL_MAX = 11
 	};
 
-
 	// Abstract demodulation model
 	class Model : public Setting
 	{
@@ -88,6 +87,7 @@ namespace AIS
 		Util::PassThrough<Plane::ADSB> outputADSB;
 		Util::PassThrough<GPS> output_gps;
 		Util::PassThrough<Control> output_control;
+		Util::PassThrough<Metric> output_metric;
 
 	public:
 		Model() : Setting("Model") {}
@@ -101,11 +101,13 @@ namespace AIS
 			outputADSB.setLock(m);
 			output_gps.setLock(m);
 			output_control.setLock(m);
+			output_metric.setLock(m);
 		}
 
 		StreamOut<Message> &Output() { return output; }
 		StreamOut<GPS> &OutputGPS() { return output_gps; }
 		StreamOut<Control> &OutputControl() { return output_control; }
+		StreamOut<Metric> &OutputMetric() { return output_metric; }
 		StreamOut<Plane::ADSB> &OutputADSB() { return outputADSB; }
 
 		void setName(const std::string &s) { setting_name = s; }
@@ -140,6 +142,24 @@ namespace AIS
 	};
 
 	// Common front-end downsampling
+	class InputMonitor : public StreamIn<RAW>
+	{
+		Device::Device *device = nullptr;
+		long long window = 0, seen = 0;
+		long long scanned = 0, clipped = 0;
+		unsigned buffers = 0;
+
+	public:
+		Connection<Metric> outMetric;
+
+		void setup(Device::Device *d, int sample_rate)
+		{
+			device = d;
+			window = 10LL * sample_rate;
+		}
+		void Receive(const RAW *raw, int len, TAG &tag);
+	};
+
 	class ModelFrontend : public Model
 	{
 	private:
@@ -157,6 +177,7 @@ namespace AIS
 		DSP::Downsample16_CU8_Exact DS16_CU8_Exact;
 
 		Util::ConvertRAW convert;
+		InputMonitor monitor;
 
 	protected:
 		bool fixedpointDS = false;

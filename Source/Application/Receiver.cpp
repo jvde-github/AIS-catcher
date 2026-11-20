@@ -303,6 +303,7 @@ void Receiver::unwire()
 		d.model->Output().out.clear();
 		d.model->OutputGPS().out.clear();
 		d.model->OutputControl().out.clear();
+		d.model->OutputMetric().out.clear();
 		d.model->OutputADSB().out.clear();
 		d.json->out.clear();
 		d.json_linked = false;

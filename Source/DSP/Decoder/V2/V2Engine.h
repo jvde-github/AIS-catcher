@@ -91,6 +91,24 @@ namespace V2
 		bool Run(float sample, bool training);
 	};
 
+	struct NoiseFloor
+	{
+		static const int BLOCKS = 938, SECONDS = 10;
+
+		float level = 0.0f;
+		float peak = 0.0f;
+		float load = -1.0f;
+
+		bool Add(float x);
+
+	private:
+		float q[5];
+		int n[5];
+		int count = 0, above = 0;
+		float point = 0.0f;
+		bool have_level = false;
+	};
+
 	class Engine : public StreamIn<CFLOAT32>
 	{
 	public:
@@ -144,6 +162,10 @@ namespace V2
 		void voteCorrected(TAG &tag);
 		void clearCorrected();
 
+		NoiseFloor noise;
+		char channel = 0;
+		void reportNoise(TAG &tag);
+
 		bool midWins(const CFLOAT32 *input) const;
 		void CGF(const CFLOAT32 *input, CFLOAT32 *output, bool busy);
 		void learnSlotPhase(const AIS::Decoder &d);
@@ -169,11 +191,14 @@ namespace V2
 			fix_agree = b ? 1 : 2;
 		}
 
-		void setOrigin(char channel, int station, int own_mmsi)
+		void setOrigin(char ch, int station, int own_mmsi)
 		{
+			channel = ch;
 			for (int i = 0; i < N_DECODERS; i++)
-				dec[i].setOrigin(channel, station, own_mmsi);
+				dec[i].setOrigin(ch, station, own_mmsi);
 		}
+
+		Connection<AIS::Metric> outMetric;
 
 		AIS::Decoder &getDecoder(int i) { return dec[i]; }
 

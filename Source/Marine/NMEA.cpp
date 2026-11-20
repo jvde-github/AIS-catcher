@@ -359,8 +359,7 @@ namespace AIS
 			return false;
 		}
 
-		GPS gps(lat, lon, s, false);
-		outGPS.Send(&gps, 1, tag);
+		sendGPS(GPS(lat, lon, s, false), tag);
 		return true;
 	}
 
@@ -556,7 +555,8 @@ namespace AIS
 				CLS_TPV,
 				CLS_ERROR,
 				CLS_WARNING,
-				CLS_INFO
+				CLS_INFO,
+				CLS_METRIC
 			} cls = CLS_UNKNOWN;
 			enum
 			{
@@ -601,6 +601,8 @@ namespace AIS
 						cls = CLS_WARNING;
 					else if (s == "info")
 						cls = CLS_INFO;
+					else if (s == "metric")
+						cls = CLS_METRIC;
 					break;
 				}
 				case AIS::KEY_UUID:
@@ -727,6 +729,9 @@ namespace AIS
 				ctl.payload = payload;
 				outControl.Send(&ctl, 1, tag);
 			}
+
+			if (cls == CLS_METRIC && uuid_match)
+				processMetric(jsonDoc.root, tag);
 
 			if (cls == CLS_TPV && cfg_GPS && has_tpv_coords && isValidCoord(tpv_lat, tpv_lon))
 			{
@@ -1017,10 +1022,167 @@ namespace AIS
 		return true;
 	}
 
+	typedef std::pair<const char *, int> Field;
+
+	static bool fields(const char *data, int len, std::vector<Field> &out)
+	{
+		int star = 1, sum = 0;
+		for (; star < len && data[star] != '*'; star++)
+			sum ^= (unsigned char)data[star];
+		if (star + 2 >= len || !Util::Convert::isHexDigit(data[star + 1]) || !Util::Convert::isHexDigit(data[star + 2]) ||
+			Util::Convert::hexDigitValue(data[star + 1]) * 16 + Util::Convert::hexDigitValue(data[star + 2]) != sum)
+			return false;
+		out.clear();
+		for (int i = 1, start = 1; i <= star; i++)
+			if (i == star || data[i] == ',')
+			{
+				out.emplace_back(data + start, i - start);
+				start = i + 1;
+			}
+		return true;
+	}
+
+	static int number(const Field &f, int missing)
+	{
+		int n = 0, digits = 0;
+		for (; digits < f.second && digits < 6 && f.first[digits] >= '0' && f.first[digits] <= '9'; digits++)
+			n = n * 10 + (f.first[digits] - '0');
+		return digits ? n : missing;
+	}
+
+	static int talkerSystem(const char *data)
+	{
+		static const struct { char talker[3]; int system; } talkers[] = {{"GP", Sky::GPS}, {"GL", Sky::GLONASS}, {"GA", Sky::GALILEO},
+			{"GB", Sky::BEIDOU}, {"BD", Sky::BEIDOU}, {"GQ", Sky::QZSS}, {"QZ", Sky::QZSS}, {"GI", Sky::NAVIC}};
+		for (const auto &t : talkers)
+			if (data[1] == t.talker[0] && data[2] == t.talker[1])
+				return t.system;
+		return Sky::OTHER;
+	}
+
+	void NMEA::processGSV(const char *data, int len)
+	{
+		std::vector<Field> f;
+		if (!cfg_GPS || !fields(data, len, f))
+			return;
+		const int system = talkerSystem(data);
+		for (std::size_t g = 4; g + 3 < f.size(); g += 4)
+		{
+			const int id = number(f[g], -1);
+			if (id < 0)
+				continue;
+			Sky::Satellite s{system == Sky::GPS && id > 32 ? (int)Sky::SBAS : system, id, number(f[g + 1], -1), number(f[g + 2], -1), number(f[g + 3], -1), false};
+			auto known = std::find_if(sky.satellites.begin(), sky.satellites.end(), [&](const Sky::Satellite &o) { return o.system == s.system && o.id == s.id; });
+			if (known == sky.satellites.end())
+			{
+				if (sky.satellites.size() < 128)
+					sky.satellites.push_back(s);
+			}
+			else
+				known->signal = MAX(known->signal, s.signal);
+		}
+	}
+
+	void NMEA::processGSA(const char *data, int len)
+	{
+		std::vector<Field> f;
+		if (!cfg_GPS || !fields(data, len, f) || f.size() < 18)
+			return;
+		sky.fix = MAX(sky.fix, number(f[2], 0));
+		const float hdop = (float)std::atof(std::string(f[16].first, f[16].second).c_str());
+		if (hdop > 0 && hdop < 99)
+			sky.hdop = hdop;
+		const int system = f.size() > 18 ? number(f[18], Sky::OTHER) : talkerSystem(data);
+		for (int i = 3; i < 15; i++)
+			if (number(f[i], -1) >= 0 && sky_used.size() < 128)
+				sky_used.emplace_back(system, number(f[i], -1));
+	}
+
+	void NMEA::sendGPS(GPS gps, TAG &tag)
+	{
+		const std::time_t now = std::time(nullptr);
+		const bool told = !sky.satellites.empty() || ((!sky_used.empty() || sky.fix) && now - sky_sent > 10);
+		if (!told && !gps.hasPosition())
+			return;
+		if (!told)
+		{
+			outGPS.Send(&gps, 1, tag);
+			return;
+		}
+		for (auto &s : sky.satellites)
+			for (const auto &u : sky_used)
+				s.used |= u.second == s.id && (u.first == s.system || u.first == Sky::OTHER || (u.first == Sky::GPS && s.system == Sky::SBAS));
+		gps.sky = &sky;
+		outGPS.Send(&gps, 1, tag);
+		sky = Sky();
+		sky_used.clear();
+		sky_sent = now;
+	}
+
+	void NMEA::sendMetric(Metric &m, int key, double value, TAG &tag)
+	{
+		if (!(value > -1e9 && value < 1e9))
+			return;
+		m.key = key;
+		m.value = value;
+		outMetric.Send(&m, 1, tag);
+	}
+
+	void NMEA::processMetric(const JSON::JSON &line, TAG &tag)
+	{
+		Metric m;
+		for (const auto &p : line.getMembers())
+			switch (p.Key())
+			{
+			case AIS::KEY_CHANNEL:
+				m.channel = p.Get().getString().empty() ? 0 : p.Get().getString()[0];
+				break;
+			case AIS::KEY_WINDOW:
+				m.window = (int)p.Get().getInt();
+				break;
+			case AIS::KEY_UNIT:
+				m.unit = p.Get().getCString();
+				break;
+			case AIS::KEY_STATION_ID:
+				m.station = (int)p.Get().getInt(-1);
+				break;
+			}
+		for (const auto &p : line.getMembers())
+			if (p.Key() != AIS::KEY_WINDOW && p.Key() != AIS::KEY_STATION_ID && (p.Get().isFloat() || p.Get().isInt()))
+				sendMetric(m, p.Key(), p.Get().getFloat(), tag);
+	}
+
+	void NMEA::processMET(const char *data, int len, TAG &tag)
+	{
+		static const int keys[] = {AIS::KEY_NOISE_FLOOR, AIS::KEY_CHANNEL_LOAD, AIS::KEY_PEAK};
+		std::vector<Field> f;
+		if (!fields(data, len, f) || f.size() < 9)
+			return;
+		const std::string unit(f[5].first, f[5].second);
+		Metric m;
+		m.channel = f[3].second ? f[3].first[0] : 0;
+		m.window = number(f[4], 0);
+		m.unit = unit.c_str();
+		for (int i = 0; i < 3; i++)
+		{
+			const std::string text(f[6 + i].first, f[6 + i].second);
+			char *end = nullptr;
+			const double value = std::strtod(text.c_str(), &end);
+			if (!text.empty() && end == text.c_str() + text.size())
+				sendMetric(m, keys[i], value, tag);
+		}
+	}
+
 	bool NMEA::processNMEAline(const char *data, int len, TAG &tag)
 	{
 		if (len <= 5)
 			return true;
+
+		if (len > 12 && memcmp(data + 1, "PWEGA,,MET,", 11) == 0)
+		{
+			processMET(data, len, tag);
+			return true;
+		}
 
 		const char *id = data + 3;
 
@@ -1028,23 +1190,29 @@ namespace AIS
 			return processAIS(data, len, tag);
 		if (memcmp(id, "VDO", 3) == 0 && cfg_VDO)
 			return processAIS(data, len, tag);
+		if (memcmp(id, "GSV", 3) == 0)
+		{
+			processGSV(data, len);
+			return true;
+		}
+		if (memcmp(id, "GSA", 3) == 0)
+		{
+			processGSA(data, len);
+			return true;
+		}
+		bool ok;
+		gps_line.assign(data, len);
 		if (memcmp(id, "GGA", 3) == 0)
-		{
-			gps_line.assign(data, len);
-			return processGPS(gps_line, tag, "GGA", 15, 15, 2, 3, 4, 5, 6);
-		}
-		if (memcmp(id, "RMC", 3) == 0)
-		{
-			gps_line.assign(data, len);
-			return processGPS(gps_line, tag, "RMC", 12, 14, 3, 4, 5, 6, -1, 2);
-		}
-		if (memcmp(id, "GLL", 3) == 0)
-		{
-			gps_line.assign(data, len);
-			return processGPS(gps_line, tag, "GLL", 8, 8, 1, 2, 3, 4, -1, 6);
-		}
+			ok = processGPS(gps_line, tag, "GGA", 15, 15, 2, 3, 4, 5, 6);
+		else if (memcmp(id, "RMC", 3) == 0)
+			ok = processGPS(gps_line, tag, "RMC", 12, 14, 3, 4, 5, 6, -1, 2);
+		else if (memcmp(id, "GLL", 3) == 0)
+			ok = processGPS(gps_line, tag, "GLL", 8, 8, 1, 2, 3, 4, -1, 6);
+		else
+			return true;
 
-		return true;
+		sendGPS(GPS(gps_line), tag);
+		return ok;
 	}
 
 	bool NMEA::processTagBlock(const std::string &s, TAG &tag)

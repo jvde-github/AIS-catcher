@@ -136,6 +136,7 @@ public:
 	Connection<AIS::Message> &Output(int i) { return decoders[i].model->Output().out; }
 	Connection<AIS::GPS> &OutputGPS(int i) { return decoders[i].model->OutputGPS().out; }
 	Connection<AIS::Control> &OutputControl(int i) { return decoders[i].model->OutputControl().out; }
+	Connection<AIS::Metric> &OutputMetric(int i) { return decoders[i].model->OutputMetric().out; }
 	Connection<Plane::ADSB> &OutputADSB(int i) { return decoders[i].model->OutputADSB().out; }
 
 	Connection<JSON::JSON> &OutputJSON(int i) { return decoders[i].json->out; }

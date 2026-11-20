@@ -33,6 +33,11 @@
 #include "Parse.h"
 #include "Convert.h"
 
+namespace AIS
+{
+	struct Metric;
+}
+
 namespace Device
 {
 
@@ -109,6 +114,7 @@ namespace Device
 		bool isLost() const { return lost; }
 		virtual bool isConnected() { return true; }
 		virtual bool isReplay() { return false; }
+		virtual void report(std::vector<AIS::Metric> &) {}
 		// the connection counts of an input that dials a remote; null for the rest
 		virtual const IO::OutputStats *getConnectionStats() const { return nullptr; }
 

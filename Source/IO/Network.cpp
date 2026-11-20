@@ -103,7 +103,7 @@ namespace IO
 
 	void HTTPStreamer::Receive(const AIS::GPS *data, int len, TAG &tag)
 	{
-		if (!filter.includeGPS() || len <= 0)
+		if (!filter.includeGPS() || len <= 0 || !data[len - 1].hasPosition())
 			return;
 		const std::lock_guard<std::mutex> lock(msg_list_mutex);
 		lat = std::to_string(data[len - 1].getLat());

@@ -10,87 +10,112 @@
 	<div class="graphtab" data-on-contextmenu="plotsContextMenu">
 		<div class="graph-panel compare-panel">
 			<header>Messages per Minute — A vs B</header>
-			<canvas id="chart-compare-minutes"></canvas>
+			<div id="chart-compare-minutes"></div>
 		</div>
 		<div class="graph-panel compare-panel">
 			<header>Messages per Hour — A vs B</header>
-			<canvas id="chart-compare-hours"></canvas>
+			<div id="chart-compare-hours"></div>
 		</div>
 		<div class="graph-panel compare-panel">
 			<header>Message Gain per Minute — B vs A</header>
-			<canvas id="chart-compare-gain-minute"></canvas>
+			<div id="chart-compare-gain-minute"></div>
 		</div>
 		<div class="graph-panel compare-panel">
 			<header>Message Gain per Hour — B vs A</header>
-			<canvas id="chart-compare-gain-hour"></canvas>
+			<div id="chart-compare-gain-hour"></div>
 		</div>
 		<div class="graph-panel compare-panel">
 			<header>Vessels per Minute — A vs B</header>
-			<canvas id="chart-compare-vessels-minute"></canvas>
+			<div id="chart-compare-vessels-minute"></div>
 		</div>
 		<div class="graph-panel compare-panel">
 			<header>Vessels per Hour — A vs B</header>
-			<canvas id="chart-compare-vessels-hour"></canvas>
+			<div id="chart-compare-vessels-hour"></div>
+		</div>
+		<div class="graph-panel range-panel polar-panel polar-none">
+			<header>Coverage</header>
+			<div class="plot-bar">
+				<div class="plot-seg">
+					<button type="button" data-action="setCoveragePeriod" data-period="hour">Last hour</button>
+					<button type="button" data-action="setCoveragePeriod" data-period="day">24 hours</button>
+					<button type="button" data-action="setCoveragePeriod" data-period="week">7 days</button>
+				</div>
+				<div class="plot-seg">
+					<button type="button" data-action="setCoverageMeasure" data-measure="n">Messages</button>
+					<button type="button" data-action="setCoverageMeasure" data-measure="level">Signal</button>
+				</div>
+			</div>
+			<div class="polar-plot">
+				<canvas id="chart-coverage" role="img"></canvas>
+				<div class="polar-tip" hidden></div>
+			</div>
+			<div class="polar-sub"></div>
+			<div class="polar-legend"></div>
 		</div>
 		<div class="graph-panel">
 			<header>Messages per Second</header>
-			<canvas id="chart-seconds"></canvas>
+			<div id="chart-seconds"></div>
 		</div>
 		<div class="graph-panel">
 			<header>Messages per Minute</header>
-			<canvas id="chart-minutes"></canvas>
+			<div id="chart-minutes"></div>
 		</div>
 		<div class="graph-panel">
 			<header>Messages per Hour</header>
-			<canvas id="chart-hours"></canvas>
+			<div id="chart-hours"></div>
 		</div>
 		<div class="graph-panel">
 			<header>Messages per Day</header>
-			<canvas id="chart-days"></canvas>
+			<div id="chart-days"></div>
 		</div>
 		<div class="graph-panel">
 			<header>Vessels per Minute</header>
-			<canvas id="chart-vessels-minute"></canvas>
+			<div id="chart-vessels-minute"></div>
 		</div>
 		<div class="graph-panel">
 			<header>Vessels per Hour</header>
-			<canvas id="chart-vessels-hour"></canvas>
+			<div id="chart-vessels-hour"></div>
 		</div>
 		<div class="graph-panel">
 			<header>Vessels per Day</header>
-			<canvas id="chart-vessels-day"></canvas>
+			<div id="chart-vessels-day"></div>
 		</div>
 		<div class="graph-panel">
 			<header>Frequency Shift (avg PPM per minute)</header>
-			<canvas id="chart-ppm-minute"></canvas>
+			<div id="chart-ppm-minute"></div>
 		</div>
 		<div class="graph-panel">
 			<header>Frequency Shift (avg PPM per hour)</header>
-			<canvas id="chart-ppm"></canvas>
+			<div id="chart-ppm"></div>
 		</div>
 		<div class="graph-panel">
 			<header>Signal Level (Min/Max dB per minute)</header>
-			<canvas id="chart-level"></canvas>
+			<div id="chart-level"></div>
 		</div>
 		<div class="graph-panel">
 			<header>Signal Level (Min/Max dB per hour)</header>
-			<canvas id="chart-level-hour"></canvas>
+			<div id="chart-level-hour"></div>
 		</div>
 		<div class="graph-panel range-panel">
 			<header>Distance (Max <span class="distunit">NMi</span> per Hour)</header>
-			<canvas id="chart-distance-hour"></canvas>
+			<div id="chart-distance-hour"></div>
 		</div>
 		<div class="graph-panel range-panel">
 			<header>Distance (Max <span class="distunit">NMi</span> per Day)</header>
-			<canvas id="chart-distance-day"></canvas>
+			<div id="chart-distance-day"></div>
 		</div>
-		<div class="graph-panel range-panel">
-			<header>Max Distance Last Hour (<span class="distunit">NMi</span>)</header>
-			<canvas id="chart-radar-hour"></canvas>
+		<div class="graph-panel range-panel polar-panel polar-none">
+			<header>GNSS Sky</header>
+			<div class="polar-plot">
+				<canvas id="chart-sky" role="img"></canvas>
+				<div class="polar-tip" hidden></div>
+			</div>
+			<div class="polar-sub"></div>
+			<div class="polar-legend"></div>
 		</div>
-		<div class="graph-panel range-panel">
-			<header>Max Distance Last Day (<span class="distunit">NMi</span>)</header>
-			<canvas id="chart-radar-day"></canvas>
+		<div class="graph-panel range-panel fill-panel polar-none">
+			<header>Satellite Signals</header>
+			<div class="sat-bars" id="sky-signals"></div>
 		</div>
 	</div>
 </div>

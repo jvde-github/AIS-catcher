@@ -25,6 +25,7 @@
 #include "DB.h"
 #include "Located.h"
 #include "Figures.h"
+#include "Metrics.h"
 #include "PlaneDB.h"
 #include "StationRegistry.h"
 #include "Writer.h"
@@ -90,7 +91,14 @@ namespace Services
 
 		// the statistics page: the totals and the last whole periods, and the plots' histories
 		static void counters(JSON::Writer &w, Figures &f, bool hidden);
-		static void history(JSON::Writer &w, Figures &f, bool hidden);
+		struct Told
+		{
+			const AIS::Sky *sky = nullptr;
+			int sky_age = 0;
+			std::vector<MetricTable::Row> reception;
+			std::unique_ptr<MetricHistory> reception_history;
+		};
+		static void history(JSON::Writer &w, Figures &f, bool hidden, const Told &told);
 		// the aircraft: in full, and as the map's rows
 		static std::string planes(PlaneDB &db, const Located *shown = nullptr);
 		static std::string planesCompact(PlaneDB &db, std::time_t since = 0, const Located *shown = nullptr);

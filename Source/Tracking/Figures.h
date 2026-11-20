@@ -15,19 +15,123 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <ctime>
 #include <fstream>
+#include <memory>
 #include <vector>
 
 #include "History.h"
+#include "Metrics.h"
 #include "Statistics.h"
 #include "Writer.h"
+
+struct Coverage
+{
+	static const int DIRECTIONS = 24, RINGS = 19, CELLS = DIRECTIONS * RINGS;
+
+	struct Cell
+	{
+		uint32_t n, leveled;
+		float level;
+	};
+
+	struct Span
+	{
+		int interval, slots;
+		std::vector<long int> slot;
+		std::vector<Cell> cells;
+
+		Span(int interval_, int slots_) : interval(interval_), slots(slots_), slot(slots_, 0), cells((std::size_t)slots_ * CELLS, Cell{0, 0, 0}) {}
+
+		Cell *at(long int s)
+		{
+			const std::size_t i = (std::size_t)(s % slots);
+			if (s < slot[i])
+				return nullptr;
+			if (s > slot[i])
+			{
+				slot[i] = s;
+				std::fill(cells.begin() + i * CELLS, cells.begin() + (i + 1) * CELLS, Cell{0, 0, 0});
+			}
+			return &cells[i * CELLS];
+		}
+
+		static void add(Cell *to, const Cell *from)
+		{
+			for (int c = 0; c < CELLS; c++)
+			{
+				to[c].n += from[c].n;
+				to[c].leveled += from[c].leveled;
+				to[c].level += from[c].level;
+			}
+		}
+
+		std::vector<Cell> sum(long int now) const
+		{
+			std::vector<Cell> out(CELLS, Cell{0, 0, 0});
+			const long int s = now / interval;
+			for (int i = 0; i < slots; i++)
+				if (slot[i] > s - slots && slot[i] <= s)
+					add(out.data(), &cells[(std::size_t)i * CELLS]);
+			return out;
+		}
+
+		void add(const Span &o)
+		{
+			for (int i = 0; i < o.slots; i++)
+				if (o.slot[i])
+					if (Cell *to = at(o.slot[i]))
+						add(to, &o.cells[(std::size_t)i * CELLS]);
+		}
+
+		bool save(std::ofstream &f) const
+		{
+			return f.write((const char *)slot.data(), slot.size() * sizeof(long int)) && f.write((const char *)cells.data(), cells.size() * sizeof(Cell));
+		}
+		bool load(std::ifstream &f)
+		{
+			return f.read((char *)slot.data(), slot.size() * sizeof(long int)) && f.read((char *)cells.data(), cells.size() * sizeof(Cell));
+		}
+	};
+
+	Span hour{600, 6}, day{10800, 8}, week{86400, 7};
+
+	static int ring(float nm)
+	{
+		return nm >= 0.5f ? MIN(RINGS - 1, 1 + (int)(2 * std::log2(nm / 0.5f))) : 0;
+	}
+
+	void add(long int t, int angle, float nm, float level)
+	{
+		const int c = angle / (360 / DIRECTIONS) * RINGS + ring(nm);
+		for (Span *s : {&hour, &day, &week})
+			if (Cell *cells = s->at(t / s->interval))
+			{
+				cells[c].n++;
+				if (level != LEVEL_UNDEFINED)
+				{
+					cells[c].leveled++;
+					cells[c].level += level;
+				}
+			}
+	}
+
+	void add(const Coverage &o)
+	{
+		hour.add(o.hour);
+		day.add(o.day);
+		week.add(o.week);
+	}
+
+	bool save(std::ofstream &f) const { return hour.save(f) && day.save(f) && week.save(f); }
+	bool load(std::ifstream &f) { return hour.load(f) && day.load(f) && week.load(f); }
+};
 
 // What one stream of messages adds up to: totals kept across restarts and for
 // this run, and the figures by second, minute, hour and day. The tracker keeps
@@ -55,6 +159,10 @@ struct Figures : public StreamIn<JSON::JSON>
 		uint32_t n[LEVEL_BANDS];
 	};
 	Levels levels_total, levels_session;
+
+	std::unique_ptr<Coverage> coverage;
+
+	std::unique_ptr<MetricHistory> reception;
 
 	// A day of exceptional range, as tropospheric ducting brings
 	struct Propagation
@@ -129,6 +237,12 @@ struct Figures : public StreamIn<JSON::JSON>
 				levels_session.sum[b] += f->levels_session.sum[b];
 				levels_session.n[b] += f->levels_session.n[b];
 			}
+			if (f->coverage)
+			{
+				if (!coverage)
+					coverage.reset(new Coverage());
+				coverage->add(*f->coverage);
+			}
 		}
 	}
 
@@ -147,20 +261,28 @@ struct Figures : public StreamIn<JSON::JSON>
 	bool save(std::ofstream &f) { return total.Save(f) && second.Save(f) && minute.Save(f) && hour.Save(f) && day.Save(f); }
 	bool load(std::ifstream &f) { return total.Load(f) && second.Load(f) && minute.Load(f) && hour.Load(f) && day.Load(f); }
 
-	// the week and the levels since first kept, which a tracker's backup holds after the figures
 	bool saveProfile(std::ofstream &f)
 	{
 		const int version = PROFILE_VERSION;
+		const char covered = coverage ? 1 : 0, told = reception ? 1 : 0;
 		return f.write((const char *)&version, sizeof(version)) && f.write((const char *)week_vessels, sizeof(week_vessels)) &&
-			   f.write((const char *)week_hours, sizeof(week_hours)) && f.write((const char *)&levels_total, sizeof(levels_total));
+			   f.write((const char *)week_hours, sizeof(week_hours)) && f.write((const char *)&levels_total, sizeof(levels_total)) &&
+			   f.write(&covered, 1) && (!coverage || coverage->save(f)) && f.write(&told, 1) && (!reception || reception->save(f));
 	}
 	bool loadProfile(std::ifstream &f)
 	{
 		int version = 0;
-		if (!f.read((char *)&version, sizeof(version)) || version != PROFILE_VERSION)
+		char covered = 0, told = 0;
+		if (!f.read((char *)&version, sizeof(version)) || version < 1 || version > PROFILE_VERSION)
 			return false;
-		return f.read((char *)week_vessels, sizeof(week_vessels)) && f.read((char *)week_hours, sizeof(week_hours)) &&
-			   f.read((char *)&levels_total, sizeof(levels_total));
+		if (!f.read((char *)week_vessels, sizeof(week_vessels)) || !f.read((char *)week_hours, sizeof(week_hours)) ||
+			!f.read((char *)&levels_total, sizeof(levels_total)) || (version >= 2 && !f.read(&covered, 1)))
+			return false;
+		coverage.reset(covered ? new Coverage() : nullptr);
+		if ((coverage && !coverage->load(f)) || (version >= 3 && !f.read(&told, 1)))
+			return false;
+		reception.reset(told ? new MetricHistory() : nullptr);
+		return !reception || reception->load(f);
 	}
 
 	// The days of exceptional range, oldest first, today's when it is one: the
@@ -200,7 +322,7 @@ struct Figures : public StreamIn<JSON::JSON>
 	}
 
 private:
-	static const int PROFILE_VERSION = 1;
+	static const int PROFILE_VERSION = 3;
 	int range_cutoff = LONG_RANGE_CUTOFF_DEFAULT;
 	long int last_minute = 0, last_hour = 0;
 
@@ -210,6 +332,8 @@ private:
 		std::memset(week_hours, 0, sizeof(week_hours));
 		std::memset(&levels_total, 0, sizeof(levels_total));
 		std::memset(&levels_session, 0, sizeof(levels_session));
+		coverage.reset();
+		reception.reset();
 		last_minute = last_hour = 0;
 	}
 
@@ -240,8 +364,16 @@ private:
 			week_vessels[weekday][hr]++;
 
 		// the positions the range figures take: validated, heard directly, no aid to navigation
-		if (!tag.validated || tag.level == LEVEL_UNDEFINED || tag.distance < 0 || tag.distance > range_cutoff ||
+		if (!tag.validated || tag.distance < 0 || tag.distance > range_cutoff ||
 			m.type() == 21 || m.type() == 28 || (m.repeat() > 0 && m.type() != 27))
+			return;
+		if (tag.angle >= 0 && tag.angle < 360)
+		{
+			if (!coverage)
+				coverage.reset(new Coverage());
+			coverage->add(t, tag.angle, tag.distance, tag.level);
+		}
+		if (tag.level == LEVEL_UNDEFINED)
 			return;
 		const int band = MIN(LEVEL_BANDS - 1, (int)(tag.distance / LEVEL_BAND_NM));
 		levels_total.sum[band] += tag.level;

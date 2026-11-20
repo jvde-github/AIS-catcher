@@ -35,7 +35,7 @@ X(KEY_QUALITY, "quality", "quality", "quality", "", "", "quality", "",
   nullptr)
 X(KEY_SCALED, "scaled", "", "scaled", "", "", "", "",
   "Scaled-output flag (true=engineering units)", nullptr)
-X(KEY_CHANNEL, "channel", "channel", "channel", "", "", "", "",
+X(KEY_CHANNEL, "channel", "channel", "channel", "", "", "channel", "",
   "AIS channel letter from the NMEA sentence (A or B; C/D for channels 75/76)", nullptr)
 X(KEY_HARDWARE, "hardware", "hardware", "hardware", "", "", "hardware", "",
   "Hardware/device product name reported by the driver", nullptr)
@@ -1229,3 +1229,13 @@ X(KEY_TOA_NS, "toa_ns", "", "toa_ns", "", "", "toa_ns", "ns",
 X(KEY_PLACE_RANK, "", "", "", "", "rank", "", "", "Place metadata", nullptr)
 X(KEY_SETTING_SETUP_CODE, "", "", "", "", "setup_code", "", "", "", nullptr)
 X(KEY_SETTING_ITERATIONS, "", "", "", "", "iterations", "", "", "", nullptr)
+
+X(KEY_WINDOW, "window", "", "", "", "", "window", "s", "Seconds a reported value was measured over", nullptr)
+X(KEY_UNIT, "unit", "", "", "", "", "unit", "", "Unit of the levels reported, dBm or dBFS", nullptr)
+X(KEY_NOISE_FLOOR, "noise_floor", "", "", "", "", "noise_floor", "dB",
+  "Noise floor of a channel: the level a tenth of its blocks stay under", nullptr)
+X(KEY_CHANNEL_LOAD, "channel_load", "", "", "", "", "channel_load", "%",
+  "Share of the time a channel is more than 6 dB above its noise floor", nullptr)
+X(KEY_PEAK, "peak", "", "", "", "", "peak", "dB", "Highest level on a channel", nullptr)
+X(KEY_CLIPPING, "clipping", "", "", "", "", "clipping", "%", "Share of an input's raw samples at full scale", nullptr)
+X(KEY_GAIN, "gain", "", "", "", "", "gain", "dB", "Tuner gain of a receiver", nullptr)

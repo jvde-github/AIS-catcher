@@ -15,7 +15,6 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 #include "Ui.h"
 #include "UiFormat.h"
 #include "Parse.h"
@@ -391,7 +390,15 @@ namespace Services
 			std::string out;
 			JSON::Writer w(out);
 			const std::vector<int> of = figuresOf(focus);
-			const auto write = [&](Figures &f) { UiFormat::history(w, f, shown.hidesRange(of, f.total.maxDistance())); };
+			AIS::Sky sky;
+			int sky_age = 0;
+			const bool has_sky = tracker.skyOf(of, sky, sky_age);
+			UiFormat::Told told;
+			told.sky = has_sky && shown.all(of) ? &sky : nullptr;
+			told.sky_age = sky_age;
+			told.reception = tracker.metricsOf(of);
+			told.reception_history = tracker.receptionOf(of);
+			const auto write = [&](Figures &f) { UiFormat::history(w, f, shown.hidesRange(of, f.total.maxDistance()), told); };
 			if (of.empty())
 				tracker.withAll(write);
 			else if (!tracker.withStations(of, write))

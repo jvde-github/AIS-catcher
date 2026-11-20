@@ -257,6 +257,7 @@ void Engine::feed(Tracker &t, const TrackerSpec *own)
 			r->OutputJSON(j).Connect(&t.json());
 			r->OutputGPS(j).Connect(&t.gps());
 			r->OutputControl(j).Connect(&t.control());
+			r->OutputMetric(j).Connect(&t.metric());
 			r->OutputADSB(j).Connect(&t.adsb());
 		}
 		r->linkJSON();

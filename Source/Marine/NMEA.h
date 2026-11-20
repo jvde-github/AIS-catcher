@@ -99,6 +99,9 @@ namespace AIS
 		ParseState state = ParseState::FIND_START;
 		std::string line;
 		std::string gps_line;
+		Sky sky;
+		std::vector<std::pair<int, int>> sky_used;
+		std::time_t sky_sent = 0;
 		int count = 0;
 
 		// Scan context — set by Receive(), used by scanners
@@ -178,6 +181,12 @@ namespace AIS
 		bool parseTagBlock(const std::string &s, int &nmeaStart);
 		bool processTagBlock(const std::string &s, TAG &tag);
 		bool processNMEAline(const char *data, int len, TAG &tag);
+		void processGSV(const char *data, int len);
+		void processGSA(const char *data, int len);
+		void sendGPS(GPS gps, TAG &tag);
+		void sendMetric(Metric &m, int key, double value, TAG &tag);
+		void processMetric(const JSON::JSON &line, TAG &tag);
+		void processMET(const char *data, int len, TAG &tag);
 
 	public:
 		NMEA() : parser(JSON_DICT_INPUT)
@@ -210,5 +219,6 @@ namespace AIS
 
 		Connection<GPS> outGPS;
 		Connection<Control> outControl;
+		Connection<Metric> outMetric;
 	};
 }

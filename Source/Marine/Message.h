@@ -52,17 +52,37 @@ namespace AIS
 		return (double)((ns + 500) / 1000) / 1000000.0;
 	}
 
+	struct Sky
+	{
+		enum System { OTHER = 0, GPS = 1, GLONASS = 2, GALILEO = 3, BEIDOU = 4, QZSS = 5, NAVIC = 6, SBAS = 7 };
+		struct Satellite
+		{
+			int system, id;
+			int elevation, azimuth, signal;
+			bool used;
+		};
+		std::vector<Satellite> satellites;
+		int fix = 0;
+		float hdop = -1;
+	};
+
 	class GPS
 	{
 		float lat = 0, lon = 0;
 		const std::string &source;
 		bool isJSON;
 
+		bool position = true;
+
 		const std::string formatLatLon(float, bool) const;
 
 	public:
-		GPS(float lt, float ln, const std::string &src, bool json) : lat(lt), lon(ln), source(src), isJSON(json) {}
+		const Sky *sky = nullptr;
 
+		GPS(float lt, float ln, const std::string &src, bool json) : lat(lt), lon(ln), source(src), isJSON(json) {}
+		explicit GPS(const std::string &src) : source(src), isJSON(false), position(false) {}
+
+		bool hasPosition() const { return position; }
 		float getLat() const { return lat; }
 		float getLon() const { return lon; }
 
@@ -76,6 +96,16 @@ namespace AIS
 	public:
 		int topic = 0;
 		const JSON::JSON *payload = nullptr; // valid for the duration of the Send
+	};
+
+	struct Metric
+	{
+		int key = 0;
+		double value = 0;
+		char channel = 0;
+		int window = 0;
+		int station = -1;
+		const char *unit = nullptr;
 	};
 
 	class Message

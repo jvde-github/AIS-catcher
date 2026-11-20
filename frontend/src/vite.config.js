@@ -46,8 +46,6 @@ export default defineConfig({
           if (id.includes('/frontend/src/core/') || id.includes('/frontend/packages/')) return 'core';
           if (id.includes('/frontend/src/overlays/pollingtile')) return 'core';
 
-          if (id.includes('node_modules/chart.js') ||
-              id.includes('node_modules/chartjs-plugin-annotation')) return 'chart';
           if (id.includes('node_modules/ol/')) return 'ol';
           if (id.includes('node_modules/tabulator-tables')) return 'tabulator';
           if (id.includes('node_modules/marked')) return 'marked';

@@ -457,6 +457,7 @@ namespace V2
 			fm_sum += fm_filtered[k];
 
 		tag.ppm = ppm_prev;
+		float block_power = 0.0f;
 
 		for (int i = 0; i < BLOCK_SIZE; i++)
 		{
@@ -471,6 +472,7 @@ namespace V2
 										before == AIS::State::DATAFCS ? &quality[di][dec[di].getPosition()] : nullptr);
 
 			tag.sample_lvl = norm2(coh_filtered[i]);
+			block_power += tag.sample_lvl;
 
 			if (dec[di].Run(bit ? 1.0f : -1.0f, tag) == AIS::State::FOUNDMESSAGE)
 			{
@@ -506,6 +508,95 @@ namespace V2
 
 		memmove(raw, raw + BLOCK_SIZE, BLOCK_SIZE * sizeof *raw);
 		memmove(fm_filtered, fm_filtered + BLOCK_SIZE, FM_HIST * sizeof *fm_filtered);
+
+		if (block_power > BLOCK_SIZE * 1e-12f && noise.Add(10.0f * log10f(block_power / BLOCK_SIZE)))
+			reportNoise(tag);
+	}
+
+	void Engine::reportNoise(TAG &tag)
+	{
+		AIS::Metric m;
+		m.channel = channel;
+		m.window = NoiseFloor::SECONDS;
+		m.unit = "dBFS";
+		const auto send = [&](int key, float value)
+		{
+			m.key = key;
+			m.value = value;
+			outMetric.Send(&m, 1, tag);
+		};
+		send(AIS::KEY_NOISE_FLOOR, noise.level);
+		if (noise.load >= 0.0f)
+			send(AIS::KEY_CHANNEL_LOAD, noise.load);
+		send(AIS::KEY_PEAK, noise.peak);
+	}
+
+	bool NoiseFloor::Add(float x)
+	{
+		static const float share[5] = {0.0f, 0.05f, 0.1f, 0.55f, 1.0f};
+		static const float LOAD_DB = 6.0f;
+
+		if (have_level && x > point + LOAD_DB)
+			above++;
+
+		if (count < 5)
+		{
+			int i = count;
+			for (; i > 0 && q[i - 1] > x; i--)
+				q[i] = q[i - 1];
+			q[i] = x;
+			n[count] = count + 1;
+			count++;
+			return false;
+		}
+
+		int k;
+		if (x < q[0])
+		{
+			q[0] = x;
+			k = 0;
+		}
+		else if (x >= q[4])
+		{
+			q[4] = x;
+			k = 3;
+		}
+		else
+			for (k = 0; x >= q[k + 1]; k++)
+				;
+		for (int i = k + 1; i < 5; i++)
+			n[i]++;
+		count++;
+
+		for (int i = 1; i <= 3; i++)
+		{
+			const float off = 1.0f + (float)(count - 1) * share[i] - (float)n[i];
+			if ((off >= 1.0f && n[i + 1] - n[i] > 1) || (off <= -1.0f && n[i - 1] - n[i] < -1))
+			{
+				const int d = off > 0.0f ? 1 : -1;
+				const float up = (q[i + 1] - q[i]) / (float)(n[i + 1] - n[i]);
+				const float down = (q[i] - q[i - 1]) / (float)(n[i] - n[i - 1]);
+				float h = q[i] + (float)d / (float)(n[i + 1] - n[i - 1]) * ((float)(n[i] - n[i - 1] + d) * up + (float)(n[i + 1] - n[i] - d) * down);
+				if (!(q[i - 1] < h && h < q[i + 1]))
+					h = q[i] + (d > 0 ? up : -down);
+				q[i] = h;
+				n[i] += d;
+			}
+		}
+
+		if (count < BLOCKS)
+			return false;
+
+		load = have_level ? 100.0f * (float)above / BLOCKS : -1.0f;
+		point = q[2];
+		const float busy = load > 0.0f ? load : 0.0f;
+		const float below = 0.553f - 0.00249f * busy - 0.0000525f * busy * busy;
+		level = point + (below > 0.0f ? below : 0.0f);
+		peak = q[4];
+		have_level = true;
+		count = 0;
+		above = 0;
+		return true;
 	}
 
 	void Engine::Receive(const CFLOAT32 *data, int len, TAG &tag)

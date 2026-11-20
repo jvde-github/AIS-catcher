@@ -15,7 +15,6 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 #pragma once
 
 #include <algorithm>
@@ -30,6 +29,7 @@
 #include "DB.h"
 #include "Figures.h"
 #include "Journal.h"
+#include "Metrics.h"
 #include "PlaceCatalogue.h"
 #include "PlaneDB.h"
 #include "StationRegistry.h"
@@ -71,7 +71,11 @@ public:
 	StreamIn<JSON::JSON> &json() { return intake; }
 	StreamIn<AIS::GPS> &gps() { return gps_intake; }
 	StreamIn<AIS::Control> &control() { return db; }
+	bool skyOf(const std::vector<int> &ids, AIS::Sky &out, int &age);
 	StreamIn<Plane::ADSB> &adsb() { return adsb_intake; }
+	StreamIn<AIS::Metric> &metric() { return metric_intake; }
+	std::vector<MetricTable::Row> metricsOf(const std::vector<int> &ids) { return metric_table.of(ids); }
+	std::unique_ptr<MetricHistory> receptionOf(const std::vector<int> &ids);
 
 	// The installation's one table of station positions, given when the tracker is made.
 	void useStations(std::shared_ptr<StationTable> shared) { table = std::move(shared); }
@@ -220,11 +224,23 @@ private:
 		void Receive(const AIS::GPS *data, int len, TAG &tag) override;
 	} gps_intake;
 
+	std::mutex sky_mtx;
+	std::map<int, std::pair<std::time_t, AIS::Sky>> skies;
+
+	struct MetricIntake : public StreamIn<AIS::Metric>
+	{
+		Tracker *tracker = nullptr;
+		void Receive(const AIS::Metric *data, int len, TAG &tag) override;
+	} metric_intake;
+	MetricTable metric_table;
+
 	struct AdsbIntake : public StreamIn<Plane::ADSB>
 	{
 		Tracker *tracker = nullptr;
 		void Receive(const Plane::ADSB *data, int len, TAG &tag) override;
 	} adsb_intake;
+
+	Figures *stationFigures(int id);
 
 	// the station the message is counted at: the one it names when listed, else the input's; and where it was heard
 	void place(const AIS::Message *msg, TAG &tag);

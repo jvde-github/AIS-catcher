@@ -22,6 +22,7 @@
 
 #include "RTLSDR.h"
 #include "Logger.h"
+#include "Message.h"
 
 namespace Device
 {
@@ -307,6 +308,16 @@ namespace Device
 			break;
 		}
 		return *this;
+	}
+
+	void RTLSDR::report(std::vector<AIS::Metric> &values)
+	{
+		if (tuner_AGC)
+			return;
+		AIS::Metric m;
+		m.key = AIS::KEY_GAIN;
+		m.value = tuner_Gain;
+		values.push_back(m);
 	}
 
 	std::string RTLSDR::Get()
