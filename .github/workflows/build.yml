@@ -532,7 +532,7 @@ jobs:
 
         echo "AIS-catcher"
         mkdir build; cd build
-        cmake .. -A $msplatform -G $gen -DWINDOWS_INCLUDE_DIR=${{github.workspace}}\include -DWINDOWS_LIBRARY_DIR=${{github.workspace}}\lib -DWINDOWS_BINARY_DIR=${{github.workspace}}\release -DRUN_NUMBER=$env:RUN_NUMBER
+        cmake .. -A $msplatform -G $gen -DWINDOWS_INCLUDE_DIR=${{github.workspace}}\include -DWINDOWS_LIBRARY_DIR=${{github.workspace}}\lib -DWINDOWS_BINARY_DIR=${{github.workspace}}\release -DRUN_NUMBER=${{ env.RUN_NUMBER }}
         msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform AIS-catcher.sln
         cd ..
         cp LICENSE output\Licenses\AIS-catcher
