@@ -1205,8 +1205,7 @@
    One treatment for every "label over a group of values": table column
    headers and settings section headers alike. */
 
-.col-header,
-.tabulator .tabulator-header .tabulator-col {
+.col-header {
     font-size: var(--fs-xs);
     font-weight: var(--fw-semibold);
     text-transform: uppercase;

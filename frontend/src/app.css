@@ -2,7 +2,6 @@
    the viewer's own. Vite bundles the chain into lib.css; @import keeps the
    order, where separate imports from a module would not. */
 @import "ol/ol.css";
-@import "tabulator-tables/dist/css/tabulator.min.css";
 @import "@aiscatcher/ui/css/index.css";
 @import "./style.css";
 /* the features' own sheets, after the viewer's */

@@ -47,7 +47,6 @@ export default defineConfig({
           if (id.includes('/frontend/src/overlays/pollingtile')) return 'core';
 
           if (id.includes('node_modules/ol/')) return 'ol';
-          if (id.includes('node_modules/tabulator-tables')) return 'tabulator';
           if (id.includes('node_modules/marked')) return 'marked';
           if (id.includes('node_modules/ol-mapbox-style') || id.includes('node_modules/@maplibre') ||
               id.includes('node_modules/mapbox-to-css-font')) return 'mapbox-style';

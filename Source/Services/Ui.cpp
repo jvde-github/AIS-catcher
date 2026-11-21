@@ -398,6 +398,15 @@ namespace Services
 			told.sky_age = sky_age;
 			told.reception = tracker.metricsOf(of);
 			told.reception_history = tracker.receptionOf(of);
+			const auto slots = [&](const char *ring, int &count) {
+				const std::string asked = request.param(ring);
+				if (!asked.empty())
+					count = (int)MAX(0, MIN(toInt(asked, count), 100000));
+			};
+			slots("second", told.seconds);
+			slots("minute", told.minutes);
+			slots("hour", told.hours);
+			slots("day", told.days);
 			const auto write = [&](Figures &f) { UiFormat::history(w, f, shown.hidesRange(of, f.total.maxDistance()), told); };
 			if (of.empty())
 				tracker.withAll(write);

@@ -97,6 +97,7 @@ namespace Services
 			int sky_age = 0;
 			std::vector<MetricTable::Row> reception;
 			std::unique_ptr<MetricHistory> reception_history;
+			int seconds = 60, minutes = 60, hours = 24, days = 90;
 		};
 		static void history(JSON::Writer &w, Figures &f, bool hidden, const Told &told);
 		// the aircraft: in full, and as the map's rows

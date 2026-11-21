@@ -174,7 +174,7 @@ export async function fetchRange(forcefetch = false) {
     const next = [];
     for (const c of at) {
         try {
-            const response = await fetch("api/history_full.json?stations=" + c.id);
+            const response = await fetch("api/history_full.json?second=0&day=30&stations=" + c.id);
             const h = await response.json();
             if (h && !h.range_hidden && h.day && h.day.stat && h.day.stat.length) next.push(ringsOf(h, c));
         } catch {

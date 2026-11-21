@@ -156,11 +156,19 @@ function buildSourceSelectors() {
     if (sourceB !== null) pickerB.set(sourceB);
 }
 
+const fetched = new Map();
+
 async function fetchHistory(idx) {
+    const used = new Set(Object.values(period)), slots = (f, n) => (used.has(f) ? n : 0), now = Date.now();
+    const url = `api/history_full.json?second=${slots("second", 60)}&minute=${slots("minute", 60)}&hour=168&day=${slots("day", 365)}&stations=${idx}`;
+    for (const [u, last] of fetched) if (now - last.at > 10000) fetched.delete(u);
+    if (fetched.has(url) && !used.has("second")) return fetched.get(url).h;
     try {
-        const response = await fetch("api/history_full.json?stations=" + idx);
+        const response = await fetch(url);
         if (!response.ok) return null;
-        return await response.json();
+        const h = await response.json();
+        fetched.set(url, { at: now, h });
+        return h;
     } catch (error) {
         console.error("plots: history fetch failed:", error);
         return null;
@@ -239,7 +247,9 @@ function drawPanel(id, h) {
 function setPeriod(id, f) {
     period[id] = f;
     document.getElementById(id).closest(".graph-panel").querySelectorAll("[data-period]").forEach((b) => b.classList.toggle("active", b.dataset.period === f));
-    if (COMPARE[id] && compared) drawComparePanel(id, compared);
+    const have = COMPARE[id] ? compared && compared[0] : shown;
+    if (have && !have[f]) update();
+    else if (COMPARE[id] && compared) drawComparePanel(id, compared);
     else if (OVERVIEW[id] && shown) drawPanel(id, shown);
 }
 

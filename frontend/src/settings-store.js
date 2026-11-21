@@ -122,6 +122,7 @@ const DEFAULT_SETTINGS = {
         plot_absolute_time: true,
         kiosk_rotation_speed: 5,
         kiosk_pan_map: true,
+        shiptable_sort: null,
         shiptable_columns: ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"],
         realtime_background_streaming: false,
         realtime_filters: [],

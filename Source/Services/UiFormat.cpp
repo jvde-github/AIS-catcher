@@ -1208,8 +1208,11 @@ namespace Services
 	// a history as the plots read it: when its slot under way began, its
 	// interval, and newest first each slot's offset from it and its figures
 	template <typename H>
-	static void historyJSON(JSON::Writer &w, H &history, long int interval, bool hidden, const MetricHistory *reception = nullptr, int span = 0)
+	static void historyJSON(JSON::Writer &w, const char *key, H &history, int count, long int interval, bool hidden, const MetricHistory *reception = nullptr, int span = 0)
 	{
+		if (count < 1)
+			return;
+
 		struct Slot
 		{
 			long int start;
@@ -1219,9 +1222,9 @@ namespace Services
 		std::vector<Slot> slots;
 		history.forEachSlot([&](long int start, MessageStatistics &s, bool empty) {
 			slots.push_back(Slot{start, s.values(), empty});
-		});
+		}, count);
 
-		w.beginObject();
+		w.key(key).beginObject();
 		w.key("now").val(slots.back().start);
 		w.key("interval").val(interval);
 		w.key("time").beginArray();
@@ -1320,14 +1323,10 @@ namespace Services
 		w.beginObject();
 		if (hidden)
 			w.kv("range_hidden", true);
-		w.key("second");
-		historyJSON(w, f.second, 1, hidden);
-		w.key("minute");
-		historyJSON(w, f.minute, 60, hidden, kept, 0);
-		w.key("hour");
-		historyJSON(w, f.hour, 3600, hidden, kept, 1);
-		w.key("day");
-		historyJSON(w, f.day, 86400, hidden, kept, 2);
+		historyJSON(w, "second", f.second, told.seconds, 1, hidden);
+		historyJSON(w, "minute", f.minute, told.minutes, 60, hidden, kept, 0);
+		historyJSON(w, "hour", f.hour, told.hours, 3600, hidden, kept, 1);
+		historyJSON(w, "day", f.day, told.days, 86400, hidden, kept, 2);
 		if (!told.reception.empty())
 		{
 			w.key("reception");

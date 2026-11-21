@@ -13,13 +13,14 @@ const MEASURES = {
     signal: [(i) => (ring.stat[i].count ? ring.stat[i].level_max : null), (v) => v.toFixed(1) + " dB strongest"],
     noise: [channels("noise_floor"), (v) => v.toFixed(1) + " dB noise floor"],
     load: [channels("channel_load"), (v) => v.toFixed(0) + "% channel load"],
+    clipping: [(i) => channels("clipping")(i) || null, (v) => compact(v) + "% of samples clipped", "No clipping"],
 };
 
 const day = (d) => d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate();
 
 function draw() {
     if (!grid || !ring) return;
-    const [value, word] = MEASURES[measure];
+    const [value, word, none = "Nothing heard"] = MEASURES[measure];
     const cells = new Map();
     ring.time.forEach((x, i) => {
         const d = new Date((ring.now + x * ring.interval) * 1000), v = value(i);
@@ -49,7 +50,7 @@ function draw() {
             cell.title = `${DAYS[d.getDay()]} ${d.getDate()}, ${String(h).padStart(2, "0")}:00 · ${word(v)}`;
         }
     }
-    sub.textContent = values.length ? `Lighter to darker: ${word(lo)} to ${word(hi)}, by local hour` : "Nothing heard in the last 7 days";
+    sub.textContent = values.length ? `Lighter to darker: ${word(lo)} to ${word(hi)}, by local hour` : none + " in the last 7 days";
 }
 
 export function init() {
@@ -66,6 +67,7 @@ export function update(h) {
     const told = (name) => !!ring && (ring.reception || []).some((s) => s.name === name);
     panel.querySelector('[data-measure="noise"]').hidden = !told("noise_floor");
     panel.querySelector('[data-measure="load"]').hidden = !told("channel_load");
+    panel.querySelector('[data-measure="clipping"]').hidden = !told("clipping");
     setMeasure(panel.querySelector(`[data-measure="${measure}"]`).hidden ? "messages" : measure);
 }
 

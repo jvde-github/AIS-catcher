@@ -211,7 +211,7 @@ const json = (url) => fetch(url).then((r) => (r.ok ? r.json() : null)).catch(() 
 
 async function fillFigures(id) {
     figuresAt = Date.now();
-    const [stat, history] = await Promise.all([json("api/stat.json?stations=" + id), json("api/history_full.json?stations=" + id)]);
+    const [stat, history] = await Promise.all([json("api/stat.json?stations=" + id), json("api/history_full.json?second=0&hour=48&day=0&stations=" + id)]);
     if (cardStation !== id) return;
     set("stationcard_ships", stat ? count(stat.vessel_count) : "-");
     set("stationcard_messages", stat ? count(stat.session?.count) : "-");
