@@ -439,30 +439,27 @@ export async function fetchTracks() {
 
 export let refreshIntervalMs = 2500;
 let interval;
-let updateInProgress = false;
+let running = null;
 
 export function refresh() {
-    if (!document.hidden && !updateInProgress) {
-        updateInProgress = true;
-
-        return (async () => {
-            try {
-                await refreshTab();
-            } catch (error) {
-                console.error("Error updating data:", error);
-            } finally {
-                updateInProgress = false;
-            }
-        })();
-    }
-    return Promise.resolve();
+    if (document.hidden || running) return Promise.resolve();
+    running = (async () => {
+        try {
+            await refreshTab();
+        } catch (error) {
+            console.error("Error updating data:", error);
+        } finally {
+            running = null;
+        }
+    })();
+    return running;
 }
 
 // refresh now, then on the interval from when that one is done
 export function restart() {
     clearInterval(interval);
 
-    refresh().then(() => {
+    Promise.resolve(running).then(refresh).then(() => {
         clearInterval(interval);
         interval = setInterval(refresh, refreshIntervalMs);
     });

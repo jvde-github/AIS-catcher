@@ -9,28 +9,48 @@
 	</div>
 	<div class="graphtab" data-on-contextmenu="plotsContextMenu">
 		<div class="graph-panel compare-panel">
-			<header>Messages per Minute — A vs B</header>
-			<div id="chart-compare-minutes"></div>
+			<header>Messages — A vs B</header>
+			<div class="plot-bar">
+				<div class="plot-seg">
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-compare-messages" data-period="minute">Minute</button>
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-compare-messages" data-period="hour">Hour</button>
+				</div>
+			</div>
+			<div id="chart-compare-messages"></div>
 		</div>
 		<div class="graph-panel compare-panel">
-			<header>Messages per Hour — A vs B</header>
-			<div id="chart-compare-hours"></div>
+			<header>Message Gain — B vs A</header>
+			<div class="plot-bar">
+				<div class="plot-seg">
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-compare-gain" data-period="minute">Minute</button>
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-compare-gain" data-period="hour">Hour</button>
+				</div>
+			</div>
+			<div id="chart-compare-gain"></div>
 		</div>
 		<div class="graph-panel compare-panel">
-			<header>Message Gain per Minute — B vs A</header>
-			<div id="chart-compare-gain-minute"></div>
+			<header>Vessels — A vs B</header>
+			<div class="plot-bar">
+				<div class="plot-seg">
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-compare-vessels" data-period="minute">Minute</button>
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-compare-vessels" data-period="hour">Hour</button>
+				</div>
+			</div>
+			<div id="chart-compare-vessels"></div>
 		</div>
-		<div class="graph-panel compare-panel">
-			<header>Message Gain per Hour — B vs A</header>
-			<div id="chart-compare-gain-hour"></div>
-		</div>
-		<div class="graph-panel compare-panel">
-			<header>Vessels per Minute — A vs B</header>
-			<div id="chart-compare-vessels-minute"></div>
-		</div>
-		<div class="graph-panel compare-panel">
-			<header>Vessels per Hour — A vs B</header>
-			<div id="chart-compare-vessels-hour"></div>
+		<div class="graph-panel polar-none">
+			<header>Busy Hours</header>
+			<div class="plot-bar">
+				<div class="plot-seg">
+					<button type="button" data-action="setBusyMeasure" data-measure="messages">Messages</button>
+					<button type="button" data-action="setBusyMeasure" data-measure="vessels">Vessels</button>
+					<button type="button" data-action="setBusyMeasure" data-measure="signal">Signal</button>
+					<button type="button" data-action="setBusyMeasure" data-measure="noise">Noise floor</button>
+					<button type="button" data-action="setBusyMeasure" data-measure="load">Load</button>
+				</div>
+			</div>
+			<div class="busy-grid" id="chart-busy"></div>
+			<div class="polar-sub"></div>
 		</div>
 		<div class="graph-panel range-panel polar-panel polar-none">
 			<header>Coverage</header>
@@ -53,56 +73,72 @@
 			<div class="polar-legend"></div>
 		</div>
 		<div class="graph-panel">
-			<header>Messages per Second</header>
-			<div id="chart-seconds"></div>
+			<header>Messages</header>
+			<div class="plot-bar">
+				<div class="plot-seg">
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-messages" data-period="second">Second</button>
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-messages" data-period="minute">Minute</button>
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-messages" data-period="hour">Hour</button>
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-messages" data-period="day">Day</button>
+				</div>
+			</div>
+			<div id="chart-messages"></div>
 		</div>
 		<div class="graph-panel">
-			<header>Messages per Minute</header>
-			<div id="chart-minutes"></div>
+			<header>Vessels</header>
+			<div class="plot-bar">
+				<div class="plot-seg">
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-vessels" data-period="minute">Minute</button>
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-vessels" data-period="hour">Hour</button>
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-vessels" data-period="day">Day</button>
+				</div>
+			</div>
+			<div id="chart-vessels"></div>
 		</div>
 		<div class="graph-panel">
-			<header>Messages per Hour</header>
-			<div id="chart-hours"></div>
-		</div>
-		<div class="graph-panel">
-			<header>Messages per Day</header>
-			<div id="chart-days"></div>
-		</div>
-		<div class="graph-panel">
-			<header>Vessels per Minute</header>
-			<div id="chart-vessels-minute"></div>
-		</div>
-		<div class="graph-panel">
-			<header>Vessels per Hour</header>
-			<div id="chart-vessels-hour"></div>
-		</div>
-		<div class="graph-panel">
-			<header>Vessels per Day</header>
-			<div id="chart-vessels-day"></div>
-		</div>
-		<div class="graph-panel">
-			<header>Frequency Shift (avg PPM per minute)</header>
-			<div id="chart-ppm-minute"></div>
-		</div>
-		<div class="graph-panel">
-			<header>Frequency Shift (avg PPM per hour)</header>
+			<header>Frequency Shift (avg PPM)</header>
+			<div class="plot-bar">
+				<div class="plot-seg">
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-ppm" data-period="minute">Minute</button>
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-ppm" data-period="hour">Hour</button>
+				</div>
+			</div>
 			<div id="chart-ppm"></div>
 		</div>
 		<div class="graph-panel">
-			<header>Signal Level (Min/Max dB per minute)</header>
+			<header>Signal Level (Min/Max dB)</header>
+			<div class="plot-bar">
+				<div class="plot-seg">
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-level" data-period="minute">Minute</button>
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-level" data-period="hour">Hour</button>
+				</div>
+			</div>
 			<div id="chart-level"></div>
 		</div>
-		<div class="graph-panel">
-			<header>Signal Level (Min/Max dB per hour)</header>
-			<div id="chart-level-hour"></div>
+		<div class="graph-panel polar-none">
+			<header>Channel Load (%)</header>
+			<div class="plot-bar">
+				<div class="plot-seg">
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-load" data-period="minute">Minute</button>
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-load" data-period="hour">Hour</button>
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-load" data-period="day">Day</button>
+				</div>
+				<div class="plot-seg">
+					<button type="button" data-action="setLoadMeasure" data-measure="load">Load</button>
+					<button type="button" data-action="setLoadMeasure" data-measure="clipping">Clipping</button>
+				</div>
+			</div>
+			<div id="chart-load"></div>
 		</div>
 		<div class="graph-panel range-panel">
-			<header>Distance (Max <span class="distunit">NMi</span> per Hour)</header>
-			<div id="chart-distance-hour"></div>
-		</div>
-		<div class="graph-panel range-panel">
-			<header>Distance (Max <span class="distunit">NMi</span> per Day)</header>
-			<div id="chart-distance-day"></div>
+			<header>Distance (Max <span class="distunit">NMi</span>)</header>
+			<div class="plot-bar">
+				<div class="plot-seg">
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-distance" data-period="hour">Hour</button>
+					<button type="button" data-action="setPlotPeriod" data-chart="chart-distance" data-period="day">Day</button>
+				</div>
+			</div>
+			<div id="chart-distance"></div>
 		</div>
 		<div class="graph-panel range-panel polar-panel polar-none">
 			<header>GNSS Sky</header>

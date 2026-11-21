@@ -525,14 +525,14 @@ namespace Services
 
 		// one history of figures, a slot an object, oldest first
 		template <typename H>
-		void writeSlots(JSON::Writer &w, const char *key, H &history, bool hidden)
+		void writeSlots(JSON::Writer &w, const char *key, H &history, bool hidden, int count = 1 << 30)
 		{
 			w.key(key).beginArray();
 			history.forEachSlot([&](long int start, MessageStatistics &s, bool empty) {
 				w.beginObject().kv("time", isoTime((std::time_t)start));
 				writeFigures(w, s.values(), empty, true, hidden);
 				w.endObject();
-			});
+			}, count);
 			w.endArray();
 		}
 	}
@@ -799,8 +799,8 @@ namespace Services
 			w.key("history").beginObject();
 			writeSlots(w, "second", f.second, hidden);
 			writeSlots(w, "minute", f.minute, hidden);
-			writeSlots(w, "hour", f.hour, hidden);
-			writeSlots(w, "day", f.day, hidden);
+			writeSlots(w, "hour", f.hour, hidden, 24);
+			writeSlots(w, "day", f.day, hidden, 90);
 			w.endObject();
 			writeWeek(w, f);
 			if (hidden)

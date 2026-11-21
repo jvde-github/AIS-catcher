@@ -1,5 +1,6 @@
 
 import { chart } from './chart.js';
+import * as busy from './busy.js';
 import * as coverage from './coverage.js';
 import * as sky from './sky.js';
 import { settings } from '../../core/state.js';
@@ -20,7 +21,6 @@ const sum = (msg, types) => types.reduce((n, t) => n + msg[t], 0);
 function countSeries(r) {
     const a = (s) => sum(s.msg, [0, 1, 2, 4]), b = (s) => sum(s.msg, [17, 18, 23]), area = { fill: "stack", width: 1 };
     return [
-        line("Vessel Count", C4, points(r, (s) => s.vessels), { right: true, width: 1.5 }),
         line("Class A", C1, points(r, a), area),
         line("Class B", C2, points(r, b), area),
         line("Base Station", C5, points(r, (s) => s.msg[3]), area),
@@ -30,13 +30,32 @@ function countSeries(r) {
 
 const single = (key) => (r) => [line("Data", C4, points(r, (s) => s[key]))];
 
+const told = (r, name, label) => (r.reception || []).filter((s) => s.name === name).sort((a, b) => (a.channel < b.channel ? -1 : 1)).slice(0, 2)
+    .map((s, i) => line(label + (s.channel ? " " + s.channel : ""), [C4, C2][i], r.time.map((t, k) => ({ x: t, y: s.values[k] })), { width: 1.5 }));
+
+const has = (r, name) => (r.reception || []).some((s) => s.name === name);
+
 function levelSeries(r) {
-    const floors = (r.reception || []).filter((s) => s.name === "noise_floor").sort((a, b) => (a.channel < b.channel ? -1 : 1)).slice(0, 2);
+    const peaks = (r.reception || []).filter((s) => s.name === "peak");
     return [
         line("Max", C1, points(r, (s) => s.level_max), { width: 1 }),
         line("Min", C1, points(r, (s) => s.level_min), { width: 1, fill: "band" }),
-        ...floors.map((s, i) => line("Noise floor" + (s.channel ? " " + s.channel : ""), [C4, C2][i], r.time.map((t, k) => ({ x: t, y: s.values[k] })), { width: 1.5 })),
+        ...told(r, "noise_floor", "Noise floor"),
+        ...(peaks.length ? [line("Peak", C5, r.time.map((t, k) => ({ x: t, y: Math.max(...peaks.map((s) => s.values[k] ?? -Infinity)) })), { width: 1 })] : []),
     ];
+}
+
+let measure = "load";
+
+function loadSeries(r) {
+    const clipping = has(r, "clipping"), m = clipping ? measure : "load";
+    const panel = document.getElementById("chart-load").closest(".graph-panel");
+    panel.querySelector("header").textContent = m === "clipping" ? "Clipping (%)" : "Channel Load (%)";
+    panel.querySelectorAll("[data-measure]").forEach((b) => {
+        b.hidden = b.dataset.measure === "clipping" && !clipping;
+        b.classList.toggle("active", b.dataset.measure === m);
+    });
+    return m === "clipping" ? told(r, "clipping", "Clipping") : told(r, "channel_load", "Channel");
 }
 
 function distanceSeries(r) {
@@ -49,33 +68,25 @@ function distanceSeries(r) {
     ];
 }
 
-const count = { legend: true, average: true, zero: true, yTitle: "Message Count", y2Title: "Vessel Count", xTitle: "Time" };
+const count = { legend: true, average: true, zero: true, yTitle: "Message Count", xTitle: "Time" };
 const one = { average: true, zero: true };
+const bars = { average: true, zero: true, bars: true, yTitle: "Vessel Count", xTitle: "Time" };
 const far = { legend: true, log: true };
+const share = { legend: true, zero: true };
 
 const OVERVIEW = {
-    "chart-seconds": [count, "second", countSeries],
-    "chart-minutes": [count, "minute", countSeries],
-    "chart-hours": [count, "hour", countSeries],
-    "chart-days": [count, "day", countSeries],
-    "chart-vessels-minute": [one, "minute", single("vessels")],
-    "chart-vessels-hour": [one, "hour", single("vessels")],
-    "chart-vessels-day": [one, "day", single("vessels")],
-    "chart-ppm-minute": [one, "minute", single("ppm")],
-    "chart-ppm": [one, "hour", single("ppm")],
+    "chart-messages": [count, "minute", countSeries],
+    "chart-vessels": [bars, "minute", single("vessels")],
+    "chart-ppm": [one, "minute", single("ppm")],
     "chart-level": [{}, "minute", levelSeries],
-    "chart-level-hour": [{}, "hour", levelSeries],
-    "chart-distance-hour": [far, "hour", distanceSeries],
-    "chart-distance-day": [far, "day", distanceSeries],
+    "chart-load": [share, "minute", loadSeries, (r) => has(r, "channel_load") || has(r, "clipping")],
+    "chart-distance": [far, "hour", distanceSeries],
 };
 
 const COMPARE = {
-    "chart-compare-minutes": ["minute", "count", "Message Count"],
-    "chart-compare-hours": ["hour", "count", "Message Count"],
-    "chart-compare-vessels-minute": ["minute", "vessels", "Vessel Count"],
-    "chart-compare-vessels-hour": ["hour", "vessels", "Vessel Count"],
-    "chart-compare-gain-minute": ["minute"],
-    "chart-compare-gain-hour": ["hour"],
+    "chart-compare-messages": ["count", "Message Count"],
+    "chart-compare-gain": [null, "More messages than A (%)"],
+    "chart-compare-vessels": ["vessels", "Vessel Count"],
 };
 
 const charts = {};
@@ -189,31 +200,53 @@ function wording(ring) {
 
 const EMPTY = { time: [], stat: [] };
 
-function drawCompare(a, b, srcA, srcB) {
-    for (const [id, [f, key]] of Object.entries(COMPARE)) {
-        const A = a[f] || EMPTY, B = b[f] || EMPTY, shift = a[f] && b[f] && A.interval ? Math.round((B.now - A.now) / A.interval) : 0;
-        const other = points(B, (s) => s[key || "count"]).map((p) => ({ x: p.x + shift, y: p.y }));
-        if (key) {
-            charts[id].draw({ series: [line(seriesName(srcA), C4, points(A, (s) => s[key])), line(seriesName(srcB), C1, other)], ...wording(A) });
-            continue;
-        }
-        const theirs = new Map(other.map((p) => [p.x, p.y])), shared = points(A, (s) => s.count).filter((p) => p.y > 0 && theirs.has(p.x));
-        const totalA = shared.reduce((n, p) => n + p.y, 0), totalB = shared.reduce((n, p) => n + theirs.get(p.x), 0);
-        const gain = totalA > 0 ? (100 * (totalB - totalA)) / totalA : 0;
-        charts[id].draw({
-            series: [line(seriesName(srcB) + " vs " + seriesName(srcA), C1, shared.map((p) => ({ x: p.x, y: (100 * (theirs.get(p.x) - p.y)) / p.y })))],
-            mark: shared.length ? { value: gain, text: (gain >= 0 ? "+" : "") + gain.toFixed(1) + "%" } : null,
-            ...wording(A),
-        });
+const period = {};
+for (const [id, [, ring]] of Object.entries(OVERVIEW)) period[id] = ring;
+for (const id of Object.keys(COMPARE)) period[id] = "minute";
+let shown = null, compared = null;
+
+function drawComparePanel(id, [a, b, srcA, srcB]) {
+    const [key] = COMPARE[id], f = period[id];
+    const A = a[f] || EMPTY, B = b[f] || EMPTY, shift = a[f] && b[f] && A.interval ? Math.round((B.now - A.now) / A.interval) : 0;
+    const other = points(B, (s) => s[key || "count"]).map((p) => ({ x: p.x + shift, y: p.y }));
+    if (key) {
+        charts[id].draw({ series: [line(seriesName(srcA), C4, points(A, (s) => s[key])), line(seriesName(srcB), C1, other)], ...wording(A) });
+        return;
     }
+    const theirs = new Map(other.map((p) => [p.x, p.y])), shared = points(A, (s) => s.count).filter((p) => p.y > 0 && theirs.has(p.x));
+    const totalA = shared.reduce((n, p) => n + p.y, 0), totalB = shared.reduce((n, p) => n + theirs.get(p.x), 0);
+    const gain = totalA > 0 ? (100 * (totalB - totalA)) / totalA : 0;
+    charts[id].draw({
+        series: [line(seriesName(srcB) + " vs " + seriesName(srcA), C1, shared.map((p) => ({ x: p.x, y: (100 * (theirs.get(p.x) - p.y)) / p.y })))],
+        mark: shared.length ? { value: gain, text: (gain >= 0 ? "+" : "") + gain.toFixed(1) + "%" } : null,
+        ...wording(A),
+    });
+}
+
+function drawCompare(...args) {
+    compared = args;
+    for (const id of Object.keys(COMPARE)) drawComparePanel(id, args);
+}
+
+function drawPanel(id, h) {
+    const [, , series, shows] = OVERVIEW[id], f = period[id];
+    if (!h[f] || (h.range_hidden && series === distanceSeries)) return;
+    const list = series(h[f]);
+    if (shows) document.getElementById(id).closest(".graph-panel").classList.toggle("polar-none", !shows(h[f]));
+    if (list) charts[id].draw({ series: list, legend: series === levelSeries ? list.length > 2 : undefined, ...wording(h[f]) });
+}
+
+function setPeriod(id, f) {
+    period[id] = f;
+    document.getElementById(id).closest(".graph-panel").querySelectorAll("[data-period]").forEach((b) => b.classList.toggle("active", b.dataset.period === f));
+    if (COMPARE[id] && compared) drawComparePanel(id, compared);
+    else if (OVERVIEW[id] && shown) drawPanel(id, shown);
 }
 
 function drawOverview(h) {
-    for (const [id, [, f, series]] of Object.entries(OVERVIEW)) {
-        if (!h[f] || (h.range_hidden && series === distanceSeries)) continue;
-        const list = series(h[f]);
-        if (list) charts[id].draw({ series: list, legend: series === levelSeries ? list.length > 2 : undefined, ...wording(h[f]) });
-    }
+    shown = h;
+    for (const id of Object.keys(OVERVIEW)) drawPanel(id, h);
+    busy.update(h);
     if (h.range_hidden) return;
     coverage.update(h);
     sky.update(h);
@@ -223,8 +256,9 @@ function init() {
     if (Object.keys(charts).length) return;
     const host = (id) => document.getElementById(id);
     for (const [id, [options]] of Object.entries(OVERVIEW)) charts[id] = chart(host(id), options);
-    for (const [id, [, key, yTitle]] of Object.entries(COMPARE))
-        charts[id] = chart(host(id), key ? { legend: true, zero: true, yTitle, xTitle: "Time" } : { legend: true, zero: true, bars: true, yTitle: "More messages than A (%)", xTitle: "Time" });
+    for (const [id, [key, yTitle]] of Object.entries(COMPARE)) charts[id] = chart(host(id), { legend: true, zero: true, bars: !key, yTitle, xTitle: "Time" });
+    for (const [id, f] of Object.entries(period)) setPeriod(id, f);
+    busy.init();
     coverage.init();
     sky.init();
 }
@@ -261,6 +295,12 @@ export function updateColors() {
 
 register({
     setPlotsMode: (e, d) => setMode(d.mode),
+    setPlotPeriod: (e, d) => setPeriod(d.chart, d.period),
+    setLoadMeasure: (e, d) => {
+        measure = d.measure;
+        if (shown) drawPanel("chart-load", shown);
+    },
+    setBusyMeasure: (e, d) => busy.setMeasure(d.measure),
     setCoveragePeriod: (e, d) => coverage.setPeriod(d.period),
     setCoverageMeasure: (e, d) => coverage.setMeasure(d.measure),
 });

@@ -291,7 +291,7 @@ void MqttState::publishState(std::time_t now, bool always)
 		fig.hour.forEachSlot([&](long int, MessageStatistics &st, bool empty) {
 			if (!empty)
 				day = MAX(day, st.maxDistance());
-		});
+		}, 24);
 		record = MAX(0.0f, fig.total.maxDistance());
 	};
 	tracker.withAll([&](Figures &fig) { ranges(fig, range_24h, range_record); });

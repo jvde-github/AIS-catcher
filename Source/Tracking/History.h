@@ -141,55 +141,51 @@ public:
 	{
 		std::lock_guard<std::mutex> l{this->mtx};
 
-		int magic = 0x4f80b;
-		int version = 1;
-		int i = INTERVAL;
-		int n = N;
-		int s = sizeof(history);
+		const int k = (end - start + N) % N + 1;
+		const int header[] = {0x4f80b, 1, (int)sizeof(history), INTERVAL, k, 0, k - 1};
+		file.write((const char *)header, sizeof(header));
 
-		file.write((const char *)&magic, sizeof(int));
-		file.write((const char *)&version, sizeof(int));
-		file.write((const char *)&s, sizeof(int));
-		file.write((const char *)&i, sizeof(int));
-		file.write((const char *)&n, sizeof(int));
-		file.write((const char *)&start, sizeof(int));
-		file.write((const char *)&end, sizeof(int));
-
-		for (int i = 0; i < N; i++)
+		for (int j = 0; j < k; j++)
 		{
-			file.write((const char *)&history[i].time, sizeof(history[i].time));
-			history[i].stat.Save(file);
+			const int idx = (start + j) % N;
+			file.write((const char *)&history[idx].time, sizeof(history[idx].time));
+			history[idx].stat.Save(file);
 		}
 
-		return true;
+		return (bool)file;
 	}
 
 	bool Load(std::ifstream &file)
 	{
 		std::lock_guard<std::mutex> l{this->mtx};
 
-		int tmp;
+		int tmp, n, start_in, end_in;
 
-		if (!(readInteger(file, tmp, 0x4f80b) && readInteger(file, tmp, 1) && readInteger(file, tmp, /*sizeof(history)*/ -1) && readInteger(file, tmp, INTERVAL) && readInteger(file, tmp, N)))
+		if (!(readInteger(file, tmp, 0x4f80b) && readInteger(file, tmp, 1) && readInteger(file, tmp) && readInteger(file, tmp, INTERVAL) && readInteger(file, n)) || n < 1 || n > 100000)
 			return false;
 
-		int start_in, end_in;
 		readInteger(file, start_in, -1);
 		readInteger(file, end_in, -1);
 
-		if (start_in < 0 || start_in >= N || end_in < 0 || end_in >= N)
+		if (start_in < 0 || start_in >= n || end_in < 0 || end_in >= n)
 			return false;
 
-		start = start_in;
-		end = end_in;
-
-		for (int i = 0; i < N; i++)
+		const int count = (end_in - start_in + n) % n + 1, k = MIN(count, N);
+		MessageStatistics skipped;
+		long int skipped_time;
+		for (int i = 0; i < n; i++)
 		{
-			if (!file.read((char *)&history[i].time, sizeof(history[i].time)))
+			const int p = (i - start_in + n) % n - (count - k);
+			const bool kept = p >= 0 && p < k;
+			if (!file.read((char *)(kept ? &history[p].time : &skipped_time), sizeof(skipped_time)) || !(kept ? history[p].stat : skipped).Load(file))
+			{
+				start = end = 0;
+				create((long int)time(nullptr) / (long int)INTERVAL);
 				return false;
-			if (!history[i].stat.Load(file))
-				return false;
+			}
 		}
+		start = 0;
+		end = k - 1;
 
 		// as database is not persistent we cannot combine old and new
 		history[end].stat.clearVessels();
@@ -233,14 +229,14 @@ public:
 	// Each slot from the oldest kept to the current one, oldest first, as
 	// f(its start in seconds since 1970, its figures, whether nothing was heard in it)
 	template <typename F>
-	void forEachSlot(F f)
+	void forEachSlot(F f, int count = N)
 	{
 		std::lock_guard<std::mutex> l{this->mtx};
 
 		long int tm_now = ((long int)time(nullptr)) / (long int)INTERVAL;
 		std::vector<std::pair<long int, int>> slots;
 		long int tm = tm_now;
-		for (int i = N, idx = end; i > 0; i--, tm--)
+		for (int i = MIN(count, N), idx = end; i > 0; i--, tm--)
 		{
 			const bool empty = history[idx].time < tm;
 			slots.push_back(std::make_pair(tm, empty ? -1 : idx));

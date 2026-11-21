@@ -141,8 +141,8 @@ struct Figures : public StreamIn<JSON::JSON>
 	Counter total, session;
 	History<60, 1> second;
 	History<60, 60> minute;
-	History<24, 3600> hour;
-	History<90, 86400> day;
+	History<168, 3600> hour;
+	History<365, 86400> day;
 
 	// The week by the UTC hour, Monday first: the vessels heard in each hour of
 	// each weekday added up, and the hours a message came in, so that the one
@@ -203,10 +203,10 @@ struct Figures : public StreamIn<JSON::JSON>
 	{
 		total.Clear();
 		session.Clear();
-		std::vector<History<60, 1> *> seconds;
-		std::vector<History<60, 60> *> minutes;
-		std::vector<History<24, 3600> *> hours;
-		std::vector<History<90, 86400> *> days;
+		std::vector<decltype(second) *> seconds;
+		std::vector<decltype(minute) *> minutes;
+		std::vector<decltype(hour) *> hours;
+		std::vector<decltype(day) *> days;
 		for (Figures *f : parts)
 		{
 			total.add(f->total);
@@ -282,7 +282,7 @@ struct Figures : public StreamIn<JSON::JSON>
 		if ((coverage && !coverage->load(f)) || (version >= 3 && !f.read(&told, 1)))
 			return false;
 		reception.reset(told ? new MetricHistory() : nullptr);
-		return !reception || reception->load(f);
+		return !reception || reception->load(f, version >= 4);
 	}
 
 	// The days of exceptional range, oldest first, today's when it is one: the
@@ -322,7 +322,7 @@ struct Figures : public StreamIn<JSON::JSON>
 	}
 
 private:
-	static const int PROFILE_VERSION = 3;
+	static const int PROFILE_VERSION = 4;
 	int range_cutoff = LONG_RANGE_CUTOFF_DEFAULT;
 	long int last_minute = 0, last_hour = 0;
 

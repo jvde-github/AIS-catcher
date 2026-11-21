@@ -64,7 +64,7 @@ public:
 			it->key = m.key;
 		}
 		it->value = m.value;
-		it->window = std::max(0, std::min(m.window, 86400));
+		it->window = m.window < 0 ? 0 : m.window > 86400 ? 86400 : m.window;
 		it->unit.clear();
 		for (const char *c = level ? m.unit : nullptr; c && *c && it->unit.size() < 8; c++)
 			if ((*c >= 'a' && *c <= 'z') || (*c >= 'A' && *c <= 'Z') || *c == '%')
@@ -95,7 +95,7 @@ struct MetricHistory
 	static const int SPANS = 3;
 	static int places(int span)
 	{
-		static const int n[SPANS] = {60, 24, 90};
+		static const int n[SPANS] = {60, 168, 365};
 		return n[span];
 	}
 	static long int interval(int span)
@@ -103,7 +103,7 @@ struct MetricHistory
 		static const long int seconds[SPANS] = {60, 3600, 86400};
 		return seconds[span];
 	}
-	static bool kept(int key) { return key == AIS::KEY_NOISE_FLOOR || key == AIS::KEY_CHANNEL_LOAD || key == AIS::KEY_CLIPPING; }
+	static bool kept(int key) { return key == AIS::KEY_NOISE_FLOOR || key == AIS::KEY_CHANNEL_LOAD || key == AIS::KEY_PEAK || key == AIS::KEY_CLIPPING; }
 
 	struct Place
 	{
@@ -175,7 +175,7 @@ struct MetricHistory
 		}
 		return ok;
 	}
-	bool load(std::ifstream &f)
+	bool load(std::ifstream &f, bool current)
 	{
 		uint8_t count = 0;
 		if (!f.read((char *)&count, 1) || count > MAX_SERIES)
@@ -188,11 +188,16 @@ struct MetricHistory
 			if (!f.read(name, sizeof(name)) || !f.read(&s.channel, 1) || !f.read(s.unit, sizeof(s.unit)))
 				return false;
 			name[sizeof(name) - 1] = s.unit[sizeof(s.unit) - 1] = 0;
+			static const int before[SPANS] = {60, 24, 90};
 			for (int i = 0; i < SPANS; i++)
 			{
-				s.span[i].resize(places(i));
-				if (!f.read((char *)s.span[i].data(), places(i) * sizeof(Place)))
+				std::vector<Place> in(current ? places(i) : before[i]);
+				if (!f.read((char *)in.data(), in.size() * sizeof(Place)))
 					return false;
+				s.span[i].assign(places(i), Place());
+				for (const Place &p : in)
+					if (p.n && p.slot > s.span[i][(uint32_t)p.slot % places(i)].slot)
+						s.span[i][(uint32_t)p.slot % places(i)] = p;
 			}
 			for (int key = 0; key < AIS::KEY_COUNT; key++)
 				if (kept(key) && std::strcmp(name, AIS::KeyMap[key][JSON_DICT_FULL].p) == 0)
