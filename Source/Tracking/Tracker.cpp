@@ -292,7 +292,7 @@ void Tracker::setStations(const StationRegistry &registry)
 		for (const auto &s : registry.ordered())
 			listed.insert(s.id);
 		for (auto it = station_figures.begin(); it != station_figures.end();)
-			if (listed.count(it->first))
+			if (listed.empty() || listed.count(it->first))
 				++it;
 			else
 				it = station_figures.erase(it);
