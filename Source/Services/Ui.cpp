@@ -435,17 +435,6 @@ namespace Services
 			const bool drawn = drawnStation(std::vector<int>(), at);
 			response = Response::json(UiFormat::ships(db, p == "/api/ships_full.json", drawn ? &at : nullptr, keep, &shown));
 		}
-		else if (p == "/api/output_stats.json")
-		{
-			std::string out;
-			JSON::Writer w(out);
-			w.beginObject().kv("tcp_clients", clients ? clients() : 0).key("outputs").beginArray();
-			if (!spec.exposed())
-				writeOutputs(w, facts());
-			w.endArray().endObject();
-			w.finish();
-			response = Response::json(out);
-		}
 		else if (p == "/api/planes.json")
 			response = Response::json(spec.stations.empty() ? UiFormat::planes(tracker.planes(), &shown) : noPlanes("planes"));
 		else if (p == "/api/places.json")
@@ -597,23 +586,20 @@ namespace Services
 			};
 			each("product", &DeviceFacts::product);
 			each("vendor", &DeviceFacts::vendor);
-			if (!spec.exposed())
-				each("serial", &DeviceFacts::serial);
+			each("serial", &DeviceFacts::serial);
 			each("model", &DeviceFacts::model);
 			each("sample_rate", &DeviceFacts::sample_rate);
 			each("device_label", &DeviceFacts::label);
-			w.kv("received", (unsigned long long)f.received).kv("run_time", std::to_string((long long)(std::time(nullptr) - f.born)));
-			if (!spec.exposed())
-				w.kv("os", Util::Helper::getOS()).kv("hardware", Util::Helper::getHardware()).kv("processor", Util::Helper::getProcessor());
+			w.kv("received", (unsigned long long)f.received).kv("run_time", std::to_string((long long)(std::time(nullptr) - f.born)))
+				.kv("os", Util::Helper::getOS()).kv("hardware", Util::Helper::getHardware()).kv("processor", Util::Helper::getProcessor());
 		}
 		w.key("outputs").beginArray();
-		if (!spec.exposed())
-			writeOutputs(w, f);
+		writeOutputs(w, f);
 		w.endArray();
 		w.kv("sharing_link", "https://www.aiscatcher.org/livemap").kv("station", title()).kv("station_link", options.station_link)
 			.kv("vessel_count", keep ? vessels : db.getCount()).kv("vessel_max", db.getMaxCount())
 			.kv("build_date", __DATE__).kv("build_version", VERSION).kv("build_describe", VERSION_DESCRIBE)
-			.kv("memory", spec.exposed() ? 0ULL : (unsigned long long)Util::Helper::getMemoryConsumption())
+			.kv("memory", (unsigned long long)Util::Helper::getMemoryConsumption())
 			.kv("track_time", view.track_time > 0 && (tracking.track_time <= 0 || view.track_time < tracking.track_time) ? view.track_time : tracking.track_time)
 			.kv("track_memory", tracking.track_memory > 0 ? tracking.track_memory : (tracking.server_mode ? 4096 : 1024));
 		w.endObject();

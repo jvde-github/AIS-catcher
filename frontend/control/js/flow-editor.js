@@ -13,7 +13,7 @@ import { stationName } from './stations.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const CONTAINER = 'flow-zones';
-export const OUTPUT_STATS = '/viewer/api/output_stats.json';
+export const VIEWER_STAT = '/viewer/api/stat.json';
 const STATS_MS = 5000;
 const STAT_TYPES = {};
 OUTPUT_TYPES.forEach(o => (o.stats || []).forEach(t => { STAT_TYPES[t] = o.value; }));
@@ -330,7 +330,7 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
             outputs.forEach(o => { putStats(o.stats, []); paintOutput(o); });
             return;
         }
-        api(OUTPUT_STATS)
+        api(VIEWER_STAT)
             .then(stat => {
                 const byKey = statsByKey(stat, outputs);
                 outputs.forEach(o => {

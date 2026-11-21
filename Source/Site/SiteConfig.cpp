@@ -338,7 +338,7 @@ namespace
 			throw ConfigError(where + " is both public and keyed: choose one. \"public\" is for anyone who reaches it; \"keys\" for the readers it names.");
 		if (!spec.local() && spec.keys.empty() && !spec.open && (spec.api || spec.mcp || spec.system))
 			throw ConfigError(where + " listens beyond this machine: give it \"keys\", say \"public\": true for data anyone may read, or bind it to 127.0.0.1.");
-		if (spec.system && spec.exposed())
+		if (spec.system && spec.open && !spec.local())
 			throw ConfigError(where + " is public on the network: \"system\" is never public there; give it \"keys\" instead, or switch \"system\" off.");
 		// the viewer's log, which may name hosts and paths, is a key's on a server with keys
 		if (spec.ui && spec.viewer.log && spec.keys.empty() && !spec.local())

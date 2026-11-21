@@ -226,29 +226,7 @@ namespace Util
 #elif __APPLE__
 		return "MacOS";
 #elif __linux__
-		std::string os;
-
-		std::ifstream inFile("/etc/os-release");
-		std::string line;
-		while (std::getline(inFile, line))
-		{
-			if (line.substr(0, 11) == "PRETTY_NAME")
-			{
-				std::size_t start = line.find('"') + 1;
-				std::size_t end = line.rfind('"');
-				if (start != std::string::npos && end != std::string::npos)
-				{
-					os = line.substr(start, end - start);
-					break;
-				}
-			}
-		}
-
-		if (os.empty())
-		{
-			os = "Linux";
-		}
-		return os;
+		return "Linux";
 #else
 		return "";
 #endif
@@ -261,18 +239,6 @@ namespace Util
 		static const std::string hardware = detectHardware();
 		return hardware;
 	}
-
-#ifdef __linux__
-	static std::string cpuinfo(const std::string &key)
-	{
-		std::string line, value;
-		std::ifstream inFile("/proc/cpuinfo");
-		while (std::getline(inFile, line))
-			if (line.compare(0, key.size(), key) == 0 && line.find(": ") != std::string::npos)
-				value = line.substr(line.find(": ") + 2);
-		return value;
-	}
-#endif
 
 	static std::string detectProcessor()
 	{
@@ -289,21 +255,6 @@ namespace Util
 		struct utsname u;
 		if (uname(&u) == 0)
 			s = u.machine;
-#endif
-#ifdef __linux__
-		static const struct
-		{
-			const char *part;
-			const char *name;
-		} ARM_PARTS[] = {{"0xb76", "ARM1176"}, {"0xc07", "Cortex-A7"}, {"0xd03", "Cortex-A53"}, {"0xd08", "Cortex-A72"}, {"0xd0b", "Cortex-A76"}};
-
-		std::string cpu = cpuinfo("model name");
-		const std::string part = cpuinfo("CPU part");
-		for (const auto &p : ARM_PARTS)
-			if (part == p.part)
-				cpu = p.name;
-		if (!cpu.empty())
-			s += " " + cpu;
 #endif
 		return s + (s.empty() ? "" : ", ") + std::to_string(sizeof(void *) * 8) + "-bit build";
 	}
@@ -417,26 +368,6 @@ namespace Util
 					return m.family;
 			return model;
 		}
-
-		// DMI information (x86/x64 systems and some ARM systems)
-		{
-			std::string product, vendor;
-			std::ifstream dmiProduct("/sys/class/dmi/id/product_name");
-			if (std::getline(dmiProduct, product) && !product.empty() &&
-				product != "To be filled by O.E.M." && product != "System Product Name")
-			{
-				std::ifstream dmiVendor("/sys/class/dmi/id/sys_vendor");
-				if (std::getline(dmiVendor, vendor) && !vendor.empty() &&
-					vendor != "To be filled by O.E.M." && vendor != "System manufacturer")
-					return vendor + " " + product;
-				return product;
-			}
-		}
-
-		// cpuinfo model name as a best-effort fallback, last entry wins
-		const std::string model_name = cpuinfo("model name");
-		if (!model_name.empty())
-			return model_name;
 
 		return "Linux System";
 #endif
