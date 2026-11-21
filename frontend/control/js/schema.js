@@ -645,7 +645,8 @@ export const receiverSchema = {
             { value: "auto", label: "Auto" },
             { value: "v1_base", label: "AIS Engine v1 Base" },
             { value: "v1_high", label: "AIS Engine v1 High" },
-            { value: "v2_base", label: "AIS Engine v2 Base" }
+            { value: "v2_base", label: "AIS Engine v2 Base" },
+            { value: "v2_high", label: "AIS Engine v2 High" }
         ],
         tooltip: "A second engine doubles CPU",
         settings: [
@@ -653,16 +654,8 @@ export const receiverSchema = {
                 name: "fp_ds",
                 label: "Fixed-point downsampling",
                 type: "toggle",
-                types: ["v1_base", "v1_high", "v2_base"],
+                types: ["v1_base", "v1_high", "v2_base", "v2_high"],
                 tooltip: "Less CPU on small devices"
-            },
-            {
-                name: "sensitivity_high",
-                label: "High sensitivity",
-                type: "toggle",
-                defaultValue: true,
-                types: ["auto", "v2_base"],
-                tooltip: "More aggressive decoding (slightly more false decodes)"
             }
         ]
     },

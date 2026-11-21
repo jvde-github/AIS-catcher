@@ -62,7 +62,7 @@ void printUsage()
 	Info() << "\t[-H [optional: url] - send messages via HTTP, for options see documentation]";
 	Info() << "\t[-i [interface] - read NMEA2000 data from socketCAN interface - Linux only]";
 	Info() << "\t[-I [interface] - push messages as NMEA2000 data to a socketCAN interface - Linux only]";
-	Info() << "\t[-m xx - run specific decoding model (default: 11, engine v2; 2 is engine v1), see README for more details]";
+	Info() << "\t[-m xx - run specific decoding model (default: 12, engine v2 high; 11 is engine v2 base, 2 is engine v1), see README for more details]";
 	Info() << "\t[-M xxx - set additional meta data to generate: T = NMEA timestamp, D = decoder related (signal power, ppm) (default: none)]";
 	Info() << "\t[-n show NMEA messages on screen without detail (-o 1)]";
 	Info() << "\t[-N [optional: port][optional settings] - a web server at port: the map, and api, mcp, system, geojson, kml or metrics switched on; with a message filter it keeps ships of its own; TLS_CERT file TLS_KEY file for HTTPS; KEYS name:scopes:sha256[:limit],... for access by key (scopes data or data+system, limit requests a minute); see README for details]";
@@ -114,7 +114,7 @@ void printUsage()
 	Info() << "";
 	Info() << "\tModel specific settings:";
 	Info() << "";
-	Info() << "\t[-go Model: AFC_WIDE [on/off] FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SRC [on/off] DD_TRAIN [weight] DD_WEIGHT [weight] SENSITIVITY_HIGH [on/off] ]";
+	Info() << "\t[-go Model: AFC_WIDE [on/off] FP_DS [on/off] PS_EMA [on/off] SOXR [on/off] SRC [on/off] DD_TRAIN [weight] DD_WEIGHT [weight] ]";
 }
 
 void printBuildConfiguration()

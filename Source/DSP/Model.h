@@ -68,7 +68,8 @@ namespace AIS
 		MODEL_BEAST = 8,
 		MODEL_RAW1090 = 10,
 		MODEL_V2_BASE = 11,
-		MODEL_MAX = 11
+		MODEL_V2_HIGH = 12,
+		MODEL_MAX = 12
 	};
 
 	// Abstract demodulation model
@@ -300,12 +301,12 @@ namespace AIS
 	class ModelEngineV2 : public ModelFrontend
 	{
 	public:
-		ModelEngineV2() { setName("AIS engine v2 base"); }
+		explicit ModelEngineV2(bool high) : high(high) { setName(high ? "AIS engine v2 high" : "AIS engine v2 base"); }
 
 	private:
 		V2::Engine V2_a, V2_b;
 		float dd_train = 0.75f, dd_weight = 0.86f;
-		bool sensitivity_high = true;
+		const bool high;
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);

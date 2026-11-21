@@ -190,7 +190,7 @@ int Receiver::defaultModel()
 	case Format::RAW1090:
 		return AIS::MODEL_RAW1090;
 	default:
-		return AIS::MODEL_V2_BASE;
+		return AIS::MODEL_V2_HIGH;
 	}
 }
 
@@ -221,7 +221,9 @@ AIS::Model *Receiver::makeModel(int m)
 	case 10:
 		return new AIS::ModelRAW1090();
 	case 11:
-		return new AIS::ModelEngineV2();
+		return new AIS::ModelEngineV2(false);
+	case 12:
+		return new AIS::ModelEngineV2(true);
 	default:
 		throw std::runtime_error("Model not implemented in this version. Check in later.");
 	}

@@ -46,10 +46,12 @@ namespace
 			return AIS::MODEL_V1_HIGH;
 		if (t == "V2_BASE")
 			return AIS::MODEL_V2_BASE;
+		if (t == "V2_HIGH")
+			return AIS::MODEL_V2_HIGH;
 		if (t.find_first_not_of("0123456789") == std::string::npos)
 			return Util::Parse::Integer(t, 0, AIS::MODEL_MAX);
 
-		throw std::runtime_error("engine type must be auto, v1_base, v1_high, v2_base or a model number");
+		throw std::runtime_error("engine type must be auto, v1_base, v1_high, v2_base, v2_high or a model number");
 	}
 
 	// skip: a key the caller already consumed; told: the settings in the order given
@@ -271,6 +273,8 @@ std::string Config::modelName(int model)
 		return "v1_high";
 	case AIS::MODEL_V2_BASE:
 		return "v2_base";
+	case AIS::MODEL_V2_HIGH:
+		return "v2_high";
 	default:
 		return std::to_string(model);
 	}
