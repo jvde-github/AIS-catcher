@@ -109,7 +109,7 @@ namespace Services
 		beginList(w);
 		for (const auto &r : f.receivers)
 		{
-			const std::time_t heard = tracker.lastHeard(r.station);
+			const std::time_t heard = r.last_message;
 			w.beginObject().kv("index", r.index).kv("station", r.station).kv("input", r.input).kv("label", r.label)
 				.kv("state", r.status())
 				.kv("messages", (unsigned long long)r.messages).kv("messages_last_minute", (unsigned long long)r.per_minute);
@@ -139,7 +139,7 @@ namespace Services
 
 	// pass, warn or fail, as health checks say it (draft-inadarei-api-health-check):
 	// fail, and 503, when the engine is not running or a receiver lost its
-	// device; warn when a station has been quiet for a quarter of an hour
+	// device; warn when a receiver has been quiet for a quarter of an hour
 	Response System::health()
 	{
 		const SystemFacts f = facts();
@@ -151,7 +151,8 @@ namespace Services
 		w.key("engine").beginArray().beginObject().kv("status", f.running ? "pass" : "fail").endObject().endArray();
 		for (const auto &r : f.receivers)
 		{
-			const std::time_t heard = tracker.lastHeard(r.station);
+			// an input that never counts a message, as a GPS, goes by its station
+			const std::time_t heard = r.last_message ? r.last_message : tracker.lastHeard(r.station);
 			const bool quiet = f.running && age(now, f.session) > STATION_QUIET_S && age(now, heard ? heard : f.session) > STATION_QUIET_S;
 			const int level = r.lost || !r.streaming ? 2 : quiet ? 1 : 0;
 			worst = std::max(worst, level);
@@ -218,7 +219,10 @@ namespace Services
 	// reader of the journal gives them; without a cursor the newest page.
 	Response System::events(const Request &request)
 	{
+		long long limit = 0;
+		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
+			return badLimit();
 		return pageEvents(request, tracker.journal(), "/api/v1/system/events",
-						  [](const Journal::Entry &e) { return e.event.kind == Tracking::Kind::SYSTEM; });
+						  [](const Journal::Entry &e) { return e.event.kind == Tracking::Kind::SYSTEM; }, limit);
 	}
 }

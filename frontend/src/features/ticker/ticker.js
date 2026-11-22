@@ -17,7 +17,7 @@ export function init() {
         selection: {
             noteSeen: mapObjects.eventSeen,
             resolveVessel: async (m) => {
-                if (!ships[m]) await fetchShips(false);
+                if (!ships[m]) await fetchShips();
                 return ships[m]?.raw || null;
             },
             openVessel: (m) => showTargetcard('ship', m),

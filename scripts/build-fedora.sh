@@ -28,7 +28,8 @@ readonly PACKAGE_NAME="ais-catcher"
 readonly LIB_INSTALL_DIR="/usr/lib/${PACKAGE_NAME}"
 
 # Directories
-readonly BUILD_DIR="${PROJECT_ROOT}/build"
+# set in main
+BUILD_DIR=""
 
 # Source repositories
 readonly RTLSDR_REPO="https://gitea.osmocom.org/sdr/rtl-sdr.git"
@@ -186,6 +187,9 @@ install -D -m 755 ${BUILD_DIR}/aiscatcher/AIS-catcher %{buildroot}/usr/bin/AIS-c
 mkdir -p %{buildroot}/etc/AIS-catcher/plugins
 install -m 644 ${PROJECT_ROOT}/plugins/* %{buildroot}/etc/AIS-catcher/plugins/
 
+install -D -m 644 ${PROJECT_ROOT}/Source/DBMS/create_pg.sql %{buildroot}/etc/AIS-catcher/DBMS/create_pg.sql
+install -D -m 644 ${PROJECT_ROOT}/Source/DBMS/create_sqlite.sql %{buildroot}/etc/AIS-catcher/DBMS/create_sqlite.sql
+
 install -D -m 644 ${BUILD_DIR}/rtl-sdr/rtl-sdr.rules %{buildroot}/usr/share/ais-catcher/rtl-sdr.rules
 install -D -m 644 ${BUILD_DIR}/hydrasdr-host/hydrasdr-tools/51-hydrasdr.rules %{buildroot}/usr/share/ais-catcher/51-hydrasdr.rules
 
@@ -198,6 +202,9 @@ find ${BUILD_DIR}/local -name 'libhydrasdr.so*' -exec cp -a {} %{buildroot}${LIB
 %dir /etc/AIS-catcher
 %dir /etc/AIS-catcher/plugins
 %config(noreplace) /etc/AIS-catcher/plugins/*
+%dir /etc/AIS-catcher/DBMS
+/etc/AIS-catcher/DBMS/create_pg.sql
+/etc/AIS-catcher/DBMS/create_sqlite.sql
 /usr/share/ais-catcher/
 ${LIB_INSTALL_DIR}/
 
@@ -277,7 +284,9 @@ main() {
 
     export JOBS OUTPUT_DIR
 
-    rm -rf "${BUILD_DIR}"
+    # a directory of this run's own, not build/: a checkout's build/ holds more than this run's output
+    BUILD_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ais-catcher-rpm.XXXXXX")"
+    trap 'rm -rf "${BUILD_DIR}"' EXIT
     mkdir -p "${BUILD_DIR}/local" "${OUTPUT_DIR}"
 
     [[ "${SKIP_DEPS}" == false ]] && install_build_deps

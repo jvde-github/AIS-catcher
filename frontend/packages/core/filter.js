@@ -209,14 +209,19 @@ export function create(opts) {
         return true;
     }
 
-    function shipPasses(ship) {
+    // "seen within" goes by the clock, the other terms change only with the vessel or the filter
+    function passesSeen(ship) {
+        const { active, f } = current();
+        return !active || !(f.seen > 0) || (ship.last_signal != null && now() - ship.last_signal <= f.seen * 60);
+    }
+
+    function passesUntimed(ship) {
         const { active, f } = current();
         if (!active) return true;
         if (!passesAppearance(ship)) return false;
 
         if (f.hidden_statuses.length && f.hidden_statuses.includes(statusOf(ship))) return false;
 
-        if (f.seen > 0 && !(ship.last_signal != null && now() - ship.last_signal <= f.seen * 60)) return false;
         if (f.distance_min != null && !(ship.distance != null && ship.distance >= f.distance_min)) return false;
         if (f.distance_max != null && !(ship.distance != null && ship.distance <= f.distance_max)) return false;
 
@@ -230,5 +235,7 @@ export function create(opts) {
         return true;
     }
 
-    return { get, set, LISTS, isHidden, toggle, setAll, reset, isActive, describe, passesAppearance, shipPasses };
+    const shipPasses = (ship) => passesUntimed(ship) && passesSeen(ship);
+
+    return { get, set, LISTS, isHidden, toggle, setAll, reset, isActive, describe, passesAppearance, passesUntimed, passesSeen, shipPasses };
 }

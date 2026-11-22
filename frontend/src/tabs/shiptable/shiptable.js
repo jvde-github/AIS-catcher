@@ -62,6 +62,11 @@ const yes = (b) => (b ? "Yes" : "No");
 const fixed = (v, n) => (v != null ? Number(v).toFixed(n) : "");
 const position = (ship, text) => `<div class="${valid(ship, "status-ok", "status-bad", "")}">${text}</div>`;
 
+const draught = (s) => (s.draught ? getDraughtVal(s.draught) : "");
+const distance = (s) => (s.distance != null ? getDistanceVal(s.distance) : "");
+const speed = (s) => (s.speed != null ? getSpeedVal(s.speed) : "");
+
+// [title, field, shown, sorted by, exported]: without the last the CSV takes the field as it is
 const columns = () => [
     ["Shipname", "shipname", (s) => flagHTML(s.country, 'flag-inline', getCountryName(s.country)) + sanitizeString(String(getShipName(s) || s.mmsi))],
     ["MMSI", "mmsi"],
@@ -75,17 +80,17 @@ const columns = () => [
     ["Type", "shipclass", (s) => `<div class="cell-center">${getTableShiptype(s)}</div>`],
     ["Class", "class", getMmsiTypeVal, getMmsiTypeVal],
     ["Dim", "dimension", (s) => getShipDimension(s) || "", dimSortValue],
-    [`Draught (${getDimUnit()})`, "draught", (s) => (s.draught ? getDraughtVal(s.draught) : "")],
+    [`Draught (${getDimUnit()})`, "draught", draught, undefined, draught],
     ["Last", "last_signal", (s) => (s.last_signal != null ? getDeltaTimeVal(clock - s.last_signal) : "")],
     ["Count", "count"],
     ["PPM", "ppm", (s) => fixed(s.ppm, 1)],
     ["RSSI (dB)", "level", (s) => fixed(s.level, 1)],
-    [`Dist (${getDistanceUnit()})`, "distance", (s) => (s.distance != null ? getDistanceVal(s.distance) + (s.repeat > 0 ? " (R)" : "") : "")],
+    [`Dist (${getDistanceUnit()})`, "distance", (s) => (s.distance != null ? distance(s) + (s.repeat > 0 ? " (R)" : "") : ""), undefined, distance],
     ["Brg", "bearing", (s) => (s.bearing != null ? Number(s.bearing).toFixed(0) + "&deg;" : "")],
     ["Station", "stations", (s) => sanitizeString(stationNames(s.stations)), (s) => stationNames(s.stations)],
     ["Lat", "lat", (s) => position(s, s.lat != null ? getLatValFormat(s) : "")],
     ["Lon", "lon", (s) => position(s, s.lon != null ? getLonValFormat(s) : "")],
-    [`Spd (${getSpeedUnit()})`, "speed", (s) => (s.speed ? getSpeedVal(s.speed) : "")],
+    [`Spd (${getSpeedUnit()})`, "speed", (s) => (s.speed ? speed(s) : ""), undefined, speed],
     ["Valid", "validated", (s) => valid(s, "Yes", "No", "Pending")],
     ["Repeated", "repeat", (s) => yes(s.repeat == 1)],
     ["Ch", "channels", (s) => getStringfromChannels(s.channels)],
@@ -229,7 +234,8 @@ function downloadCSV() {
         plain.innerHTML = text(c, ship);
         return plain.textContent;
     };
-    const lines = [cols.map((c) => cell(c[0])), ...listed().map((ship) => cols.map((c) => cell(ship[c[1]] !== undefined ? ship[c[1]] : shownAs(c, ship))))];
+    const value = (c, ship) => (c[4] ? c[4](ship) : ship[c[1]] !== undefined ? ship[c[1]] : shownAs(c, ship));
+    const lines = [cols.map((c) => cell(c[0])), ...listed().map((ship) => cols.map((c) => cell(value(c, ship))))];
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([lines.map((l) => l.join(",")).join("\n")], { type: "text/csv" }));
     link.download = "data.csv";

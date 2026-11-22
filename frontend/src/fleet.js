@@ -66,7 +66,6 @@ export async function updateMap() {
 
     refreshTargetcard();
 
-    updateMarkerCount();
     redraw();
 }
 

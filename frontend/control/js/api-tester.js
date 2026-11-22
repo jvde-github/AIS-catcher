@@ -18,7 +18,9 @@ let routes = null;
 async function loadRoutes() {
     if (routes) return routes;
     const spec = await api('/api/openapi');
-    routes = Object.entries(spec.paths || {}).map(([path, item]) => {
+    // the description's paths are relative to its server, which on the machine itself is /api/v1
+    routes = Object.entries(spec.paths || {}).map(([relative, item]) => {
+        const path = '/api/v1' + (relative === '/' ? '' : relative);
         const get = item.get || {};
         const system = path.startsWith('/api/v1/system') || path === '/api/v1/health';
         const part = path.split('/')[3] || '';

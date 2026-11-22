@@ -26,7 +26,7 @@ import { updateFollowOption } from '../targetcard/shipcard.js';
 
 // vessel `m` on the map tab, its card open, the map zoomed in on it
 export async function openFocus(m, z) {
-    await fetchShips(false);
+    await fetchShips();
 
     selectMapTab(m);
 

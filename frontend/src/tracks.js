@@ -127,8 +127,9 @@ async function showAllTracks() {
     saveSettings();
 }
 
+// the vessels whose track is on, null when the tracks did not load
 export async function showTracksForMMSIs(mmsis) {
-    let added = 0;
+    let added = 0, loaded = true;
     for (const m of mmsis) {
         if (!marker_tracks.has(Number(m))) {
             marker_tracks.add(Number(m));
@@ -137,11 +138,11 @@ export async function showTracksForMMSIs(mmsis) {
     }
     if (added > 0) {
         resetTrackCursor();
-        await fetchTracks();
+        loaded = await fetchTracks();
         redraw();
         updateTrackOption();
     }
-    return mmsis.length;
+    return loaded ? mmsis.length : null;
 }
 
 function deleteAllTracks() {

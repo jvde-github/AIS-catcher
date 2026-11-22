@@ -104,7 +104,9 @@ struct MetricHistory
 		return seconds[span];
 	}
 	static bool kept(int key) { return key == AIS::KEY_NOISE_FLOOR || key == AIS::KEY_CHANNEL_LOAD || key == AIS::KEY_PEAK || key == AIS::KEY_CLIPPING; }
+	static bool highest(int key) { return key == AIS::KEY_PEAK || key == AIS::KEY_CLIPPING; }
 
+	// sum / n is the slot's value; a highest is kept as the sum with n = 1, which older files and readers read the same
 	struct Place
 	{
 		int32_t slot = 0;
@@ -124,7 +126,10 @@ struct MetricHistory
 	{
 		if (!kept(r.key))
 			return;
-		auto it = std::find_if(series.begin(), series.end(), [&](const Series &s) { return s.key == r.key && s.channel == r.channel; });
+		// the unit is part of a series: dBm and dBFS never average together
+		auto it = std::find_if(series.begin(), series.end(), [&](const Series &s) {
+			return s.key == r.key && s.channel == r.channel && std::strncmp(s.unit, r.unit.c_str(), sizeof(s.unit) - 1) == 0;
+		});
 		if (it == series.end())
 		{
 			if (series.size() >= MAX_SERIES)
@@ -132,10 +137,11 @@ struct MetricHistory
 			it = series.insert(series.end(), Series());
 			it->key = r.key;
 			it->channel = r.channel;
+			std::strncpy(it->unit, r.unit.c_str(), sizeof(it->unit) - 1);
 			for (int s = 0; s < SPANS; s++)
 				it->span[s].resize(places(s));
 		}
-		std::strncpy(it->unit, r.unit.c_str(), sizeof(it->unit) - 1);
+		const float v = (float)r.value;
 		for (int s = 0; s < SPANS; s++)
 		{
 			const int32_t slot = (int32_t)(r.at / interval(s));
@@ -143,9 +149,14 @@ struct MetricHistory
 			if (p.slot != slot)
 				p = Place();
 			p.slot = slot;
-			if (p.n < UINT16_MAX)
+			if (highest(r.key))
 			{
-				p.sum += (float)r.value;
+				p.sum = p.n ? MAX(p.sum / p.n, v) : v;
+				p.n = 1;
+			}
+			else if (p.n < UINT16_MAX)
+			{
+				p.sum += v;
 				p.n++;
 			}
 		}

@@ -10,8 +10,6 @@ import { saveSettings } from '../../settings-store.js';
 import { settingsPanel, openSettingsTab } from '../settings/settings.js';
 import { loaded as loadedTab } from '../../tabs/index.js';
 import * as replay from '../replay/replay.js';
-import { updateMarkerCount } from '../counts/counts.js';
-import { updateTablecard } from '../tablecard/tablecard.js';
 import { register } from '../../actions.js';
 import { focus } from '../../data.js';
 import { focusLabel } from '../../core/config.js';
@@ -22,11 +20,9 @@ function applyFilter() {
     for (const key in shipsDB) shipsDB[key].show = undefined;
 
     // whichever view is on screen owns the counters: replay reports its own
-    // fleet as it redraws, and updateMarkerCount stands down while it does
+    // fleet as it redraws, and the map's counts stand down while it does
     replay.refresh();
-    updateMarkerCount();
     redraw();
-    updateTablecard();
     loadedTab('ships')?.update();
     loadedTab('realtime')?.applyVesselFilter();
     updateFilterUI();

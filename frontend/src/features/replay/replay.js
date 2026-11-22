@@ -409,11 +409,13 @@ const courseOf = (p) => courseMadeGood(p) ?? headingOf(p);
 const angleOf = (p) =>
     headingOf(p) ?? (p[4] != null && p[4] > underWayUnits ? courseMadeGood(p) : null);
 
-// Shortest way round: a vessel swinging through north must not spin 359 degrees.
+// Shortest way round, -180 to 180: a vessel swinging through north must not spin
+// 359 degrees, nor one crossing the date line sail round the world.
+const turn = (from, to) => ((to - from + 540) % 360) - 180;
 function lerpAngle(from, to, f) {
-    let d = ((to - from + 540) % 360) - 180;
-    return (from + d * f + 360) % 360;
+    return (from + turn(from, to) * f + 360) % 360;
 }
+const lerpLon = (from, to, f) => ((from + turn(from, to) * f + 540) % 360) - 180;
 
 // Speed made good from a to b, for vessels whose own report says nothing.
 // Constant for the segment's lifetime, so this runs once per segment rather than
@@ -424,7 +426,7 @@ function leg(s, a, b) {
 
     const [latA, lonA] = s.pts[a], [latB, lonB] = s.pts[b];
     const dLat = latB - latA;
-    const dLon = (lonB - lonA) * Math.cos(latA * Math.PI / 180);
+    const dLon = turn(lonA, lonB) * Math.cos(latA * Math.PI / 180);
     const metres = Math.hypot(dLat, dLon) * 111320;
     const secs = Math.max(1, s.pts[b][2] - s.pts[a][3]);
 
@@ -495,7 +497,7 @@ function sample(s, T) {
 
         return {
             lat: pa[0] + (pts[b][0] - pa[0]) * f,
-            lon: pa[1] + (pts[b][1] - pa[1]) * f,
+            lon: lerpLon(pa[1], pts[b][1], f),
             knots: underWay ? sog / sogDiv : l.knots,
             hdg: between(angleOf),
             cog: between(courseOf),

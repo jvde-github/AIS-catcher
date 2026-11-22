@@ -224,6 +224,15 @@ namespace IO
 	{
 		switch (key)
 		{
+		// the uploads are built from the JSON stream: a format of the message stream would send nothing
+		case AIS::KEY_SETTING_MSGFORMAT:
+			OutputMessage::applyKey(key, arg);
+			if (!usesJSONStream())
+				throw std::runtime_error("HTTP: msgformat " + arg + " is not one an HTTP output sends; for NMEA lines use protocol NMEA");
+			break;
+		case AIS::KEY_SETTING_JSON:
+			Warning() << "HTTP: the json option is ignored; an HTTP output always sends JSON";
+			break;
 		case AIS::KEY_SETTING_URL:
 			http.setURL(arg);
 			url = Util::Parse::URLWithoutCredentials(arg);

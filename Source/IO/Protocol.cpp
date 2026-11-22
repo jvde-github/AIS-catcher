@@ -1385,22 +1385,15 @@ namespace Protocol
 		if (buffer.empty())
 			buffer.resize(16384);
 
-		int len = prev->read((char *)buffer.data() + buffer_ptr, buffer.size() - buffer_ptr, t, wait);
-
-		if (len <= 0)
-			return len;
-
-		buffer_ptr += len;
-
-		while (true)
+		// 1 when the buffer starts with a whole packet, with its remaining length and where that
+		// begins; 0 when it needs more bytes; -1 for a packet that cannot be
+		const auto whole = [&](int &length, int &i) -> int
 		{
 			if (buffer_ptr < 2)
 				return 0;
-
-			int length = 0;
+			length = 0;
 			int shift = 0;
-
-			int i = 1;
+			i = 1;
 			do
 			{
 				if (i >= buffer_ptr)
@@ -1429,8 +1422,28 @@ namespace Protocol
 			if ((int)buffer.size() < length + i)
 				buffer.resize(length + i);
 
-			if (buffer_ptr < length + i)
-				return 0;
+			return buffer_ptr < length + i ? 0 : 1;
+		};
+
+		// what the buffer holds goes out before the transport is asked for more, once a call
+		bool asked = false;
+		while (true)
+		{
+			int length = 0, i = 0;
+			const int got = whole(length, i);
+			if (got < 0)
+				return -1;
+			if (got == 0)
+			{
+				if (asked)
+					return 0;
+				asked = true;
+				const int len = prev->read((char *)buffer.data() + buffer_ptr, buffer.size() - buffer_ptr, t, wait);
+				if (len <= 0)
+					return len;
+				buffer_ptr += len;
+				continue;
+			}
 
 			// we have a message
 			int data_returned = 0;

@@ -75,8 +75,6 @@ public:
 	std::string toPrometheus(bool hide_range);
 };
 
-class Tracker;
-
 namespace Services
 {
 	// The counts at /metrics, as Prometheus scrapes them
@@ -84,14 +82,13 @@ namespace Services
 	{
 	public:
 		Metrics(PrometheusCounter &counter, const Context &context)
-			: counter(counter), tracker(context.tracker), spec(context.spec), stations(context.stations), facts(context.facts) {}
+			: counter(counter), spec(context.spec), stations(context.stations), facts(context.facts) {}
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
 
 	private:
 		PrometheusCounter &counter;
-		Tracker &tracker;
 		const ServerSpec &spec;
 		std::function<StationRegistry()> stations;
 		std::function<SystemFacts()> facts;

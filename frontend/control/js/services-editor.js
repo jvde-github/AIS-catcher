@@ -585,7 +585,7 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         }
         const list = state.list.map(clean);
         if (!await editor.write(cfg => { cfg.services = list; }, 'the services')) return;
-        state.list = list.map(s => ({ ...s }));
+        if (!editor.dirty) state.list = list.map(s => ({ ...s }));
         state.saved = new Set(list.filter(s => !s.main).map(s => s.port));
         const deaf = await deafPorts(list);
         if (deaf.length) App.notify('error', `Saved, but nothing listens on port ${deaf.join(', ')}: another program has it`);

@@ -121,7 +121,9 @@ soapysdr-only: AIS-catcher
 # so two files with the same name in different directories cannot collide.
 obj/%.o: Source/%.cpp
 	@mkdir -p $(dir $@)
-	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -o $@
+	$(CC) -c $< $(CFLAGS) $(CFLAGS_ALL) -MMD -MP -o $@
+
+-include $(OBJ:.o=.d)
 
 # isFinite() lives there: with -ffast-math the compiler takes every number for finite
 obj/Utilities/Helper.o: override CFLAGS += -fno-finite-math-only

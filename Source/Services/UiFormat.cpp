@@ -1148,8 +1148,8 @@ namespace Services
 	// `hidden` leaves out the range
 	static void stat(JSON::Writer &w, const MessageStatistics::Values &v, bool empty, bool hidden)
 	{
-		int c = v.count - v.exclude;
-		bool has_level = c > 0 && v.level_min <= v.level_max;
+		float ppm = 0;
+		const bool has_level = !empty && v.hasLevel(), has_ppm = !empty && v.meanPpm(ppm);
 
 		w.beginObject();
 		w.kv("count", empty ? 0 : v.count);
@@ -1159,18 +1159,14 @@ namespace Services
 		for (int i = 0; i < 4; i++)
 			w.kv(names[i], empty ? 0 : v.errors[i]);
 		w.endObject();
-		if (empty || !has_level)
-		{
-			w.kv_null("level_min");
-			w.kv_null("level_max");
-			w.kv_null("ppm");
-		}
+		if (has_level)
+			w.kv("level_min", v.level_min).kv("level_max", v.level_max);
 		else
-		{
-			w.kv("level_min", v.level_min);
-			w.kv("level_max", v.level_max);
-			w.kv("ppm", v.ppm / c);
-		}
+			w.kv_null("level_min").kv_null("level_max");
+		if (has_ppm)
+			w.kv("ppm", ppm);
+		else
+			w.kv_null("ppm");
 		if (hidden)
 		{
 		}

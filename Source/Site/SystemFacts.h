@@ -61,6 +61,9 @@ struct ReceiverState
 	bool lost = false;
 	uint64_t messages = 0;
 	uint64_t per_minute = 0;
+	// this input's own, not its station's
+	std::time_t last_message = 0;
+	uint64_t errors[3] = {0, 0, 0}; // checksum, undersized, oversized
 	uint64_t bytes = 0;
 	// for an input that dials a remote
 	bool connection = false;

@@ -658,12 +658,8 @@ std::string Site::stationsLive()
 	for (const auto &r : facts.receivers)
 	{
 		w.beginObject().kv("index", r.index).kv("station", r.station).kv("input", r.input).kv("label", r.label).kv("state", r.status()).kv("messages", (unsigned long long)r.messages).kv("per_minute", (unsigned long long)r.per_minute);
-		if (t)
-		{
-			const std::time_t heard = t->lastHeard(r.station);
-			if (heard)
-				w.kv("heard_age_s", (long long)(now - heard));
-		}
+		if (r.last_message)
+			w.kv("heard_age_s", (long long)(now - r.last_message));
 		w.endObject();
 	}
 	w.endArray();

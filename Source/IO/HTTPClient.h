@@ -38,7 +38,8 @@ namespace IO
 		HTTP_NO_RESPONSE = -1,
 		HTTP_UNSUPPORTED_ENCODING = -2,
 		HTTP_PARSE_ERROR = -3,
-		HTTP_CONNECTION_FAILED = -4
+		HTTP_CONNECTION_FAILED = -4,
+		HTTP_RESPONSE_INCOMPLETE = -5
 	};
 
 	inline std::string httpStatusString(int r)
@@ -53,6 +54,8 @@ namespace IO
 			return "parse error";
 		case HTTP_CONNECTION_FAILED:
 			return "connection failed";
+		case HTTP_RESPONSE_INCOMPLETE:
+			return "response incomplete or too large";
 		default:
 			return std::to_string(r);
 		}

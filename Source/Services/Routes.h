@@ -71,6 +71,11 @@ namespace Services
 	const std::vector<Route> &routes();
 	const Route *route(const std::string &path);
 
+	// where clients reach a route: below the server's public URL when it has one, else below
+	// /api/v1; the same rule for the OpenAPI document, the index and the paging links
+	inline std::string apiBase(const std::string &public_url) { return public_url.empty() ? "/api/v1" : public_url; }
+	inline std::string apiRelative(const std::string &path) { return path.size() > 7 ? path.substr(7) : "/"; }
+
 	// the OpenAPI 3.1 document of the routes the given services offer
 	void writeOpenAPI(JSON::Writer &w, const std::vector<std::string> &services, const std::string &public_url = std::string(),
 					  bool area_only = false);

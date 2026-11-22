@@ -322,6 +322,20 @@ uint64_t Receiver::messages()
 	return count;
 }
 
+std::time_t Receiver::lastMessage()
+{
+	std::time_t last = 0;
+	for (auto &d : decoders)
+		last = MAX(last, d.counter->getLast());
+	return last;
+}
+
+void Receiver::addErrors(uint64_t out[3])
+{
+	for (auto &d : decoders)
+		d.counter->addErrors(out);
+}
+
 void Receiver::linkJSON()
 {
 	for (auto &d : decoders)

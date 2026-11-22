@@ -406,7 +406,10 @@ namespace Services
 "heading_deg":{"type":["integer","null"],"description":"True heading, degrees"}}})J"},
 			{"TrackFeature", R"J({"type":"object","required":["type","geometry","properties"],"description":"The track as one GeoJSON Feature","properties":{
 "type":{"const":"Feature"},
-"geometry":{"type":"object","properties":{"type":{"const":"LineString"},"coordinates":{"type":"array","items":{"type":"array","items":{"type":"number"},"description":"lon, lat"}}}},
+"geometry":{"oneOf":[
+ {"type":"object","properties":{"type":{"const":"LineString"},"coordinates":{"type":"array","minItems":2,"items":{"type":"array","items":{"type":"number"},"description":"lon, lat"}}}},
+ {"type":"object","properties":{"type":{"const":"Point"},"coordinates":{"type":"array","items":{"type":"number"},"description":"lon, lat"}},"description":"A track of one fix"},
+ {"type":"null","description":"A track without fixes"}]},
 "properties":{"type":"object","properties":{
  "mmsi":{"type":"integer","description":"The vessel's MMSI"},
  "times":{"type":"array","items":{"type":"string","format":"date-time"},"description":"When it was at each point"}}}}})J"},
@@ -485,7 +488,7 @@ namespace Services
 "state":{"enum":["starting","streaming","lost"],"description":"starting until its device delivers, lost when it stopped by itself"},
 "messages":{"type":"integer","description":"Messages since the engine started"},
 "messages_last_minute":{"type":"integer","description":"Messages in the last minute"},
-"last_heard":{"type":["string","null"],"format":"date-time","description":"When its station last heard a vessel"},
+"last_heard":{"type":["string","null"],"format":"date-time","description":"When this input last decoded a message"},
 "last_heard_age_s":{"type":["integer","null"],"description":"Seconds since then"}}})J"},
 			{"Output", R"J({"type":"object","description":"An output as the engine describes it: its kind, where it sends and its counts","additionalProperties":true})J"},
 			{"LogLine", R"J({"type":"object","required":["id","time","level","message"],"properties":{
@@ -604,8 +607,7 @@ namespace Services
 		const auto offered = [&](const char *s) { return std::find(services.begin(), services.end(), s) != services.end(); };
 		w.beginObject().kv("openapi", "3.1.0")
 			.key("info").beginObject().kv("title", "AIS-catcher").kv("version", VERSION).kv("description", DESCRIPTION).endObject();
-		if (!public_url.empty())
-			w.key("servers").beginArray().beginObject().kv("url", public_url).endObject().endArray();
+		w.key("servers").beginArray().beginObject().kv("url", apiBase(public_url)).endObject().endArray();
 		w.key("tags").beginArray();
 		for (const auto &t : TAGS)
 			w.beginObject().kv("name", t[0]).kv("description", t[1]).endObject();
@@ -616,7 +618,7 @@ namespace Services
 		{
 			if (!offered(r.service) || (area_only && !r.area))
 				continue;
-			w.key(r.path).beginObject().key("get").beginObject().kv("operationId", r.id).key("tags").beginArray().val(r.tag).endArray().kv("summary", r.summary);
+			w.key(apiRelative(r.path)).beginObject().key("get").beginObject().kv("operationId", r.id).key("tags").beginArray().val(r.tag).endArray().kv("summary", r.summary);
 			if (!r.params.empty())
 			{
 				w.key("parameters").beginArray();

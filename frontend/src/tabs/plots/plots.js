@@ -30,18 +30,19 @@ function countSeries(r) {
 
 const single = (key) => (r) => [line("Data", C4, points(r, (s) => s[key]))];
 
-const told = (r, name, label) => (r.reception || []).filter((s) => s.name === name).sort((a, b) => (a.channel < b.channel ? -1 : 1)).slice(0, 2)
-    .map((s, i) => line(label + (s.channel ? " " + s.channel : ""), [C4, C2][i], r.time.map((t, k) => ({ x: t, y: s.values[k] })), { width: 1.5 }));
+const unit = (s) => (s.unit ? " (" + s.unit + ")" : "");
+const told = (r, name, label) => busy.reported(r, name).sort((a, b) => (a.channel < b.channel ? -1 : 1)).slice(0, 2)
+    .map((s, i) => line(label + (s.channel ? " " + s.channel : "") + unit(s), [C4, C2][i], r.time.map((t, k) => ({ x: t, y: s.values[k] })), { width: 1.5 }));
 
 const has = (r, name) => (r.reception || []).some((s) => s.name === name);
 
 function levelSeries(r) {
-    const peaks = (r.reception || []).filter((s) => s.name === "peak");
+    const peaks = busy.reported(r, "peak");
     return [
         line("Max", C1, points(r, (s) => s.level_max), { width: 1 }),
         line("Min", C1, points(r, (s) => s.level_min), { width: 1, fill: "band" }),
         ...told(r, "noise_floor", "Noise floor"),
-        ...(peaks.length ? [line("Peak", C5, r.time.map((t, k) => ({ x: t, y: Math.max(...peaks.map((s) => s.values[k] ?? -Infinity)) })), { width: 1 })] : []),
+        ...(peaks.length ? [line("Peak" + unit(peaks[0]), C5, r.time.map((t, k) => ({ x: t, y: Math.max(...peaks.map((s) => s.values[k] ?? -Infinity)) })), { width: 1 })] : []),
     ];
 }
 

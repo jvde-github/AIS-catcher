@@ -222,6 +222,10 @@ namespace Services
 		if (s.size() != 20 || std::sscanf(s.c_str(), "%4d-%2d-%2dT%2d:%2d:%2d%c", &y, &mo, &d, &h, &mi, &sec, &z) != 7 || z != 'Z' ||
 			mo < 1 || mo > 12 || d < 1 || d > 31 || h > 23 || mi > 59 || sec > 60 || y < 1970)
 			return false;
+		static const int days_in[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+		const bool leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+		if (d > days_in[mo - 1] + (mo == 2 && leap))
+			return false;
 		// days since 1970 of a civil date
 		y -= mo <= 2;
 		const long era = y / 400, yoe = y - era * 400;

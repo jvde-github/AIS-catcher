@@ -78,7 +78,7 @@ namespace AIS
 		uint64_t now = (uint64_t)rxtime_cache;
 		while (i != queue.end())
 		{
-			if ((ref.match_key & 0xFFFFFF00) == (i->match_key & 0xFFFFFF00) || (i->timestamp + 3 < now))
+			if (ref.match_key == i->match_key || (i->timestamp + 3 < now))
 				i = queue.erase(i);
 			else
 				i++;
@@ -300,6 +300,8 @@ namespace AIS
 			if (quadrant == 'W' || quadrant == 'S')
 				v = -v;
 		}
+		else
+			error = true;
 		return v;
 	}
 
@@ -571,7 +573,7 @@ namespace AIS
 			const JSON::JSON *payload = nullptr;
 			const JSON::Value *nmea_array = nullptr;
 			float tpv_lat = 0, tpv_lon = 0;
-			bool has_tpv_coords = false;
+			bool has_lat = false, has_lon = false;
 
 			// the most exact upstream time wins, whatever the order of the fields
 			int toa_rank = 0;
@@ -677,11 +679,11 @@ namespace AIS
 					break;
 				case AIS::KEY_LAT:
 					tpv_lat = p.Get().isFloat() ? p.Get().getFloat() : (p.Get().isInt() ? (float)p.Get().getInt() : 0.0f);
-					has_tpv_coords = true;
+					has_lat = true;
 					break;
 				case AIS::KEY_LON:
 					tpv_lon = p.Get().isFloat() ? p.Get().getFloat() : (p.Get().isInt() ? (float)p.Get().getInt() : 0.0f);
-					has_tpv_coords = true;
+					has_lon = true;
 					break;
 				}
 			}
@@ -733,7 +735,7 @@ namespace AIS
 			if (cls == CLS_METRIC && uuid_match)
 				processMetric(jsonDoc.root, tag);
 
-			if (cls == CLS_TPV && cfg_GPS && has_tpv_coords && isValidCoord(tpv_lat, tpv_lon))
+			if (cls == CLS_TPV && cfg_GPS && has_lat && has_lon && isValidCoord(tpv_lat, tpv_lon))
 			{
 				GPS gps(tpv_lat, tpv_lon, line, true);
 				outGPS.Send(&gps, 1, tag);
@@ -796,7 +798,7 @@ namespace AIS
 		if (v < 0) { warnFail(v, " in flags"); return false; }
 		uint8_t flags = (uint8_t)v;
 
-		long long timestamp = 0;
+		uint64_t timestamp = 0;
 		for (int i = 0; i < 8; i++)
 		{
 			v = getByte();

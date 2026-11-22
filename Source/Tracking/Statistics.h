@@ -52,23 +52,34 @@ public:
 	// the figures as they stand, copied under the lock, for whoever writes them out
 	struct Values
 	{
-		int count, exclude, vessels, active_minutes;
+		int count, ppms, vessels, active_minutes;
 		int msg[28], errors[4], channel[4];
 		float level_min, level_max, ppm, distance;
 		float radarA[RADAR_BUCKETS], radarB[RADAR_BUCKETS];
 		Far furthest[FURTHEST];
+
+		bool hasLevel() const { return level_min <= level_max; }
+		bool meanPpm(float &mean) const
+		{
+			if (ppms <= 0)
+				return false;
+			mean = ppm / ppms;
+			return true;
+		}
 	};
 
 private:
 	std::mutex mtx;
 
 	static const int _MAGIC = 0x4f82b;
-	static const int _VERSION = 5;
+	static const int _VERSION = 6;
 	static const int _RADAR_BUCKETS = 18;
 
 	int _LONG_RANGE_CUTOFF = LONG_RANGE_CUTOFF_DEFAULT;
 
-	int _count, _exclude, _vessels;
+	// _ppms: the messages _ppm sums; a level and a PPM each count where a message has one
+	// _vessels_first: those new to every station, which is what a sum of stations adds up
+	int _count, _ppms, _vessels, _vessels_first;
 	int _msg[28];
 	int _errors[4]; // flagged messages, undersized, oversized, checksum
 	int _channel[4];
@@ -114,7 +125,7 @@ public:
 		std::lock_guard<std::mutex> lock(mtx);
 		_LONG_RANGE_CUTOFF = cutoff;
 	}
-	void clearVessels() { _vessels = 0; }
+	void clearVessels() { _vessels = _vessels_first = 0; }
 	void addActiveMinute()
 	{
 		std::lock_guard<std::mutex> l{this->mtx};
@@ -142,14 +153,14 @@ public:
 		std::memset(_radarA, 0, sizeof(_radarA));
 		std::memset(_radarB, 0, sizeof(_radarB));
 
-		_count = _vessels = _exclude = _active_minutes = 0;
+		_count = _vessels = _vessels_first = _ppms = _active_minutes = 0;
 		std::memset(_far, 0, sizeof(_far));
 		_distance = _ppm = 0;
 		_level_min = 1e6;
 		_level_max = -1e6;
 	}
 
-	void Add(const AIS::Message &m, const TAG &tag, bool new_vessel = false)
+	void Add(const AIS::Message &m, const TAG &tag, bool new_vessel = false, bool first = false)
 	{
 
 		std::lock_guard<std::mutex> l{this->mtx};
@@ -168,18 +179,22 @@ public:
 			_errors[3]++;
 		if (new_vessel)
 			_vessels++;
+		if (first)
+			_vessels_first++;
 
 		_msg[m.type() - 1]++;
 		if (m.getChannel() >= 'A' && m.getChannel() <= 'D')
 			_channel[m.getChannel() - 'A']++;
 
-		if (tag.level == LEVEL_UNDEFINED || tag.ppm == PPM_UNDEFINED)
-			_exclude++;
-		else
+		if (tag.level != LEVEL_UNDEFINED)
 		{
 			_level_min = MIN(_level_min, tag.level);
 			_level_max = MAX(_level_max, tag.level);
+		}
+		if (tag.ppm != PPM_UNDEFINED)
+		{
 			_ppm += tag.ppm;
+			_ppms++;
 		}
 
 		// for range we ignore atons
@@ -224,8 +239,9 @@ public:
 		std::lock(mtx, o.mtx);
 		std::lock_guard<std::mutex> a{mtx, std::adopt_lock}, b{o.mtx, std::adopt_lock};
 		_count += o._count;
-		_exclude += o._exclude;
-		_vessels += o._vessels;
+		_ppms += o._ppms;
+		_vessels += o._vessels_first;
+		_vessels_first += o._vessels_first;
 		for (int i = 0; i < 28; i++)
 			_msg[i] += o._msg[i];
 		for (int i = 0; i < 4; i++)
@@ -254,7 +270,7 @@ public:
 		std::lock_guard<std::mutex> l{this->mtx};
 		Values v;
 		v.count = _count;
-		v.exclude = _exclude;
+		v.ppms = _ppms;
 		v.vessels = _vessels;
 		v.active_minutes = _active_minutes;
 		std::memcpy(v.msg, _msg, sizeof(_msg));
@@ -283,7 +299,7 @@ public:
 		return (bool)(W(magic) && W(version) && W(_count) && W(_vessels) &&
 					  W(_msg) && W(_channel) && W(_level_min) && W(_level_max) &&
 					  W(_ppm) && W(_distance) && W(_radarA) && W(_radarB) &&
-					  W(_errors) && W(_active_minutes) && W(_far));
+					  W(_errors) && W(_active_minutes) && W(_far) && W(_ppms) && W(_vessels_first));
 	}
 
 	bool Load(std::ifstream &file)
@@ -314,10 +330,18 @@ public:
 		if (version < 3)
 			_msg[27] = 0;
 
-		return (bool)(R(_channel) && R(_level_min) && R(_level_max) && R(_ppm) &&
-					  R(_distance) && R(_radarA) && R(_radarB) &&
-					  (version < 4 || R(_errors)) &&
-					  (version < 5 || (R(_active_minutes) && R(_far))));
+		if (!(R(_channel) && R(_level_min) && R(_level_max) && R(_ppm) &&
+			  R(_distance) && R(_radarA) && R(_radarB) &&
+			  (version < 4 || R(_errors)) &&
+			  (version < 5 || (R(_active_minutes) && R(_far)))))
+			return false;
+		// before 6 the PPM readings were not counted: the messages stand in, as they did then
+		if (version < 6)
+		{
+			_ppms = _level_min <= _level_max ? _count : 0;
+			_vessels_first = _vessels;
+		}
+		return version < 6 || (bool)(R(_ppms) && R(_vessels_first));
 	}
 
 #undef W

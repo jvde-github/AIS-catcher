@@ -78,6 +78,8 @@ void Engine::publishReceivers()
 		}
 		s.label = receiverLabel(receivers, k);
 		s.messages = r.messages();
+		s.last_message = r.lastMessage();
+		r.addErrors(s.errors);
 		s.bytes = r.bytesIn().received();
 		if (const IO::OutputStats *link = device ? device->getConnectionStats() : nullptr)
 		{

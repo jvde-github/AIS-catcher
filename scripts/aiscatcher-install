@@ -36,6 +36,7 @@ Usage: sudo $0 [OPTIONS]
 
 Options:
   -p, --package              Install from pre-built package (faster, recommended)
+  --package-file FILE        Install this .deb or .rpm instead of downloading one; no source fallback
   -i, --interactive          Source build with interactive feature selection (forces source path)
   -b, --branch               Specify git branch to clone (default: main)
   -M, --managed              Run the service in managed mode (-E ${MANAGED_CONFIG_FILE} ${MANAGED_BIND})
@@ -108,6 +109,7 @@ readonly MAKE_JOBS
 
 # Global variables
 INSTALL_PACKAGE=false
+PACKAGE_FILE=""
 INTERACTIVE=false
 SKIP_SYSTEMD=false
 SKIP_USER=false
@@ -659,9 +661,14 @@ download_and_install_pkg() {
     DEB_TMP_DIR=$(mktemp -d)
     chmod 755 "$DEB_TMP_DIR"
 
-    # Download the package and check it against its .sha256 on the release
+    # a package file is installed as given: there is no checksum to check it against
     local attempt expected actual
+    if [ -n "$PACKAGE_FILE" ]; then
+        cp "$PACKAGE_FILE" "$DEB_TMP_DIR/$package" || { rm -rf "$DEB_TMP_DIR"; DEB_TMP_DIR=""; return 1; }
+    fi
+    # Download the package and check it against its .sha256 on the release
     for attempt in 1 2; do
+        [ -n "$PACKAGE_FILE" ] && break
         log "INFO" "Downloading package..."
         if ! curl -fsL -o "$DEB_TMP_DIR/$package" "$download_url"; then
             rm -rf "$DEB_TMP_DIR"; DEB_TMP_DIR=""
@@ -730,7 +737,11 @@ install_package_method() {
 
     # Declare separately so the assignment exit-code is not masked by 'local'.
     local package
-    package=$(check_package_availability "$system_info") || true
+    if [ -n "$PACKAGE_FILE" ]; then
+        package=$(basename "$PACKAGE_FILE")
+    else
+        package=$(check_package_availability "$system_info") || true
+    fi
 
     if [ -z "$package" ]; then
         log "WARN" "No pre-built package available for $system_info"
@@ -741,7 +752,7 @@ install_package_method() {
 
     # Install minimal dependencies for package installation (skip if curl is
     # already present — on Fedora, installing curl over curl-minimal conflicts)
-    if ! command -v curl &>/dev/null; then
+    if [ -z "$PACKAGE_FILE" ] && ! command -v curl &>/dev/null; then
         log "INFO" "Installing minimal dependencies for package installation"
         pkg_install curl || error_exit "Failed to install minimal dependencies"
     fi
@@ -1099,6 +1110,14 @@ parse_arguments() {
                 INSTALL_REQUESTED=true
                 shift
                 ;;
+            --package-file)
+                [[ -n "${2:-}" && -f "$2" ]] || error_exit "--package-file needs an existing .deb or .rpm"
+                PACKAGE_FILE="$(cd "$(dirname "$2")" && pwd)/$(basename "$2")"
+                log "INFO" "Installation from package file $PACKAGE_FILE requested"
+                INSTALL_PACKAGE=true
+                INSTALL_REQUESTED=true
+                shift 2
+                ;;
             -i|--interactive)
                 log "INFO" "Interactive feature selection requested (forces source build)"
                 INTERACTIVE=true
@@ -1204,6 +1223,7 @@ install_binary() {
         if install_package_method; then
             return 0
         fi
+        [ -n "$PACKAGE_FILE" ] && error_exit "Package file $PACKAGE_FILE did not install"
         log "WARN" "Package installation failed, falling back to source build..."
     fi
     install_from_source_method

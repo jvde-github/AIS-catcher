@@ -62,22 +62,21 @@ export function setShipFilter(fn) {
     shipFilterOverride = fn;
 }
 
-let isFetchingShips = false;
+let shipsPending = null, shipsPendingFocus = -1;
 let shipsTimeout = 1800;
 let shipsLastCleanup = 0;
 
-export async function fetchShips(noDoubleFetch = true) {
-    if (isFetchingShips && noDoubleFetch) {
-        console.log("A fetch operation is already running.");
-        return false;
+// one request at a time for the station on view: a caller that needs the ships waits for the
+// one under way; a reply for a station no longer on view is dropped by fetchShipsBody
+export function fetchShips() {
+    if (!shipsPending || shipsPendingFocus !== focus) {
+        const pending = fetchShipsBody().finally(() => {
+            if (shipsPending === pending) shipsPending = null;
+        });
+        shipsPending = pending;
+        shipsPendingFocus = focus;
     }
-
-    isFetchingShips = true;
-    try {
-        return await fetchShipsBody();
-    } finally {
-        isFetchingShips = false;
-    }
+    return shipsPending;
 }
 
 // The ships table's columns beyond the map's row, pulled only while that tab
@@ -393,7 +392,12 @@ export async function fetchTracks() {
             const wanted = Array.from(markerTracks).filter((m) => !shipsDB[m] || filter.visible(shipsDB[m]));
             if (wanted.length === 0) return true;
             setPathsFrom(0);
-            newPaths = await viewed("path.json?" + wanted.join(","));
+            // the server reads up to a hundred vessels a request
+            const parts = [];
+            for (let i = 0; i < wanted.length; i += 100)
+                parts.push(viewed("path.json?" + wanted.slice(i, i + 100).join(",")));
+            const got = await Promise.all(parts);
+            newPaths = got.includes(null) ? null : Object.assign({}, ...got);
         }
         if (!newPaths) return false;
 

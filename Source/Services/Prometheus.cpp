@@ -259,21 +259,12 @@ namespace Services
 		inputs("ais_input_count", "counter", "Total number of messages decoded per input", false, [](const ReceiverState &r) { return r.messages; });
 		inputs("ais_input_bytes_in", "counter", "Total number of raw bytes received per input", false, [](const ReceiverState &r) { return r.bytes; });
 		inputs("ais_input_up", "gauge", "Whether the input is streaming (1) or not (0)", false, [](const ReceiverState &r) { return (uint64_t)(r.streaming && !r.lost); });
-		inputs("ais_input_last_message_timestamp_seconds", "gauge", "Unix time of the last message decoded per input, 0 if none yet", false, [&](const ReceiverState &r) { return (uint64_t)tracker.lastHeard(r.station); });
+		inputs("ais_input_last_message_timestamp_seconds", "gauge", "Unix time of the last message decoded per input, 0 if none yet", false, [](const ReceiverState &r) { return (uint64_t)r.last_message; });
 		head("ais_input_errors", "counter", "Messages decoded with errors per input");
 		static const char *const kinds[] = {"checksum", "undersized", "oversized"};
 		for (const auto &r : f.receivers)
-		{
-			uint64_t errors[3] = {0, 0, 0};
-			tracker.withStation(r.station, [&](Figures &fig) {
-				const MessageStatistics::Values v = fig.total.values();
-				errors[0] = v.errors[3];
-				errors[1] = v.errors[1];
-				errors[2] = v.errors[2];
-			});
 			for (int k = 0; k < 3; k++)
-				out += "ais_input_errors" + inputLabels(r, std::string(",error=\"") + kinds[k] + "\"") + " " + std::to_string(errors[k]) + "\n";
-		}
+				out += "ais_input_errors" + inputLabels(r, std::string(",error=\"") + kinds[k] + "\"") + " " + std::to_string(r.errors[k]) + "\n";
 		inputs("ais_input_connect_ok", "counter", "Successful connections per input", true, [](const ReceiverState &r) { return r.connect_ok; });
 		inputs("ais_input_connect_fail", "counter", "Failed connections per input", true, [](const ReceiverState &r) { return r.connect_fail; });
 		inputs("ais_input_reconnects", "counter", "Reconnects per input", true, [](const ReceiverState &r) { return r.reconnects; });

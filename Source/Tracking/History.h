@@ -124,6 +124,8 @@ public:
 			const AIS::Message *msg = (AIS::Message *)j[i].binary;
 			long int tm = ((long int)msg->getRxTimeUnix()) / (long int)INTERVAL;
 			long int tp = ((long int)tag.previous_signal) / (long int)INTERVAL;
+			// anyone's last reception is the later of the two, whichever these figures count by
+			long int ta = ((long int)MAX(tag.previous_signal, tag.station_previous_signal)) / (long int)INTERVAL;
 
 			if (history[end].time < tm)
 			{
@@ -133,7 +135,7 @@ public:
 					start = (start + 1) % N;
 			}
 
-			history[end].stat.Add(*msg, tag, tm != tp);
+			history[end].stat.Add(*msg, tag, tm != tp, tm != ta);
 		}
 	}
 
@@ -192,17 +194,23 @@ public:
 		return true;
 	}
 
+	// messages a slot over the last N slots up to now, the one under way left out; a quiet slot counts as none
 	float getAverage()
 	{
 		std::lock_guard<std::mutex> l{this->mtx};
 
-		float avg = 0.0f;
+		const long int now = (long int)time(nullptr) / (long int)INTERVAL;
+		const long int from = MAX((long int)history[start].time, now - N);
+		float sum = 0.0f;
 
-		for (int idx = start; idx != end; idx = (idx + 1) % N)
-			avg += history[idx].stat.getCount();
-
-		int delta_time = 1 + (int)((long int)history[end].time - (long int)history[start].time);
-		return avg / delta_time;
+		for (int idx = start;; idx = (idx + 1) % N)
+		{
+			if (history[idx].time >= from && history[idx].time < now)
+				sum += history[idx].stat.getCount();
+			if (idx == end)
+				break;
+		}
+		return now > from ? sum / (now - from) : 0.0f;
 	}
 
 	// a minute heard in, counted in the slot under way

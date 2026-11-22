@@ -5,7 +5,16 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 let panel, grid, sub, ring = null, measure = "messages";
 
 const mean = (list) => (list.length ? list.reduce((a, b) => a + b, 0) / list.length : null);
-const channels = (name) => (i) => mean((ring.reception || []).filter((s) => s.name === name).map((s) => s.values[i]).filter(Number.isFinite));
+
+// the reports of one measure, in the unit reported last: two units never share a line or a mean
+export function reported(history, name) {
+    const all = (history.reception || []).filter((s) => s.name === name);
+    if (!all.length) return all;
+    const last = (s) => s.values.reduce((at, v, i) => (v === null ? at : i), -1);
+    const newest = all.reduce((a, b) => (last(b) > last(a) ? b : a), all[0]);
+    return all.filter((s) => s.unit === newest.unit);
+}
+const channels = (name) => (i) => mean(reported(ring, name).map((s) => s.values[i]).filter(Number.isFinite));
 
 const MEASURES = {
     messages: [(i) => ring.stat[i].count || null, (v) => compact(v) + " messages"],

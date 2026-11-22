@@ -91,8 +91,10 @@ if(RPATH_LIBRARY_DIR)
     set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 endif()
 
-# Common compiler flags and options.
-set(CMAKE_BUILD_TYPE Release)
+# Common compiler flags and options. Release unless a build type is given; Visual Studio picks its own.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
 
 option(MSVC_VCPKG "For MSVC use VCPKG libraries." OFF)
 
@@ -142,7 +144,7 @@ elseif(MSVC)
     set(OPTIMIZATION_FLAGS "-DWIN32_LEAN_AND_MEAN /EHsc /W3 /Oi /Ot /fp:fast") # spellchecker:disable-line
 endif()
 
-set(CMAKE_CXX_FLAGS "${OPTIMIZATION_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OPTIMIZATION_FLAGS}")
 
 include(FindPkgConfig)
 include(CheckIncludeFile)

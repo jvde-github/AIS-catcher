@@ -175,6 +175,10 @@ public:
 	IO::StreamCounter &counter(int i) { return *decoders[i].counter; }
 	// the messages all its models decoded
 	uint64_t messages();
+	// when one of them last decoded one, 0 if none yet
+	std::time_t lastMessage();
+	// theirs with errors, added to `out`: checksum, undersized, oversized
+	void addErrors(uint64_t out[3]);
 
 	void setupDevice();
 	// delivery: the lock its models deliver under, shared by every receiver; none for lock-free

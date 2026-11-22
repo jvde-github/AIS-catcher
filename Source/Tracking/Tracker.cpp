@@ -121,8 +121,13 @@ void Tracker::Router::Receive(const JSON::JSON *data, int len, TAG &tag)
 		if (id >= 0)
 		{
 			tracker->last_heard[id] = std::time(nullptr);
+			// a station's figures go by when that station last heard the vessel
 			if (Figures *f = tracker->stationFigures(id))
+			{
+				std::swap(tag.previous_signal, tag.station_previous_signal);
 				f->Receive(data, len, tag);
+				std::swap(tag.previous_signal, tag.station_previous_signal);
+			}
 		}
 	}
 }

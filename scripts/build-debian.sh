@@ -28,7 +28,8 @@ readonly PACKAGE_NAME="ais-catcher"
 readonly LIB_INSTALL_DIR="/usr/lib/${PACKAGE_NAME}"
 
 # Directories
-readonly BUILD_DIR="${PROJECT_ROOT}/build"
+# set in main
+BUILD_DIR=""
 
 # Source repositories
 readonly RTLSDR_REPO="https://gitea.osmocom.org/sdr/rtl-sdr.git"
@@ -212,7 +213,10 @@ main() {
 
     export JOBS OUTPUT_DIR
 
-    rm -rf "${BUILD_DIR}"
+    # a directory of this run's own, not build/: a checkout's build/ holds more than this run's output
+    BUILD_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ais-catcher-deb.XXXXXX")"
+    trap 'rm -rf "${BUILD_DIR}"' EXIT
+    export AISCATCHER_BUILD_DIR="${BUILD_DIR}"
     mkdir -p "${BUILD_DIR}/local" "${OUTPUT_DIR}"
 
     [[ "${SKIP_DEPS}" == false ]] && install_build_deps

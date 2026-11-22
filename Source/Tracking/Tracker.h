@@ -147,8 +147,8 @@ public:
 	}
 
 	// The figures of everything heard, of one station, or of several as one;
-	// f runs under the figures' lock. False when none of the stations has any
-	// yet.
+	// f runs under the figures' lock, except over several stations, whose sum
+	// is a copy of its own. False when none of the stations has any yet.
 	template <typename F>
 	void withAll(F f)
 	{
@@ -163,23 +163,26 @@ public:
 	template <typename F>
 	bool withStations(const std::vector<int> &ids, F f)
 	{
-		std::lock_guard<std::mutex> lock(figures_mtx);
-		std::vector<Figures *> parts;
-		for (int id : ids)
+		std::unique_ptr<Figures> sum;
 		{
-			auto it = station_figures.find(id);
-			if (it != station_figures.end() && std::find(parts.begin(), parts.end(), it->second.get()) == parts.end())
-				parts.push_back(it->second.get());
+			std::lock_guard<std::mutex> lock(figures_mtx);
+			std::vector<Figures *> parts;
+			for (int id : ids)
+			{
+				auto it = station_figures.find(id);
+				if (it != station_figures.end() && std::find(parts.begin(), parts.end(), it->second.get()) == parts.end())
+					parts.push_back(it->second.get());
+			}
+			if (parts.empty())
+				return false;
+			if (parts.size() == 1)
+			{
+				f(*parts[0]);
+				return true;
+			}
+			sum.reset(new Figures());
+			sum->combine(parts);
 		}
-		if (parts.empty())
-			return false;
-		if (parts.size() == 1)
-		{
-			f(*parts[0]);
-			return true;
-		}
-		std::unique_ptr<Figures> sum(new Figures());
-		sum->combine(parts);
 		f(*sum);
 		return true;
 	}

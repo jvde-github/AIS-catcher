@@ -81,12 +81,15 @@ export const App = {
 };
 
 // The page marks its edits with `touched`, writes them with `write` (or `clean` when they went some
-// other way) and leaves with `destroy`.
+// other way) and leaves with `destroy`. A page rebuilds its working data from what it saved only
+// while `dirty` is false: an edit made during the save is not in it.
 export function registerEditor(id, save) {
     const editor = {
         dirty: false,
+        edits: 0,
         save,
         touched() {
+            editor.edits++;
             editor.dirty = true;
             App.setUnsaved(true);
         },
@@ -96,13 +99,14 @@ export function registerEditor(id, save) {
         },
         // false, with the reason shown, when the save failed
         async write(change, what) {
+            const edits = editor.edits;
             try {
                 await ConfigStore.save(change);
             } catch (e) {
                 App.notify('error', `Could not save ${what}: ${e.message}`);
                 return false;
             }
-            editor.clean();
+            if (editor.edits === edits) editor.clean();
             return true;
         },
         destroy() { if (editors.get(id) === editor) editors.delete(id); }
