@@ -9,7 +9,7 @@ import { fetchShips, fetchTableRows } from '../../data.js';
 import { getTableShiptype } from '../../map.js';
 import { saveSettings } from '../../settings-store.js';
 import { settings } from '../../core/state.js';
-import { selectMapTab } from '../index.js';
+import { selectMapTab } from '../../features/targetcard/card.js';
 import { register } from '../../actions.js';
 import { showContextMenu } from '../../features/contextmenu/contextmenu.js';
 

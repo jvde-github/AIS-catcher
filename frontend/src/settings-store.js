@@ -190,7 +190,7 @@ export function loadSettingsFromURL() {
             if (key === 'map_overlay') {
                 if (!Array.isArray(settings[key])) settings[key] = [];
                 settings[key].push(value);
-            } else {
+            } else if (typeof DEFAULT_SETTINGS[key] !== 'object' || DEFAULT_SETTINGS[key] === null) {
                 settings[key] = value;
             }
         }

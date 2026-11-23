@@ -165,7 +165,10 @@ std::string ControlCore::getPanelConfig()
 static bool isSameFile(const std::string &a, const std::string &b)
 {
 #ifdef _WIN32
-	return a == b;
+	char ra[_MAX_PATH], rb[_MAX_PATH];
+	if (!_fullpath(ra, a.c_str(), sizeof(ra)) || !_fullpath(rb, b.c_str(), sizeof(rb)))
+		return a == b;
+	return _stricmp(ra, rb) == 0;
 #else
 	char ra[PATH_MAX], rb[PATH_MAX];
 	if (!realpath(a.c_str(), ra) || !realpath(b.c_str(), rb))
@@ -189,7 +192,7 @@ static bool inFolder(const std::string &path, const std::string &folder)
 	if (!_fullpath(full, path.c_str(), sizeof(full)) || !_fullpath(base, folder.c_str(), sizeof(base)))
 		return false;
 	const size_t n = strlen(base);
-	return _strnicmp(full, base, n) == 0 && (full[n] == 0 || full[n] == '\\' || full[n] == '/');
+	return _strnicmp(full, base, n) == 0 && (full[n] == 0 || full[n] == '\\' || full[n] == '/' || base[n - 1] == '\\');
 #else
 	char full[PATH_MAX], base[PATH_MAX];
 	if (!realpath(folder.c_str(), base))
@@ -201,7 +204,7 @@ static bool inFolder(const std::string &path, const std::string &folder)
 			return false;
 	}
 	const size_t n = strlen(base);
-	return strncmp(full, base, n) == 0 && (full[n] == 0 || full[n] == '/');
+	return strncmp(full, base, n) == 0 && (full[n] == 0 || full[n] == '/' || base[n - 1] == '/');
 #endif
 }
 
@@ -429,9 +432,6 @@ bool ControlCore::allowedPaths(const JSON::JSON &saved, std::string &error)
 
 bool ControlCore::setConfig(const std::string &json, std::string &error)
 {
-	if (!validate(json, error))
-		return false;
-
 	std::lock_guard<std::mutex> lock(file_mtx);
 
 	JSON::Document doc;
@@ -440,7 +440,8 @@ bool ControlCore::setConfig(const std::string &json, std::string &error)
 	{
 		JSON::Parser parser(JSON_DICT_SETTING);
 		doc = parser.parse(json);
-		if (!allowedPaths(doc.root, error))
+		// the paths first: validate() opens the TLS files the document names
+		if (!allowedPaths(doc.root, error) || !validate(json, error))
 			return false;
 		// the password is changed by /api/password alone, whatever the document says
 		putAuth(doc);
@@ -658,24 +659,9 @@ bool ControlCore::checkSetupCode(std::string code)
 	return diff == 0;
 }
 
-std::string ControlCore::randomHex(size_t length)
-{
-	static const char *digits = "0123456789abcdef";
-
-	std::random_device rd;
-	std::string s;
-	while (s.size() < length)
-	{
-		uint32_t r = rd();
-		for (int j = 28; j >= 0 && s.size() < length; j -= 4)
-			s += digits[(r >> j) & 0xF];
-	}
-	return s;
-}
-
 void ControlCore::setPassword(const std::string &password)
 {
-	std::string salt = randomHex(32);
+	std::string salt = Util::Helper::randomHex(32);
 	std::string hash = hashPassword(password, salt, PASSWORD_ITERATIONS);
 
 	{

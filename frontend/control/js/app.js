@@ -85,13 +85,16 @@ import { createMessageBar } from './message-bar.js';
     const logConsole = createLogConsole({ onAlert: level => { alerts[level]++; paintAlerts(); } });
 
     const iframe = document.getElementById('webviewer-frame');
+    let titleWatch = null;
     iframe.addEventListener('load', () => {
+        titleWatch?.disconnect();
         try {
             const doc = iframe.contentDocument;
             const title = doc.querySelector('title') || doc.head.appendChild(doc.createElement('title'));
             const mirror = () => { if (doc.title) document.title = doc.title; };
             mirror();
-            new MutationObserver(mirror).observe(title, { childList: true, characterData: true, subtree: true });
+            titleWatch = new MutationObserver(mirror);
+            titleWatch.observe(title, { childList: true, characterData: true, subtree: true });
         } catch { /* a page of another origin keeps its title */ }
     });
 

@@ -32,7 +32,7 @@ import * as toolbarLib from "@aiscatcher/ui/toolbar.js";
 import * as menuLib from "@aiscatcher/ui/menu.js";
 import { fromLonLat } from "ol/proj.js";
 
-var PHONE = "(max-width: 500px), (max-height: 800px)";
+let PHONE = "(max-width: 500px), (max-height: 800px)";
 
 /* --- keeping a target visible ---------------------------------------------
    reveal keeps one safety margin around everything: twice the selection
@@ -45,13 +45,13 @@ var PHONE = "(max-width: 500px), (max-height: 800px)";
    off screen lands in the middle of the biggest strip. A strip under 120px
    either way (a phone) is no place to pan to, so then nothing moves. */
 
-var MIN_ROOM = 120;
-var MARGIN_CAP = 0.1;
+let MIN_ROOM = 120;
+let MARGIN_CAP = 0.1;
 
 /* the breakpoints are tokens (tokens.css --bp-*); map.css repeats the numbers
    in its media and container queries, which cannot read custom properties */
 function bp(name, dflt) {
-    var v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
+    let v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
     return isNaN(v) ? dflt : v;
 }
 
@@ -59,17 +59,17 @@ function bp(name, dflt) {
    minimized; it is the pane's width that counts, so a side table counts */
 export function paneCramped(pane) {
     pane = pane || document.getElementById("map");
-    var w = pane && pane.clientWidth ? pane.clientWidth : window.innerWidth;
+    let w = pane && pane.clientWidth ? pane.clientWidth : window.innerWidth;
     return window.innerHeight <= bp("--bp-cramped-height", 1250) && w <= bp("--bp-narrow", 500);
 }
 
 /* pans so that map pixel `from` ends up at map pixel `to` (default: centre) */
 function panToOn(map, from, to) {
-    var view = map.getView();
-    var size = map.getSize();
-    var dest = to || [size[0] / 2, size[1] / 2];
-    var res = view.getResolution();
-    var c = view.getCenter();
+    let view = map.getView();
+    let size = map.getSize();
+    let dest = to || [size[0] / 2, size[1] / 2];
+    let res = view.getResolution();
+    let c = view.getCenter();
     view.animate({
         center: [c[0] + (from[0] - dest[0]) * res, c[1] - (from[1] - dest[1]) * res],
         duration: 1000,
@@ -81,17 +81,17 @@ function panToOn(map, from, to) {
    answer comes from its last rendered frame, which is stale right after a
    setCenter and absent on a map that has only just been shown. */
 function pixelFromView(map, coord, size) {
-    var view = map.getView();
+    let view = map.getView();
     if (view.getRotation()) return map.getPixelFromCoordinate(coord);
-    var c = view.getCenter(), res = view.getResolution();
+    let c = view.getCenter(), res = view.getResolution();
     if (!c || !res) return null;
     return [size[0] / 2 + (coord[0] - c[0]) / res, size[1] / 2 - (coord[1] - c[1]) / res];
 }
 
 function flyToOn(map, coord, dest, zoom) {
-    var view = map.getView();
-    var size = map.getSize();
-    var res = view.getResolutionForZoom(zoom);
+    let view = map.getView();
+    let size = map.getSize();
+    let res = view.getResolutionForZoom(zoom);
     view.cancelAnimations();
     view.animate({
         center: [coord[0] + (size[0] / 2 - dest[0]) * res, coord[1] - (size[1] / 2 - dest[1]) * res],
@@ -102,7 +102,7 @@ function flyToOn(map, coord, dest, zoom) {
 
 /* a chrome free box as the rectangle reveal() works in */
 export function freeRect(chrome, parent) {
-    var box = chrome.freeBox(parent);
+    let box = chrome.freeBox(parent);
     return { left: box.left, top: box.top, right: box.left + box.width, bottom: box.top + box.height };
 }
 
@@ -123,8 +123,8 @@ function roomy(s) { return s.right - s.left >= MIN_ROOM && s.bottom - s.top >= M
 /* the card's rectangle in map pixels, or null without a card */
 function cardRect(map, card) {
     if (!card || !card.offsetWidth) return null;
-    var m = map.getTargetElement().getBoundingClientRect();
-    var c = card.getBoundingClientRect();
+    let m = map.getTargetElement().getBoundingClientRect();
+    let c = card.getBoundingClientRect();
     return { left: c.left - m.left, top: c.top - m.top, right: c.right - m.left, bottom: c.bottom - m.top };
 }
 
@@ -150,15 +150,15 @@ function inside(px, s) {
 
 export function reveal(map, lonLat, card, opts) {
     opts = opts || {};
-    var size = map.getSize();
+    let size = map.getSize();
     // a position not given (91, 181) has no place on the map, and would leave the view nowhere
     if (!size || !(Math.abs(lonLat[0]) <= 180 && Math.abs(lonLat[1]) <= 90)) return null;
-    var viewport = { left: 0, top: 0, right: size[0], bottom: size[1] };
-    var whole = opts.free || viewport;
-    var cr = cardRect(map, card);
-    var strips = freeStrips(cr, whole);
-    var best = biggest(strips);
-    var coord = fromLonLat(lonLat);
+    let viewport = { left: 0, top: 0, right: size[0], bottom: size[1] };
+    let whole = opts.free || viewport;
+    let cr = cardRect(map, card);
+    let strips = freeStrips(cr, whole);
+    let best = biggest(strips);
+    let coord = fromLonLat(lonLat);
 
     /* from further out, fly to the target at the minimum zoom */
     if (opts.minZoom != null && map.getView().getZoom() < opts.minZoom) {
@@ -166,7 +166,7 @@ export function reveal(map, lonLat, card, opts) {
         return "panned";
     }
 
-    var px = opts.pixel || pixelFromView(map, coord, size);
+    let px = opts.pixel || pixelFromView(map, coord, size);
     if (!px) return null;
 
     /* a focus: the target goes to the middle of the free area, wherever it was */
@@ -174,17 +174,17 @@ export function reveal(map, lonLat, card, opts) {
         panToOn(map, px, center(roomy(best) ? best : whole));
         return "panned";
     }
-    var mg = opts.margin != null ? opts.margin : 2 * markersLib.selectionRadius(opts.settings);
-    var m = { x: Math.min(mg, (whole.right - whole.left) * MARGIN_CAP), y: Math.min(mg, (whole.bottom - whole.top) * MARGIN_CAP) };
-    var safe = inset(whole, m);                       // clear of the borders
-    var covered = cr && inset(cr, { x: -m.x, y: -m.y }); // the card and its margin
-    var hidden = !!covered && inside(px, covered);
+    let mg = opts.margin != null ? opts.margin : 2 * markersLib.selectionRadius(opts.settings);
+    let m = { x: Math.min(mg, (whole.right - whole.left) * MARGIN_CAP), y: Math.min(mg, (whole.bottom - whole.top) * MARGIN_CAP) };
+    let safe = inset(whole, m);                       // clear of the borders
+    let covered = cr && inset(cr, { x: -m.x, y: -m.y }); // the card and its margin
+    let hidden = !!covered && inside(px, covered);
     if (!hidden && inside(px, safe)) return null;
     if (!roomy(best)) return null;
 
-    var intoBest = function () { return clampInto(px, inset(best, m)); };
+    let intoBest = function () { return clampInto(px, inset(best, m)); };
 
-    var dest;
+    let dest;
     if (!inside(px, viewport)) dest = center(best);          // off screen
     else if (hidden) dest = intoBest();                      // behind the card
     else {
@@ -196,14 +196,14 @@ export function reveal(map, lonLat, card, opts) {
 }
 
 export function create(opts) {
-    var getMap = typeof opts.map === "function" ? opts.map : function () { return opts.map; };
-    var settings = opts.settings || function () { return {}; };
-    var phone = typeof matchMedia === "function" ? matchMedia(PHONE) : { matches: false };
-    var fullBleed = opts.fullBleed || function () { return phone.matches; };
+    let getMap = typeof opts.map === "function" ? opts.map : function () { return opts.map; };
+    let settings = opts.settings || function () { return {}; };
+    let phone = typeof matchMedia === "function" ? matchMedia(PHONE) : { matches: false };
+    let fullBleed = opts.fullBleed || function () { return phone.matches; };
 
     /* --- chrome: where the free map is --------------------------------------- */
 
-    var chrome = chromeLib.create(Object.assign({
+    let chrome = chromeLib.create(Object.assign({
         obstacles: [
             { selector: ".map-button-box.map-pill:not(.map-bottom)", edge: "right" },
             { selector: ".map-button-box.map-bottom", edge: "right" },
@@ -213,14 +213,14 @@ export function create(opts) {
 
     /* the map pane already ends where a side panel begins */
     function freeWidth() {
-        var map = getMap();
-        var size = map ? map.getSize() : null;
+        let map = getMap();
+        let size = map ? map.getSize() : null;
         return size && size[0] > 0 ? size[0] : window.innerWidth;
     }
 
     /* --- markers ---------------------------------------------------------------- */
 
-    var markers = markersLib.create(Object.assign({ settings: settings }, opts.markers || {}));
+    let markers = markersLib.create(Object.assign({ settings: settings }, opts.markers || {}));
 
     /* --- card ------------------------------------------------------------------- */
 
@@ -232,17 +232,17 @@ export function create(opts) {
                 chrome: chrome,
                 fullBleed: fullBleed,
                 topInset: function () { return fullBleed() ? 0 : chrome.inset("top"); },
-                viewSize: function () { var m = getMap(); return (m && m.getSize()) || [window.innerWidth, window.innerHeight]; },
+                viewSize: function () { let m = getMap(); return (m && m.getSize()) || [window.innerWidth, window.innerHeight]; },
                 freeWidth: freeWidth,
             }, c.layout || {}),
         }));
     }
 
-    var card = opts.card && opts.card.mount ? createCard(opts.card) : null;
+    let card = opts.card && opts.card.mount ? createCard(opts.card) : null;
 
     /* --- toolbar ---------------------------------------------------------------- */
 
-    var toolbar = null;
+    let toolbar = null;
     if (opts.toolbar && opts.toolbar.bar && opts.toolbar.rail) {
         toolbar = toolbarLib.create(Object.assign({
             wantWide: function () { return settings().map_toolbar === "wide"; },
@@ -255,7 +255,7 @@ export function create(opts) {
 
     /* --- menu ------------------------------------------------------------------- */
 
-    var menu = opts.menu && opts.menu.mount ? menuLib.create(opts.menu) : null;
+    let menu = opts.menu && opts.menu.mount ? menuLib.create(opts.menu) : null;
 
     /* --- the stack of things that can be open ------------------------------------
        Ordered top-down: [{ isOpen, close, stage }]. Escape closes the topmost
@@ -263,7 +263,7 @@ export function create(opts) {
        (menus, panels, drawers). An entry whose isOpen is true but has no
        close (a modal that closes itself) simply stops the ladder. */
 
-    var stack = opts.stack || [];
+    let stack = opts.stack || [];
 
     function dismiss() {
         stack.forEach(function (e) { if (e.stage && e.isOpen()) e.close(); });
@@ -272,7 +272,7 @@ export function create(opts) {
     if (stack.length && typeof document !== "undefined") {
         document.addEventListener("keydown", function (ev) {
             if (ev.key !== "Escape") return;
-            for (var i = 0; i < stack.length; i++) {
+            for (let i = 0; i < stack.length; i++) {
                 if (!stack[i].isOpen()) continue;
                 if (stack[i].close) stack[i].close();
                 return;
@@ -283,7 +283,7 @@ export function create(opts) {
     /* --- the moves a host makes ------------------------------------------------ */
 
     function revealTarget(lonLat, pixel, opts) {
-        var free = freeRect(chrome, getMap().getTargetElement());
+        let free = freeRect(chrome, getMap().getTargetElement());
         return reveal(getMap(), lonLat, card && card.el, Object.assign({ pixel: pixel, free: free, settings: settings() }, opts || {}));
     }
 
@@ -315,8 +315,8 @@ export function create(opts) {
 /* The map pane animates its width when a side panel opens; OpenLayers only
    learns about a new size when told, so keep telling it until the slide ends. */
 export function trackResize(map, ms) {
-    var until = Date.now() + (ms || 400);
-    var step = function () {
+    let until = Date.now() + (ms || 400);
+    let step = function () {
         map.updateSize();
         if (Date.now() < until) requestAnimationFrame(step);
     };

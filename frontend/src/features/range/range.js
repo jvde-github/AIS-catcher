@@ -20,7 +20,7 @@ import { config } from '../../core/config.js';
 import { saveSettings, effects } from '../../settings-store.js';
 import { showDialog } from '../../dialog.js';
 import { register } from '../../actions.js';
-import { hover_feature } from '../hover/hover.js';
+import { hoverFeature as hover_feature } from '../../core/store.js';
 import { stationsOnMap } from '../mapobjects/mapobjects.js';
 
 register({

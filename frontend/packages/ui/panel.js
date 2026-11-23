@@ -28,7 +28,7 @@
 
 import { tabScroller } from "./components.js";
 
-var TAGS = [
+let TAGS = [
     [".settings-header", "band"],
     [".settings-header .hdr-slot", "band-slot"],
     [".settings-main > header", "col-header"],
@@ -56,21 +56,21 @@ export function adoptClasses(root) {
 }
 
 export function create(opts) {
-    var win = opts.window;
-    var main = win.querySelector(".settings-main");
-    var headerSlot = win.querySelector(".settings-header .hdr-slot");
-    var groupSpec = opts.groups || [];
-    var onOpen = opts.onOpen || function () {};
-    var onClose = opts.onClose || function () {};
-    var skipGrouping = opts.skipGrouping || ".st-group, .filter-checks";
+    let win = opts.window;
+    let main = win.querySelector(".settings-main");
+    let headerSlot = win.querySelector(".settings-header .hdr-slot");
+    let groupSpec = opts.groups || [];
+    let onOpen = opts.onOpen || function () {};
+    let onClose = opts.onClose || function () {};
+    let skipGrouping = opts.skipGrouping || ".st-group, .filter-checks";
 
-    var groups = [];
-    var selectedTitle = null;
-    var subNav = null, subWrap = null;
-    var scrollers = [];
+    let groups = [];
+    let selectedTitle = null;
+    let subNav = null, subWrap = null;
+    let scrollers = [];
 
     function makeTab(label, activate) {
-        var tab = document.createElement("div");
+        let tab = document.createElement("div");
         tab.className = "settings-tab";
         tab.textContent = label;
         tab.setAttribute("role", "tab");
@@ -86,9 +86,9 @@ export function create(opts) {
     function groupRows() {
         main.querySelectorAll("section").forEach(function (section) {
             if (section.querySelector(skipGrouping)) return;
-            var rows = Array.prototype.filter.call(section.children, function (el) { return el.tagName !== "H5"; });
+            let rows = Array.prototype.filter.call(section.children, function (el) { return el.tagName !== "H5"; });
             if (!rows.length) return;
-            var box = document.createElement("div");
+            let box = document.createElement("div");
             box.className = "st-group";
             rows.forEach(function (row) { box.appendChild(row); });
             section.appendChild(box);
@@ -96,7 +96,7 @@ export function create(opts) {
     }
 
     function scroller(nav, extraClass) {
-        var r = tabScroller(nav, extraClass);
+        let r = tabScroller(nav, extraClass);
         scrollers.push(r.update);
         return r.wrap;
     }
@@ -105,8 +105,8 @@ export function create(opts) {
         groupRows();
         adoptClasses(win);
 
-        var parsed = {};
-        var current = null;
+        let parsed = {};
+        let current = null;
         Array.prototype.forEach.call(main.children, function (child) {
             if (child.tagName === "HEADER") {
                 current = child.textContent.trim();
@@ -127,13 +127,13 @@ export function create(opts) {
             })
             .filter(function (g) { return g.subs.length > 0; });
 
-        var mapped = {};
+        let mapped = {};
         groupSpec.forEach(function (g) { g.subs.forEach(function (s) { mapped[s[0]] = true; }); });
         Object.keys(parsed).forEach(function (name) {
             if (!mapped[name]) groups.push({ title: name, subs: [Object.assign({ label: name }, parsed[name])] });
         });
 
-        var nav = document.createElement("nav");
+        let nav = document.createElement("nav");
         nav.className = "settings-tabs";
         nav.setAttribute("role", "tablist");
         groups.forEach(function (g, i) { nav.appendChild(makeTab(g.title, function () { selectGroup(i); })); });
@@ -153,7 +153,7 @@ export function create(opts) {
     }
 
     function selectGroup(idx) {
-        var group = groups[idx];
+        let group = groups[idx];
         if (!group) return;
         selectedTitle = group.title;
         win.querySelectorAll(".settings-tabs:not(.settings-subtabs) .settings-tab").forEach(function (t, i) {
@@ -172,12 +172,12 @@ export function create(opts) {
     }
 
     function selectSub(groupIdx, subIdx) {
-        var shown = groups[groupIdx].subs[subIdx].sections;
-        var first = true;
+        let shown = groups[groupIdx].subs[subIdx].sections;
+        let first = true;
         Array.prototype.forEach.call(main.children, function (child) {
             if (child.tagName === "HEADER") child.style.display = "none";
             else if (child.tagName === "SECTION") {
-                var show = shown.indexOf(child) >= 0;
+                let show = shown.indexOf(child) >= 0;
                 child.style.display = show ? "" : "none";
                 child.classList.toggle("st-first", show && first);
                 if (show) first = false;
@@ -192,16 +192,16 @@ export function create(opts) {
 
     /* --- data-setting controls ------------------------------------------------ */
 
-    var store = null;
-    var onChange = null;
-    var captions = {};     // key -> (value) => text, for captions that need a host format
-    var bound = false;
+    let store = null;
+    let onChange = null;
+    let captions = {};     // key -> (value) => text, for captions that need a host format
+    let bound = false;
 
     /* <span data-caption-for="track_weight" data-caption-format="Width ({v})">:
        kept in step with the control on open, drag and change */
     function caption(key) {
         win.querySelectorAll('[data-caption-for="' + key + '"]').forEach(function (el) {
-            var v = store.get(key);
+            let v = store.get(key);
             el.textContent = captions[key] ? captions[key](v) : (el.dataset.captionFormat || "{v}").replace("{v}", v);
         });
     }
@@ -223,7 +223,7 @@ export function create(opts) {
     function sync() {
         if (!store) return;
         controls().forEach(function (el) {
-            var v = store.get(el.dataset.setting);
+            let v = store.get(el.dataset.setting);
             if (el.type === "checkbox") el.checked = !!v;
             else if (v != null) el.value = v;
         });
@@ -237,9 +237,9 @@ export function create(opts) {
         if (bound) { sync(); return; }
         bound = true;
         win.addEventListener("change", function (e) {
-            var el = e.target.closest("[data-setting]");
+            let el = e.target.closest("[data-setting]");
             if (!el) return;
-            var key = el.dataset.setting, value = readControl(el);
+            let key = el.dataset.setting, value = readControl(el);
             store.set(key, value);
             caption(key);
             if (onChange) onChange(key, value, el);
@@ -247,9 +247,9 @@ export function create(opts) {
         /* a slider being dragged: the value is staged (not saved) so captions
            and the map follow the thumb; the release above saves it */
         win.addEventListener("input", function (e) {
-            var el = e.target.closest("[data-setting]");
+            let el = e.target.closest("[data-setting]");
             if (!el || el.type !== "range") return;
-            var key = el.dataset.setting, value = readControl(el);
+            let key = el.dataset.setting, value = readControl(el);
             if (store.stage) store.stage(key, value); else return;
             caption(key);
             if (onChange) onChange(key, value, el, true);
@@ -267,7 +267,7 @@ export function create(opts) {
         onOpen();
         win.classList.add("active");
         if (title != null) {
-            var idx = -1;
+            let idx = -1;
             groups.forEach(function (g, i) { if (g.title === title) idx = i; });
             if (idx >= 0) selectGroup(idx);
         }

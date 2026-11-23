@@ -4,7 +4,8 @@ import { ships } from '../../core/store.js';
 import { config } from '../../core/config.js';
 import { showDialog, showNotification } from '../../dialog.js';
 import { saveSettings, beforeWrite } from '../../settings-store.js';
-import { selectMapTab, showTab, load } from '../index.js';
+import { showTab, load } from '../index.js';
+import { selectMapTab } from '../../features/targetcard/card.js';
 import { register } from '../../actions.js';
 import { showContextMenu } from '../../features/contextmenu/contextmenu.js';
 
@@ -68,7 +69,7 @@ class RealtimeViewer {
     }
 
     connectNmea() {
-        if (document.hidden) return;
+        if (document.hidden && !this.backgroundStreaming) return;
         if (this.eventSource && (this.eventSource.readyState === EventSource.OPEN || this.eventSource.readyState === EventSource.CONNECTING)) {
             return;
         }

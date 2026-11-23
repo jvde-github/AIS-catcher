@@ -4,7 +4,8 @@
 import { getDistanceVal, getDistanceUnit } from '../../core/units.js';
 import { getDeltaTimeVal, sanitizeString, formatBytes, isHttpUrl } from '@aiscatcher/core/text.js';
 import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
-import { focus, refreshIntervalMs } from '../../data.js';
+import { focus } from '../../data.js';
+import { refreshIntervalMs } from '../../poll.js';
 import { showDialogPlain, objectToTableHtml } from '../../dialog.js';
 import * as community from '../../overlays/community.js';
 import { hasStationChoice, mountFocusPicker } from '../../features/station/station.js';
@@ -111,7 +112,7 @@ function syncScope() {
     if (several && !scopePicker) scopePicker = mountFocusPicker(document.getElementById("stat_scope"), { scope: true });
 }
 
-export async function updateStatistics() {
+export async function update() {
     syncScope();
     const stat = await fetchStatistics();
 

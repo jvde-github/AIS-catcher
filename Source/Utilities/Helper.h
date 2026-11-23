@@ -28,6 +28,7 @@ namespace Util
 	{
 	public:
 		static std::string readFile(const std::string &filename);
+		static std::string randomHex(size_t length);
 		static bool writeFileAtomic(const std::string &path, const std::string &content, std::string &error, bool owner_only = false);
 		// Makes the temp file a save writes to, afresh, so a link left at its name
 		// is not followed: with the target's mode; a new target as the umask leaves

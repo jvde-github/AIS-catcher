@@ -11,7 +11,8 @@ import {
     ol, addTileLayer, removeTileLayer, removeTileLayerAll, addOverlayLayer, removeOverlayLayer,
     removeOverlayLayerAll,
 } from './map.js';
-import { setShipFilter, setRefreshInterval } from './data.js';
+import { setShipFilter } from './data.js';
+import { setRefreshInterval } from './poll.js';
 import { showDialog, closeDialog, showNotification } from './dialog.js';
 import { showTargetcard, addItem } from './features/targetcard/card.js';
 import { showContextMenu, context_mmsi, context_type } from './features/contextmenu/contextmenu.js';

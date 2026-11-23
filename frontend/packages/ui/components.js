@@ -11,13 +11,13 @@ export function decodeHTMLEntities(text) {
     const textArea = document.createElement('textarea');
     textArea.innerHTML = String(text).replace(/</g, '&lt;');
     // &nbsp; stands in for a space in a name typed on a command line: a line may break there
-    return textArea.value.replace(/ /g, ' ');
+    return textArea.value.replace(/\u00a0/g, ' ');
 }
 
 export function debounce(fn, ms) {
-    var t = null;
-    var wrapped = function () {
-        var args = arguments, self = this;
+    let t = null;
+    let wrapped = function () {
+        let args = arguments, self = this;
         clearTimeout(t);
         t = setTimeout(function () { t = null; fn.apply(self, args); }, ms);
     };
@@ -25,7 +25,7 @@ export function debounce(fn, ms) {
     return wrapped;
 }
 
-var ARROW = {
+let ARROW = {
     left: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 -960 960 960" fill="currentColor"><path d="M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z"/></svg>',
     right: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 -960 960 960" fill="currentColor"><path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z"/></svg>'
 };
@@ -37,14 +37,14 @@ var ARROW = {
    Returns { wrap, update, destroy } — call update() after changing the strip's
    contents, since neither scroll nor resize fires for that. */
 export function tabScroller(nav, extraClass) {
-    var wrap = document.createElement("div");
+    let wrap = document.createElement("div");
     wrap.className = "tab-scroll-wrap" + (extraClass ? " " + extraClass : "");
 
     if (nav.parentNode) nav.parentNode.insertBefore(wrap, nav);
     wrap.appendChild(nav);
 
     ["left", "right"].forEach(function (dir) {
-        var btn = document.createElement("button");
+        let btn = document.createElement("button");
         btn.type = "button";
         btn.className = "tab-scroll-btn " + dir;
         btn.tabIndex = -1;
@@ -60,7 +60,7 @@ export function tabScroller(nav, extraClass) {
     });
 
     function update() {
-        var max = nav.scrollWidth - nav.clientWidth;
+        let max = nav.scrollWidth - nav.clientWidth;
         wrap.classList.toggle("can-left", nav.scrollLeft > 4);
         wrap.classList.toggle("can-right", nav.scrollLeft < max - 4);
     }
@@ -76,12 +76,12 @@ export function tabScroller(nav, extraClass) {
         }
     }, { passive: false });
 
-    var observer;
+    let observer;
     if (typeof ResizeObserver !== "undefined") {
         observer = new ResizeObserver(update);
         observer.observe(nav);
     } else {
-        var wasConnected = false;
+        let wasConnected = false;
         var onResize = function () {
             if (nav.isConnected) {
                 wasConnected = true;
@@ -105,19 +105,19 @@ export function tabScroller(nav, extraClass) {
    opts { rowClass, idPrefix }. Returns the value cells by key. */
 export function fieldRows(mount, rows, opts) {
     opts = opts || {};
-    var cells = {};
+    let cells = {};
 
     rows.forEach(function (row) {
-        var el = document.createElement("div");
+        let el = document.createElement("div");
         el.className = [opts.rowClass, row.cls].filter(Boolean).join(" ");
 
         row.fields.forEach(function (f) {
-            var pair = document.createElement("div");
+            let pair = document.createElement("div");
             if (f.spacer) { el.appendChild(pair); return; }
 
-            var label = document.createElement("span");
+            let label = document.createElement("span");
             label.textContent = f.label;
-            var value = document.createElement("span");
+            let value = document.createElement("span");
             if (opts.idPrefix) value.id = opts.idPrefix + f.key;
             pair.appendChild(label);
             pair.appendChild(value);
@@ -133,20 +133,20 @@ export function fieldRows(mount, rows, opts) {
 
 /* --- toast ------------------------------------------------------------ */
 
-var TOAST_TIME = { info: 5000, success: 5000, warning: 7000, error: 9000 };
-var TOAST_ICON = { info: "i", success: "✓", warning: "!", error: "\u2715" };
-var TOAST_MAX = 4;   /* a burst must not become a wall */
+let TOAST_TIME = { info: 5000, success: 5000, warning: 7000, error: 9000 };
+let TOAST_ICON = { info: "i", success: "✓", warning: "!", error: "\u2715" };
+let TOAST_MAX = 4;   /* a burst must not become a wall */
 
 /* Shows a transient message. `container` is the stack to append to; if the
    element is missing it is created, so callers need not own one.
    Returns a dismiss() so a caller can retract a toast it no longer means. */
 export function toast(type, message, opts) {
     opts = opts || {};
-    var duration = opts.duration;
-    var onClose = opts.onClose;
+    let duration = opts.duration;
+    let onClose = opts.onClose;
     if (!(type in TOAST_TIME)) type = "info";
-    var id = opts.container || "toast-container";
-    var container = document.getElementById(id);
+    let id = opts.container || "toast-container";
+    let container = document.getElementById(id);
     if (!container) {
         container = document.createElement("div");
         container.id = id;
@@ -158,15 +158,15 @@ export function toast(type, message, opts) {
 
     function alive() { return container.querySelectorAll(".toast:not(.toast-dying)"); }
 
-    var twin = null;
-    var live = alive();
-    for (var t = 0; t < live.length; t++) {
+    let twin = null;
+    let live = alive();
+    for (let t = 0; t < live.length; t++) {
         if (live[t].dataset.key === type + "|" + message) { twin = live[t]; break; }
     }
     if (twin) {
-        var n = (parseInt(twin.dataset.count, 10) || 1) + 1;
+        let n = (parseInt(twin.dataset.count, 10) || 1) + 1;
         twin.dataset.count = n;
-        var badge = twin.querySelector(".toast-count");
+        let badge = twin.querySelector(".toast-count");
         if (!badge) {
             badge = document.createElement("span");
             badge.className = "toast-count";
@@ -181,26 +181,26 @@ export function toast(type, message, opts) {
     /* keep the stack readable: retire the oldest once it is full. A culled
        toast leaves at once rather than over 300ms, or this would spin. */
     while (live.length >= TOAST_MAX) {
-        var oldest = live[0];
+        let oldest = live[0];
         if (oldest._dismiss) oldest._dismiss();
         oldest.remove();
         live = alive();
     }
-    var el = document.createElement("div");
+    let el = document.createElement("div");
     el.className = "toast toast-" + type;
     el.dataset.key = type + "|" + message;
     el.dataset.count = 1;
 
     if (TOAST_ICON[type]) {
-        var icon = document.createElement("span");
+        let icon = document.createElement("span");
         icon.className = "toast-icon";
         icon.textContent = TOAST_ICON[type];
         el.appendChild(icon);
     }
-    var text = document.createElement("span");
+    let text = document.createElement("span");
     text.className = "toast-text";
     text.textContent = message;
-    var close = document.createElement("span");
+    let close = document.createElement("span");
     close.className = "toast-close";
     close.title = "Dismiss";
     close.textContent = "×";
@@ -210,9 +210,9 @@ export function toast(type, message, opts) {
     container.appendChild(el);
     requestAnimationFrame(function () { el.classList.add("toast-visible"); });
 
-    var life = duration || TOAST_TIME[type];
-    var timer = setTimeout(dismiss, life);
-    var closed = false;
+    let life = duration || TOAST_TIME[type];
+    let timer = setTimeout(dismiss, life);
+    let closed = false;
 
     el._restart = function () { clearTimeout(timer); timer = setTimeout(dismiss, life); };
     function dismiss() {
@@ -238,39 +238,39 @@ export function toast(type, message, opts) {
    bar), onClose }.
    Returns { root, card, body, foot, setTitle, open, close, isOpen }. */
 export function modal(opts) {
-    var existing = document.getElementById(opts.id);
+    let existing = document.getElementById(opts.id);
     if (existing && existing._modal) return existing._modal;
 
-    var root = document.createElement("div");
+    let root = document.createElement("div");
     root.className = "modal-overlay hidden";
     root.id = opts.id;
 
-    var card = document.createElement("div");
+    let card = document.createElement("div");
     card.className = "card col modal-card" + (opts.cardClass ? " " + opts.cardClass : "");
 
-    var header = document.createElement("div");
+    let header = document.createElement("div");
     header.className = "dialog-header";
 
-    var title = document.createElement("div");
+    let title = document.createElement("div");
     title.className = "dialog-title";
     title.textContent = opts.title || "";
 
-    var closeBtn = document.createElement("div");
+    let closeBtn = document.createElement("div");
     closeBtn.className = "close_icon";
 
     header.appendChild(title);
     header.appendChild(closeBtn);
     card.appendChild(header);
 
-    var body = document.createElement("div");
+    let body = document.createElement("div");
     body.className = opts.bodyClass || "modal-body";
     card.appendChild(body);
 
-    var foot = null;
+    let foot = null;
     if (opts.footerLabel) {
         foot = document.createElement("div");
         foot.className = "row row-end modal-foot";
-        var okBtn = document.createElement("button");
+        let okBtn = document.createElement("button");
         okBtn.type = "button";
         okBtn.className = "btn";
         okBtn.textContent = opts.footerLabel;
@@ -301,7 +301,7 @@ export function modal(opts) {
     closeBtn.addEventListener("click", close);
     /* a click that began on the scrim dismisses: a text selection ending on it must
        not, nor the tap that opened the dialog, whose mouse events land on the new scrim */
-    var pressed = false;
+    let pressed = false;
     root.addEventListener("pointerdown", function (e) {
         pressed = e.target === root;
     });
@@ -310,7 +310,7 @@ export function modal(opts) {
         pressed = false;
     });
 
-    var api = {
+    let api = {
         root: root, card: card, body: body, foot: foot,
         setTitle: function (t) { title.textContent = t; },
         open: open, close: close, isOpen: isOpen
@@ -329,20 +329,20 @@ export function placeMenu(menu, opts) {
     menu.style.display = "block";
     menu.style.transform = "none";
 
-    var vw = Math.min(window.innerWidth || Infinity, window.outerWidth || Infinity) || document.documentElement.clientWidth;
-    var vh = Math.min(window.innerHeight || Infinity, window.outerHeight || Infinity) || document.documentElement.clientHeight;
+    let vw = Math.min(window.innerWidth || Infinity, window.outerWidth || Infinity) || document.documentElement.clientWidth;
+    let vh = Math.min(window.innerHeight || Infinity, window.outerHeight || Infinity) || document.documentElement.clientHeight;
     // never taller than the window less a margin top and bottom; a longer menu scrolls inside
-    var M = 12;
+    let M = 12;
     menu.style.maxHeight = Math.max(120, vh - 2 * M) + "px";
     menu.style.overflowY = "auto";
-    var rect = menu.getBoundingClientRect();
-    var clampTop = function (t) { return Math.max(M, Math.min(t, vh - rect.height - M)); };
-    var clampLeft = function (l) { return Math.max(M, Math.min(l, vw - rect.width - M)); };
+    let rect = menu.getBoundingClientRect();
+    let clampTop = function (t) { return Math.max(M, Math.min(t, vh - rect.height - M)); };
+    let clampLeft = function (l) { return Math.max(M, Math.min(l, vw - rect.width - M)); };
 
     if (opts.anchor) {
-        var btn = opts.anchor.getBoundingClientRect();
+        let btn = opts.anchor.getBoundingClientRect();
         // above the button when it fits, else below; either way moved up until it fits
-        var top = btn.top - rect.height - 8;
+        let top = btn.top - rect.height - 8;
         if (top < M) top = btn.bottom + 8;
         menu.style.left = clampLeft(btn.right - rect.width) + "px";
         menu.style.top = clampTop(top) + "px";
@@ -361,7 +361,7 @@ export function placeMenu(menu, opts) {
 /* A Mac takes a control-click for a right-click: the context menu opens on it,
    and some browsers then send the click as well, which is not one */
 export function isSecondaryClick(e) {
-    var nav = typeof navigator !== "undefined" ? navigator : null;
+    let nav = typeof navigator !== "undefined" ? navigator : null;
     return !!(e && e.ctrlKey && e.button === 0 && nav && /Mac|iPhone|iPad/.test(nav.platform || nav.userAgent || ""));
 }
 
@@ -398,7 +398,7 @@ export function dismissOnce(menu, onClose, opts) {
    (flag-card, flag-tooltip, flag-table). */
 
 export function flag(country, variant, title) {
-    var span = document.createElement("span");
+    let span = document.createElement("span");
     if (!country) return span;
     span.className = "flag fi fi-" + String(country).toLowerCase() + (variant ? " " + variant : "");
     if (title) span.title = title;
@@ -407,8 +407,8 @@ export function flag(country, variant, title) {
 
 export function flagHTML(country, variant, title) {
     if (!country) return "<span></span>";
-    var c = String(country).toLowerCase().replace(/[^a-z]/g, "");
-    var t = title ? ' title="' + String(title).replace(/"/g, "&quot;") + '"' : "";
+    let c = String(country).toLowerCase().replace(/[^a-z]/g, "");
+    let t = title ? ' title="' + String(title).replace(/"/g, "&quot;") + '"' : "";
     return '<span class="flag fi fi-' + c + (variant ? " " + variant : "") + '"' + t + "></span>";
 }
 
@@ -424,17 +424,17 @@ export function chipStyle(b) {
 }
 
 export function bucketChip(b, countId) {
-    var item = document.createElement("span");
+    let item = document.createElement("span");
     item.className = "stat-item";
     item.title = b.label || "";
     if (b.action) item.dataset.action = b.action;
     item.dataset.bucket = b.id;
 
-    var icon = document.createElement("span");
+    let icon = document.createElement("span");
     icon.className = b.icon || "";
     if (b.style || b.pos || b.cell) icon.setAttribute("style", b.style || chipStyle(b));
 
-    var count = document.createElement("span");
+    let count = document.createElement("span");
     if (countId) count.id = countId;
 
     item.appendChild(icon);
@@ -448,9 +448,9 @@ export function bucketChip(b, countId) {
    when a drag ends. */
 
 export function draggable(handle, target) {
-    var threshold = 15;
-    var dragging = false;
-    var startX, startY, offX, offY;
+    let threshold = 15;
+    let dragging = false;
+    let startX, startY, offX, offY;
     handle.classList.add("cursor-move");
 
     handle.addEventListener("pointerdown", function (e) {
@@ -458,8 +458,8 @@ export function draggable(handle, target) {
         startX = e.clientX; startY = e.clientY;
         offX = startX - target.offsetLeft; offY = startY - target.offsetTop;
 
-        var onMove = function (e) {
-            var dx = e.clientX - startX, dy = e.clientY - startY;
+        let onMove = function (e) {
+            let dx = e.clientX - startX, dy = e.clientY - startY;
             if (!dragging && dx * dx + dy * dy > threshold * threshold) {
                 dragging = true;
                 target.classList.add("dragging");
@@ -471,7 +471,7 @@ export function draggable(handle, target) {
                 target.style.top = (e.clientY - offY) + "px";
             }
         };
-        var onUp = function (e) {
+        let onUp = function (e) {
             if (dragging) {
                 dragging = false;
                 target.classList.remove("dragging");

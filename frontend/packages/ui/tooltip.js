@@ -7,11 +7,11 @@
 
 export function create(opts) {
     opts = opts || {};
-    var selector = opts.selector || ".map-pill .map-button";
-    var margin = opts.margin || 8;
-    var below = opts.placement === "below";
+    let selector = opts.selector || ".map-pill .map-button";
+    let margin = opts.margin || 8;
+    let below = opts.placement === "below";
 
-    var tip = document.createElement("div");
+    let tip = document.createElement("div");
     tip.id = "toolbar-tooltip";
     document.body.appendChild(tip);
 
@@ -25,18 +25,18 @@ export function create(opts) {
     }
 
     function show(btn) {
-        var text = btn.dataset.label || btn.getAttribute("aria-label");
+        let text = btn.dataset.label || btn.getAttribute("aria-label");
         if (!text) return;
         // A fullscreen element paints above the body, including fixed children.
         // Keep the tooltip in the same top-layer subtree as its button.
-        var container = document.fullscreenElement || document.body;
+        let container = document.fullscreenElement || document.body;
         if (tip.parentElement !== container) container.appendChild(tip);
         tip.textContent = text;
         tip.classList.add("show");
 
-        var r = btn.getBoundingClientRect();
-        var w = tip.offsetWidth, h = tip.offsetHeight;
-        var left, top;
+        let r = btn.getBoundingClientRect();
+        let w = tip.offsetWidth, h = tip.offsetHeight;
+        let left, top;
         if (below) {
             left = Math.max(margin, Math.min(window.innerWidth - w - margin, r.left + r.width / 2 - w / 2));
             top = r.bottom + h + margin <= window.innerHeight ? r.bottom + margin : r.top - h - margin;
@@ -54,7 +54,7 @@ export function create(opts) {
     }
 
     document.addEventListener("pointerover", function (e) {
-        var btn = e.target.closest(selector);
+        let btn = e.target.closest(selector);
         if (btn) show(btn);
     });
     document.addEventListener("pointerout", function (e) {
@@ -62,7 +62,7 @@ export function create(opts) {
     });
     document.addEventListener("pointerdown", hide, true);
     document.addEventListener("focusin", function (e) {
-        var btn = e.target.closest(selector);
+        let btn = e.target.closest(selector);
         if (btn && btn.matches(":focus-visible")) show(btn);
     });
     document.addEventListener("focusout", function (e) {

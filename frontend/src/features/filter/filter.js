@@ -7,13 +7,13 @@ import { getDistanceConversion, getDistanceUnit, getSpeedConversion, getSpeedUni
 import * as components from '@aiscatcher/ui/components.js';
 import { redraw } from '../../fleet.js';
 import { saveSettings } from '../../settings-store.js';
-import { settingsPanel, openSettingsTab } from '../settings/settings.js';
+import { settingsPanel, openSettingsTab, onSettingsOpen } from '../settings/settings.js';
 import { loaded as loadedTab } from '../../tabs/index.js';
 import * as replay from '../replay/replay.js';
 import { register } from '../../actions.js';
 import { focus } from '../../data.js';
 import { focusLabel } from '../../core/config.js';
-import { resetFocus } from '../station/station.js';
+import { resetFocus, onFocusShown } from '../station/station.js';
 
 function applyFilter() {
     saveSettings();
@@ -180,3 +180,6 @@ register({
         if (label) label.textContent = "Seen within" + (v > 0 ? " (" + v + " min)" : " (any)");
     },
 });
+
+onSettingsOpen(updateFilterUI);
+onFocusShown(updateFilterUI);

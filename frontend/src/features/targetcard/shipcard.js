@@ -15,7 +15,7 @@ import { register } from '../../actions.js';
 import { saveSettings } from '../../settings-store.js';
 import { ui } from '../../ui.js';
 import { fitTargetcard, addItem, openOnTab, setValidation, showOutOfRange, updateTrackOption } from './card.js';
-import { isFollowing } from '../follow/follow.js';
+import { updateFollowOption } from '../follow/follow.js';
 
 let cells = null, layout = null;
 
@@ -187,15 +187,6 @@ function updateMessageButton() {
 
 // ─── content ─────────────────────────────────────────────────────────────────
 
-
-export function updateFollowOption() {
-    const option = document.getElementById("targetcard_follow_option");
-    const following = isFollowing(cardMmsi);
-
-    option.querySelector("#targetcard_follow").innerText = following ? "Unfollow" : "Follow";
-    option.title = following ? "Stop centring the map on this vessel" : "Keep the map centred on this vessel";
-    option.classList.toggle("card-icon-active", following);
-}
 
 function updateTechDetails(ship) {
     const formatFlag = (value, trueText = "Yes", falseText = "No", unknownText = "-") => {

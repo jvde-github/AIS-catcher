@@ -11,18 +11,14 @@ import { createEventHistory } from '@aiscatcher/ui/events-history.js';
 import { map } from '../../map.js';
 import { redraw } from '../../fleet.js';
 import { focus, viewed } from '../../data.js';
-import { ships, station } from '../../core/store.js';
+import { ships, station, cardMmsi } from '../../core/store.js';
 import { config } from '../../core/config.js';
 import { saveSettings, effects } from '../../settings-store.js';
-import { closeSettings } from '../settings/settings.js';
 import { closeDialog } from '../../dialog.js';
 import { ui } from '../../ui.js';
 import { panels, setPanels } from '../../panels.js';
-import { toggleReplaycard } from '../replay/replaybar.js';
 import { showTargetcard } from '../targetcard/card.js';
-import { openFocus } from '../follow/follow.js';
 import { register } from '../../actions.js';
-import { hoverVessel, unhoverVessel, isHovered, rehover, isHoveringShip, rehoverShip } from '../hover/hover.js';
 import { needsMapObjects, objectKindVisible } from '@aiscatcher/core/object-visibility.js';
 import { stationBand } from '@aiscatcher/ui/stations.js';
 
@@ -41,6 +37,15 @@ const shipLink = (mmsi) => {
 
 const api = (query) => fetch(`api/${query}&stations=${focus}`).then((r) => r.json());
 
+// set once by script.js, so that this module imports no features
+const viewer = {
+    isHovered: () => false, rehover: () => {}, isHoveringShip: () => false, rehoverShip: () => {}, hoverVessel: () => {}, unhoverVessel: () => {},
+    closeSettings: () => {}, toggleReplaycard: () => {}, openFocus: () => {},
+};
+export function wire(parts) {
+    Object.assign(viewer, parts);
+}
+
 // the module is built once, at load, so the layer exists before the map does
 const objects = mapobjects.create({
     fetchJSON: (url) => api(url),
@@ -58,9 +63,13 @@ const objects = mapobjects.create({
         places: objectKindVisible(settings, 'place'),
         hidden: cat => !objectKindVisible(settings, cat),
     }),
-    isHovered, rehover, isHoveringShip, rehoverShip,
+    isHovered: (...a) => viewer.isHovered(...a),
+    rehover: (...a) => viewer.rehover(...a),
+    isHoveringShip: (...a) => viewer.isHoveringShip(...a),
+    rehoverShip: (...a) => viewer.rehoverShip(...a),
     openVessel,
-    hoverVessel, unhoverVessel,
+    hoverVessel: (...a) => viewer.hoverVessel(...a),
+    unhoverVessel: (...a) => viewer.unhoverVessel(...a),
     setTableOpen,
     openStation,
     map: () => map,
@@ -102,16 +111,17 @@ function openStation(id) {
 }
 
 function setTableOpen(on) {
-    if (on) closeSettings();
-    if (on && panels.replay) toggleReplaycard();
+    if (on) viewer.closeSettings();
+    if (on && panels.replay) viewer.toggleReplaycard();
     setPanels({ table: on });
 }
 
 export function init() {
     register({
         setBinaryCategory: (e, ds, el) => setBinaryCategory(ds.cat, el.checked),
-        openEventHistory: () => { closeSettings(); openEventHistory(); },
-        focusShipLink: (e, ds) => { closeDialog(); openFocus(Number(ds.mmsi)); },
+        openEventHistory: () => { viewer.closeSettings(); openEventHistory(); },
+        focusShipLink: (e, ds) => { closeDialog(); viewer.openFocus(Number(ds.mmsi)); },
+        showBinaryMessageDialogCard: () => showBinaryMessageDialog(cardMmsi),
     });
     if (map) viewChanged(map.getView().getZoom() || 0);
 }

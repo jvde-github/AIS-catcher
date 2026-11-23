@@ -26,6 +26,8 @@ export let markerTracks = new Set();
 
 export function setCard(mmsi, type) { cardMmsi = mmsi; cardType = type; }
 export function setHover(mmsi, type) { hoverMmsi = mmsi; hoverType = type; }
+export let hoverFeature = undefined;
+export function setHoverFeature(f) { hoverFeature = f; }
 export function setMarkerTracks(v) { markerTracks = v; }
 
 export function setShips(v) { ships = v; }

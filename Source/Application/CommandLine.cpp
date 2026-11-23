@@ -17,7 +17,6 @@
 
 #include <algorithm>
 #include <iostream>
-#include <fstream>
 #include <string.h>
 #include <memory>
 #include <cctype>
@@ -25,7 +24,6 @@
 #ifdef _WIN32
 #include <direct.h>
 #else
-#include <fcntl.h>
 #include <unistd.h>
 #endif
 
@@ -43,7 +41,6 @@
 #include "Helper.h"
 #include "Logger.h"
 #include "SHA256.h"
-#include "ControlCore.h"
 
 namespace CommandLine
 {
@@ -1021,7 +1018,7 @@ static bool build(const std::vector<std::string> &args, Config &c)
 	if (actions.new_key)
 	{
 		// the key is the client's; a server holds its hash
-		const std::string key = ControlCore::randomHex(48), hash = Util::SHA256::hex(key);
+		const std::string key = Util::Helper::randomHex(48), hash = Util::SHA256::hex(key);
 		std::cout << "key:     " << key << "\nsha256:  " << hash << "\n\n"
 				  << "on the command line:     -N 8100 KEYS name:data:" << hash << " API on\n"
 				  << "in a configuration file: \"keys\": [{\"name\": \"name\", \"sha256\": \"" << hash << "\", \"scopes\": [\"data\"]}]\n"
@@ -1041,15 +1038,9 @@ static bool build(const std::vector<std::string> &args, Config &c)
 		else
 		{
 			// the document can hold passwords: a new file is its owner's alone
-#ifndef _WIN32
-			const int fd = ::open(json_file.c_str(), O_WRONLY | O_CREAT, 0600);
-			if (fd >= 0)
-				::close(fd);
-#endif
-			std::ofstream out(json_file);
-			out << file;
-			if (!out)
-				throw std::runtime_error("-J: cannot write " + json_file + ".");
+			std::string error;
+			if (!Util::Helper::writeFileAtomic(json_file, file, error, true))
+				throw std::runtime_error("-J: cannot write " + json_file + ": " + error);
 			Info() << "Configuration written to " << json_file;
 		}
 		return false;

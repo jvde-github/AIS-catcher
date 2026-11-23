@@ -17,6 +17,7 @@
 
 #include <cstdio>
 #include <fstream>
+#include <random>
 #include <stdexcept>
 #include <fcntl.h>
 
@@ -66,6 +67,21 @@ namespace Util
 			}
 		}
 		return crc;
+	}
+
+	std::string Helper::randomHex(size_t length)
+	{
+		static const char *digits = "0123456789abcdef";
+
+		std::random_device rd;
+		std::string s;
+		while (s.size() < length)
+		{
+			uint32_t r = rd();
+			for (int j = 28; j >= 0 && s.size() < length; j -= 4)
+				s += digits[(r >> j) & 0xF];
+		}
+		return s;
 	}
 
 	std::string Helper::readFile(const std::string &filename)

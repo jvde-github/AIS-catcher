@@ -131,17 +131,17 @@ public:
 	// an engine that stops unasked is started again, after a wait that doubles
 	void reportStopped()
 	{
-		std::lock_guard<std::mutex> lock(mtx);
-		const bool was_running = state_ == State::Running;
-		const bool healthy = was_running && std::time(nullptr) - started >= RETRY_HEALTHY_UPTIME;
-		state_ = State::Stopped;
-		epoch++;
-
-		if (restarting)
-			restarting = false;
-		else if (wanted)
+		bool off = false;
 		{
-			if (was_running || auto_retry)
+			std::lock_guard<std::mutex> lock(mtx);
+			const bool was_running = state_ == State::Running;
+			const bool healthy = was_running && std::time(nullptr) - started >= RETRY_HEALTHY_UPTIME;
+			state_ = State::Stopped;
+			epoch++;
+
+			if (restarting)
+				restarting = false;
+			else if (wanted && (was_running || auto_retry))
 			{
 				if (healthy)
 					retry_delay = 0;
@@ -149,12 +149,15 @@ public:
 				auto_retry = true;
 				retry_pending = true;
 			}
-			else
+			else if (wanted)
 			{
 				wanted = false;
 				resetRetry();
+				off = true;
 			}
 		}
+		if (off)
+			keep(false);
 	}
 	void failed()
 	{

@@ -6,6 +6,7 @@
 import { settings } from '../../core/state.js';
 import {
     ships as shipsDB, planes as planesDB, clock, planesSince, hoverMmsi as hoverMMSI, hoverType, setHover,
+    hoverFeature as hover_feature, setHoverFeature,
 } from '../../core/store.js';
 import { getShipName } from '../../core/names.js';
 import { getSpeedVal, getSpeedUnit } from '../../core/units.js';
@@ -28,7 +29,6 @@ import * as measure from '../measure/measure.js';
 import * as range from '../range/range.js';
 
 const hover_info = document.getElementById('hover-info');
-export let hover_feature = undefined;
 
 let hoverCircleFeature = undefined;
 
@@ -140,7 +140,7 @@ export const stopHover = function () {
     const sf = hoverType == 'ship' && hoverMMSI in shapeFeatures;
 
     setHover(undefined, undefined);
-    hover_feature = undefined;
+    setHoverFeature(undefined);
 
     if (dc) range.rangeLayer.changed();
 
@@ -162,7 +162,7 @@ export const startHover = function (type, mmsi, pixel, feature) {
         stopHover();
 
         setHover(mmsi, type);
-        hover_feature = feature;
+        setHoverFeature(feature);
 
         const shipRaw = type == 'ship' ? shipsDB[mmsi]?.raw : null;
         const planeRaw = type == 'plane' ? planesDB[mmsi]?.raw : null;

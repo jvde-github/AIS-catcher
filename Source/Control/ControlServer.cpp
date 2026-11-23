@@ -120,7 +120,7 @@ void ControlServer::close()
 
 std::string ControlServer::createSession()
 {
-	std::string token = ControlCore::randomHex(48);
+	std::string token = Util::Helper::randomHex(48);
 
 	std::lock_guard<std::mutex> lock(auth_mtx);
 
@@ -383,16 +383,15 @@ void ControlServer::serveStatic(IO::TCPServerConnection &c,
 #ifdef HASWEBVIEWER
 	std::string file = (path == "/") ? "control/index.html" : "control" + path;
 
-	auto it = WebDB::files.find(file);
-	if (it == WebDB::files.end() && path.size() > 1)
-		it = WebDB::files.find(path.substr(1));
+	const WebDB::FileData *f = WebDB::find(file);
+	if (!f && path.size() > 1)
+		f = WebDB::find(path.substr(1));
 
-	if (it != WebDB::files.end())
+	if (f)
 	{
-		const WebDB::FileData &f = it->second;
 		IO::Reply reply(200, true);
-		reply.cache = std::string(f.mime_type) != "text/html";
-		ResponseRaw(c, f.mime_type, (char *)f.data, f.size, reply);
+		reply.cache = std::string(f->mime_type) != "text/html";
+		ResponseRaw(c, f->mime_type, (char *)f->data, f->size, reply);
 		return;
 	}
 #endif
@@ -594,7 +593,10 @@ void ControlServer::Request(IO::TCPServerConnection &c,
 		{
 			core.panelTLS(cert_path, key_path);
 			if (!setTLS(cert_path, key_path, error))
-				Error() << "Control: " << error;
+			{
+				sendError(c, "saved, but the panel did not switch now; it does at the next start: " + error);
+				return;
+			}
 			Info() << "Control: control server now over " << (hasTLS() ? "HTTPS" : "plain HTTP");
 			// a session that crossed the other kind of connection does not carry over
 			destroyAllSessions();
@@ -703,7 +705,7 @@ void ControlServer::Request(IO::TCPServerConnection &c,
 	else if (path == "/api/key" && r.method == "POST")
 	{
 		// a key for a server's API: given once, the configuration keeps its SHA-256
-		const std::string key = ControlCore::randomHex(48);
+		const std::string key = Util::Helper::randomHex(48);
 		std::string out;
 		JSON::Writer w(out);
 		w.beginObject().kv("key", key).kv("sha256", Util::SHA256::hex(key)).endObject().finish();

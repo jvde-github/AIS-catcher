@@ -37,8 +37,15 @@ export const ConfigStore = {
         return this.promise.then(cfg => JSON.parse(JSON.stringify(cfg)));
     },
     invalidate() { this.promise = null; },
+    // one at a time, so each starts from what the one before wrote
+    queue: Promise.resolve(),
+    save(change) {
+        const run = this.queue.then(() => this.write(change));
+        this.queue = run.catch(() => {});
+        return run;
+    },
     // a fresh copy, changed by `change` and posted; nothing is written when `change` returns false
-    async save(change) {
+    async write(change) {
         flushDebounces();
         const cfg = await this.fetch(true);
         if (change(cfg) === false) return cfg;

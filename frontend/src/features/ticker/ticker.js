@@ -4,15 +4,14 @@ import { ships } from '../../core/store.js';
 import { fetchShips } from '../../data.js';
 import * as filter from '../../core/filter.js';
 import { ui } from '../../ui.js';
-import { bucketChips } from '../counts/counts.js';
 import { showTargetcard } from '../targetcard/card.js';
 
 let bar = null;
 
-export function init() {
+export function init(buckets) {
     bar = strip.create({
         mount: document.getElementById("ticker"),
-        buckets: bucketChips(),
+        buckets,
         bucketHidden: (b) => filter.isActive() && filter.isHidden("bucket", b),
         selection: {
             noteSeen: mapObjects.eventSeen,

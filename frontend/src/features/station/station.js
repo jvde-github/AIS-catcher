@@ -8,7 +8,8 @@ import { stationStateText } from '@aiscatcher/ui/stations.js';
 import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
 import { stepChartSVG } from '@aiscatcher/core/spark.js';
 import { getCountryName, getDeltaTimeVal } from '@aiscatcher/core/text.js';
-import { focus, switchFocus, refresh } from '../../data.js';
+import { focus, switchFocus } from '../../data.js';
+import { refresh } from '../../poll.js';
 import { ships, clock } from '../../core/store.js';
 import { getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat } from '../../core/units.js';
 import { closeDialog } from '../../dialog.js';
@@ -16,7 +17,6 @@ import { replaycardVisible, applyMenuLabels } from '../../panels.js';
 import { ui, cardLayout } from '../../ui.js';
 import { showTab } from '../../tabs/index.js';
 import { closeSearch } from '../search/search-panel.js';
-import { updateFilterUI } from '../filter/filter.js';
 import { closeTargetcard, openOnTab } from '../targetcard/card.js';
 import * as replaybar from '../replay/replaybar.js';
 import * as mapObjects from '../mapobjects/mapobjects.js';
@@ -61,10 +61,15 @@ export function resetFocus() {
     if (focus >= 0) onStationChange(-1);
 }
 
+const focusShown = [];
+export function onFocusShown(fn) {
+    focusShown.push(fn);
+}
+
 function showFocus() {
     updateFocusChip();
     updateFilterPicker();
-    updateFilterUI();
+    focusShown.forEach((fn) => fn());
 }
 
 // ─── the header chip ─────────────────────────────────────────────────────────

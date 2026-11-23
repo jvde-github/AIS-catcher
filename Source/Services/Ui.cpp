@@ -212,13 +212,12 @@ namespace Services
 			return answered;
 		}
 
-		auto it = WebDB::files.find(request.path == "/" ? "index.html" : request.path.substr(1));
-		if (it == WebDB::files.end())
+		const WebDB::FileData *file = WebDB::find(request.path == "/" ? "index.html" : request.path.substr(1));
+		if (!file)
 			return false;
-		const WebDB::FileData &file = it->second;
-		response.type = file.mime_type;
-		response.raw = (const char *)file.data;
-		response.raw_size = file.size;
+		response.type = file->mime_type;
+		response.raw = (const char *)file->data;
+		response.raw_size = file->size;
 		response.gzipped = true;
 		// the page itself is read again on every visit, so a new version reaches the browser
 		response.cache = response.type != "text/html";
