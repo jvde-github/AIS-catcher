@@ -203,10 +203,22 @@ namespace IO
 			counts += ", " + std::to_string(drop_snap) + " dropped";
 		counts += ", " + std::to_string(pos_snap) + " positions";
 
-		if (r < 200 || r > 299)
-			Error() << "HTTP Client [" << Util::Parse::URLForLog(url) << "]: " << IO::httpStatusString(r) << " (" << counts << ")";
-		else if (show_response)
-			Info() << "HTTP Client [" << Util::Parse::URLForLog(url) << "]: return code " << r << " (" << counts << ")";
+		const bool failed = r < 200 || r > 299;
+		if (!failed && !show_response)
+			return;
+
+		std::string reply = http.getResponse().substr(0, 200);
+		for (char &c : reply)
+			if ((unsigned char)c < 32)
+				c = ' ';
+		reply.erase(reply.find_last_not_of(' ') + 1);
+
+		const std::string line = "HTTP Client [" + Util::Parse::URLForLog(url) + "]: " + (failed ? IO::httpStatusString(r) : "return code " + std::to_string(r)) +
+								 " (" + counts + ")" + (reply.empty() ? "" : ": " + reply);
+		if (failed)
+			Error() << line;
+		else
+			Info() << line;
 	}
 
 	void HTTPStreamer::process()
