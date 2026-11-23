@@ -760,7 +760,7 @@ namespace AIS
 		nmea.outControl >> output_control;
 		nmea.outMetric >> output_metric;
 
-		nmea.setStation(station);
+		nmea.setStation(station, station_fixed);
 		nmea.setOwnMMSI(own_mmsi);
 	}
 

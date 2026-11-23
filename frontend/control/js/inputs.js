@@ -25,6 +25,10 @@ const kindOf = input => String(input || '').toUpperCase();
 export const deviceOf = input => DEVICES[kindOf(input)];
 export const isRadio = input => !!deviceOf(input)?.radio;
 export const decodes = input => !!(deviceOf(input)?.radio || deviceOf(input)?.iq);
+// an input whose data is text, which can name a station; a network client's by protocol, as RTLTCP.cpp sets it
+const TEXT_PROTOCOLS = ['txt', 'tls', 'none', 'ws', 'wss', 'mqtt', 'mqtts', 'wsmqtt', 'wssmqtt', 'gpsd'];
+export const namesStations = item => ['SERIALPORT', 'UDPSERVER'].includes(kindOf(item.input)) ||
+    (kindOf(item.input) === 'RTLTCP' && TEXT_PROTOCOLS.includes(String(item.rtltcp?.protocol || 'rtltcp').toLowerCase()));
 export const RADIOS = Object.keys(DEVICES).filter(isRadio);
 export const DEVICE_BLOCKS = Object.keys(DEVICES).map(k => k.toLowerCase());
 export const inputDocs = input => deviceOf(input)?.docs || 'configuration/input/overview/';
@@ -36,7 +40,7 @@ export const INPUT_ESSENTIALS = new Set(['input', 'serial', 'serialport_port', '
 // the receiver's fields carry no section: group them by what they are about
 export function inputGroup(f) {
     const n = f.name;
-    if (n === 'station') return 'Station';
+    if (n === 'station' || n === 'station_upstream') return 'Station';
     if (n === 'engines' || n === 'fp_ds') return 'Engines';
     if (n === 'channel' || n === 'nmea_channel') return 'Channels';
     if (n === 'verbose' || n === 'screen' || n === 'verbose_time') return 'Logging';

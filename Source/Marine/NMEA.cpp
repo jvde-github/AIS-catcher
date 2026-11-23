@@ -115,7 +115,7 @@ namespace AIS
 
 	void NMEA::assembleAIS(TAG &tag)
 	{
-		int src = (mctx.station == -1) ? station : mctx.station;
+		int src = (station_fixed || mctx.station == -1) ? station : mctx.station;
 
 		// Multi-part: check sequence continuity
 		int result = search();
@@ -478,7 +478,7 @@ namespace AIS
 		while (r < cs_end)
 			cs ^= *r++;
 
-		int src = (mctx.station == -1) ? station : mctx.station;
+		int src = (station_fixed || mctx.station == -1) ? station : mctx.station;
 		int fillbits = fillbits_ch - '0';
 		uint16_t message_quality = 0;
 
@@ -824,7 +824,8 @@ namespace AIS
 				if (v < 0) { warnFail(v, " in station id"); return false; }
 				id = (id << 8) | (uint32_t)v;
 			}
-			src = (int)id;
+			if (!station_fixed)
+				src = (int)id;
 			// a multiplexed frame says nothing about the sender's software or hardware
 			tag.version = 0;
 			tag.driver = Type::NONE;
@@ -1133,6 +1134,7 @@ namespace AIS
 	void NMEA::processMetric(const JSON::JSON &line, TAG &tag)
 	{
 		Metric m;
+		m.station = station_fixed ? station : -1;
 		for (const auto &p : line.getMembers())
 			switch (p.Key())
 			{
@@ -1146,7 +1148,8 @@ namespace AIS
 				m.unit = p.Get().getCString();
 				break;
 			case AIS::KEY_STATION_ID:
-				m.station = (int)p.Get().getInt(-1);
+				if (!station_fixed)
+					m.station = (int)p.Get().getInt(-1);
 				break;
 			}
 		for (const auto &p : line.getMembers())

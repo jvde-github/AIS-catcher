@@ -8,6 +8,7 @@ import { focus, refreshIntervalMs } from '../../data.js';
 import { showDialogPlain, objectToTableHtml } from '../../dialog.js';
 import * as community from '../../overlays/community.js';
 import { hasStationChoice, mountFocusPicker } from '../../features/station/station.js';
+import { stationLabel } from '../../core/config.js';
 import { setPageTitle } from '../../panels.js';
 
 // fetches main statistics from the server
@@ -66,7 +67,7 @@ function updateStat(stat, tf) {
 function renderDevices(stat) {
     const el = document.getElementById("stat_devices");
     if (!el) return;
-    const prod = stat.product || [], vend = stat.vendor || [], ser = stat.serial || [], mod = stat.model || [], rate = stat.sample_rate || [], dlab = stat.device_label || [];
+    const prod = stat.product || [], vend = stat.vendor || [], ser = stat.serial || [], mod = stat.model || [], rate = stat.sample_rate || [], dlab = stat.device_label || [], dst = stat.device_station || [], dup = stat.device_upstream || [];
     const n = Math.max(prod.length, vend.length, ser.length, mod.length, rate.length, dlab.length);
     el.replaceChildren();
     for (let i = 0; i < n; i++) {
@@ -92,6 +93,7 @@ function renderDevices(stat) {
         if (engines.length > 1) engines.forEach((e, k) => (info["Engine " + (k + 1)] = e));
         else info.Engine = engines[0];
         info["Sample rate"] = rate[i];
+        if (dst[i] !== undefined && (hasStationChoice() || dup[i])) info.Station = stationLabel(dst[i]) + (dup[i] ? ", or from upstream" : "");
 
         row.onclick = () => showDialogPlain(objectToTableHtml(info));
         el.appendChild(row);

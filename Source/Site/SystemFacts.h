@@ -35,6 +35,8 @@ struct DeviceFacts
 {
 	// model: the device's decoders, one a line; label: what a status page calls it
 	std::string product, vendor, serial, model, sample_rate, label;
+	int station = 0;
+	bool upstream = false;
 };
 typedef std::vector<DeviceFacts> EngineFacts;
 

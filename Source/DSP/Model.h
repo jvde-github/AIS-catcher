@@ -77,6 +77,7 @@ namespace AIS
 	{
 	protected:
 		int station = -1;
+		bool station_fixed = false;
 		int own_mmsi = -1;
 
 		Mode mode = Mode::AB;
@@ -118,7 +119,7 @@ namespace AIS
 		void setMode(Mode m) { mode = m; }
 		void setOwnMMSI(int m) { own_mmsi = m; }
 		// the station of the input, when the decoder has no ID of its own
-		void setDefaultStation(int s) { if (station < 0) station = s; }
+		void setDefaultStation(int s, bool fixed) { if (station < 0) station = s; station_fixed = fixed; }
 		void setDesignation(const std::string &s) { designation = s; }
 		virtual Setting &applyKey(AIS::Keys key, const std::string &arg)
 		{

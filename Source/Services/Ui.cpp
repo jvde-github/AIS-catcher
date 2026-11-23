@@ -590,6 +590,13 @@ namespace Services
 			each("model", &DeviceFacts::model);
 			each("sample_rate", &DeviceFacts::sample_rate);
 			each("device_label", &DeviceFacts::label);
+			w.key("device_station").beginArray();
+			for (const auto &d : f.devices)
+				w.val(d.station);
+			w.endArray().key("device_upstream").beginArray();
+			for (const auto &d : f.devices)
+				w.val(d.upstream);
+			w.endArray();
 			w.kv("received", (unsigned long long)f.received).kv("run_time", std::to_string((long long)(std::time(nullptr) - f.born)))
 				.kv("os", Util::Helper::getOS()).kv("hardware", Util::Helper::getHardware()).kv("processor", Util::Helper::getProcessor());
 		}

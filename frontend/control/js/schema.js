@@ -567,6 +567,13 @@ export const receiverSchema = {
         placeholder: "its own",
         tooltip: "Where this antenna stands"
     },
+    station_upstream: {
+        name: "station_upstream",
+        label: "From upstream",
+        type: "toggle",
+        jsonpath: "station_upstream",
+        tooltip: "a station the incoming data names comes first, where it is listed"
+    },
     input: {
         name: "input",
         label: "Device Type",

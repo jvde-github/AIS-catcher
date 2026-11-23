@@ -36,6 +36,8 @@ namespace AIS
 	{
 		Message msg;
 		int station = -1;
+		// a station the incoming data names does not replace `station`
+		bool station_fixed = false;
 		std::string uuid;
 
 		enum class ParseState
@@ -206,7 +208,7 @@ namespace AIS
 		void setUUID(const std::string &u) { uuid = u; }
 		const std::string &getUUID() { return uuid; }
 
-		void setStation(int s) { station = s; }
+		void setStation(int s, bool fixed) { station = s; station_fixed = fixed && s >= 0; }
 		int getStation() { return station; }
 
 		void setWarnings(bool b) { cfg_warnings = b; }

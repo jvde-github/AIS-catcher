@@ -79,6 +79,9 @@ Setting &Receiver::applyKey(AIS::Keys key, const std::string &arg)
 	case AIS::KEY_SETTING_STATION:
 		station = Util::Parse::Integer(arg, 0, 2147483647);
 		break;
+	case AIS::KEY_SETTING_STATION_UPSTREAM:
+		upstream = Util::Parse::Switch(arg);
+		break;
 	default:
 		throw std::runtime_error(getName() + ": unknown setting \"" + AIS::KeyMap[key][JSON_DICT_SETTING] + "\"");
 	}
@@ -264,8 +267,7 @@ void Receiver::setupModel(std::mutex *delivery)
 	{
 		auto &m = d.model;
 		// with stations configured, the station is the station_id its messages carry, unless the decoder names one
-		if (stamp_station)
-			m->setDefaultStation(station);
+		m->setDefaultStation(stamp_station ? station : -1, !upstream);
 		m->setDesignation(channel_nmea);
 		m->setMode(channel_mode);
 		m->setOwnMMSI(own_mmsi);

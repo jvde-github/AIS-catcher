@@ -278,6 +278,8 @@ X(KEY_SETTING_SPLIT, "", "", "", "", "split", "", "",
 X(KEY_SETTING_SPYSERVER, "", "", "", "", "spyserver", "", "", "", nullptr)
 X(KEY_SETTING_SRC, "", "", "", "", "src", "", "", "", nullptr)
 X(KEY_SETTING_STATION, "", "", "", "", "station", "", "", "", nullptr)
+X(KEY_SETTING_STATION_UPSTREAM, "", "", "", "", "station_upstream", "", "",
+  "An input whose messages keep the station number the incoming data gives, where this install lists it; its own station otherwise.", nullptr)
 X(KEY_SETTING_STATIONS, "", "", "", "", "stations", "", "",
   "The receiving stations of this installation: id, name, position and altitude; 0 is the default station, where inputs stand that name none.", nullptr)
 X(KEY_SETTING_ALT, "", "", "", "", "alt", "", "", "Altitude of a station's antenna in metres.", nullptr)

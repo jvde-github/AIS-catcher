@@ -45,6 +45,7 @@ class Receiver : public Setting
 	// 0, the default station, when the configuration names none; its messages carry the
 	// number (stamp_station) once stations are configured
 	int station = 0;
+	bool upstream = false;
 	bool stamp_station = false;
 
 	AIS::Mode channel_mode = AIS::Mode::AB;
@@ -94,6 +95,8 @@ public:
 	ByteCounter &bytesIn() { return bytes; }
 
 	int getStation() const { return station; }
+	bool fromUpstream() const { return upstream; }
+	bool stampsStation() const { return stamp_station; }
 	bool hasPosition() const { return isValidCoord(station_lat, station_lon); }
 	FLOAT32 getLat() const { return station_lat; }
 	FLOAT32 getLon() const { return station_lon; }

@@ -1,12 +1,13 @@
 import { icon } from './icons.js';
 import { DOCS, docLink } from './docs.js';
-import { decodes, describeInput, inputDocs, inputGroup, INPUT_ESSENTIALS } from './inputs.js';
+import { decodes, describeInput, inputDocs, inputGroup, namesStations, INPUT_ESSENTIALS } from './inputs.js';
 import { pickDevice, pickSerialPort } from './device-picker.js';
 import { ConfigForm } from './config-form.js';
+import { Renderer } from './config-widgets.js';
 import { createStationPicker } from './station-picker.js';
 import { inputRouting } from './flow-editor.js';
 import { receiverSchema } from './schema.js';
-import { el, isActive } from './dom.js';
+import { el, isActive, on } from './dom.js';
 
 function addFindButton(form, node, item) {
     const serialPort = item.input === 'SERIALPORT';
@@ -27,10 +28,13 @@ function stationSection(form, item, index) {
     const stationField = form.config.stationPicker && form.fields.find(f => f.name === 'station');
     if (!stationField) return null;
     const picker = form.config.stationPicker(item.station, id => form.updateValue(index, stationField, id));
-    const desc = stationField.tooltip;
+    const upField = (namesStations(item) || on(item.station_upstream)) && form.fields.find(f => f.name === 'station_upstream');
+    const upstream = upField ? Renderer.createInput(upField, item.station_upstream, v => form.updateValue(index, upField, v || undefined)) : null;
+    upstream?.append(el('span', '', {}, upField.label));
+    const desc = upField ? `${stationField.tooltip}; with ${upField.label}, ${upField.tooltip}` : stationField.tooltip;
     return el('div', 'st-flat st-stpick__section', {},
         el('div', 'st-flat__head', {}, el('h3', 'st-section__title', {}, 'Station'), form.config.stationDocs?.()),
-        picker, desc ? el('p', 'st-help', {}, desc) : null);
+        el('div', 'st-stpick__row', {}, picker, upstream), desc ? el('p', 'st-help', {}, desc) : null);
 }
 
 export function inputsLayout(form) {
@@ -49,7 +53,7 @@ export function inputsLayout(form) {
         const station = stationSection(form, item, index);
         const { node, refresh } = form.renderSplit(item, index, { essentials: form.config.essentials || new Set(), key: 'input', onZones,
             // settings that cannot apply to this kind of input stay out (engines decode radio only)
-            exclude: new Set(['description', ...(station ? ['station'] : []), ...(form.config.excludeFor ? form.config.excludeFor(item) : [])]),
+            exclude: new Set(['description', ...(station ? ['station', 'station_upstream'] : []), ...(form.config.excludeFor ? form.config.excludeFor(item) : [])]),
             flat: {}, lead: station ? [station] : [] });
         addFindButton(form, node, item);
         node.dataset.receiverCard = index;

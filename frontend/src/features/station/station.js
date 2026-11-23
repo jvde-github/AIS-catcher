@@ -149,7 +149,7 @@ export function stationcardVisible() {
 const FIELDS = [
     [{ key: "ships", label: "Ships" }, { key: "rate", label: "Rate" }, { key: "messages", label: "Messages" }],
     [{ key: "station_id", label: "ID" }, { key: "status", label: "Status" }, { key: "ago", label: "Last message" }],
-    [{ key: "where", label: "Position" }, { key: "furthest", label: "Furthest" }],
+    [{ key: "where", label: "Position" }, { key: "furthest", label: "Furthest" }, { key: "receivers", label: "Receivers" }],
 ];
 
 export function build() {
@@ -217,6 +217,8 @@ async function fillFigures(id) {
     set("stationcard_messages", stat ? count(stat.session?.count) : "-");
     set("stationcard_rate", stat ? (Number(stat.msg_rate) || 0).toFixed(1) + " msg/s" : "-");
     set("stationcard_furthest", stat?.session?.dist > 0 ? getDistanceVal(stat.session.dist) + " " + getDistanceUnit() : "-");
+    const receivers = (stat?.device_station || []).filter((s) => s === id).length;
+    set("stationcard_receivers", receivers ? count(receivers) : "-");
     activity(history?.hour, stationRow(id)?.status);
     chart("msgrate", "stationcard_msgrate", history?.minute, 30, "msg/min", "30 min of messages", "Messages per minute over the last 30 minutes");
     card.fit();
