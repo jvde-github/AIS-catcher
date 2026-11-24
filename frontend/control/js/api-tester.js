@@ -94,7 +94,7 @@ function meta(status, ms, text, type, note) {
 
 // ---- the API
 function tryApi(body, servers, highlight) {
-    const tryable = servers.filter(s => ['api', 'system', 'geojson', 'metrics'].some(k => s.serve.includes(k)));
+    const tryable = servers.filter(s => ['api', 'system', 'geojson', 'kml', 'metrics'].some(k => s.serve.includes(k)));
     if (!tryable.length)
         return body.replaceChildren(el('div', 'st-empty', {}, el('strong', '', { text: 'No server offers the API yet' }),
             el('span', '', { text: 'Switch API on for Main, or add a server with it, and save.' })));

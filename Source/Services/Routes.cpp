@@ -110,7 +110,7 @@ namespace Services
 
 		std::vector<Route> make()
 		{
-			const Param LIMIT = query("limit", integer(1, 1000, 100), "Rows on a page. A limited server gives 25 unless asked for more, 250 at most; every 25 rows of a page count as one call, and a page larger than the hour has left is cut to what is left");
+			const Param LIMIT = query("limit", integer(1, 1000, 100), "Rows on a page. A limited server gives 100 unless asked for more, 1000 at most; every 100 rows of a page count as one call, and a page larger than the hour has left is cut to what is left");
 			const Param CURSOR = query("cursor", TEXT, "What meta.next or meta.poll gave; without one a listing starts");
 			const Param VIEW = query("view", oneOf({"brief", "full"}) + ",\"default\":\"full\"", "brief answers a short form with only the main fields, and says how to get the rest; a limited server answers short rows and refuses full");
 			const Param EVENT_CURSOR = query("cursor", TEXT, "An event's id, or what meta.next or meta.poll gave: the events after it. Without one, the newest page");

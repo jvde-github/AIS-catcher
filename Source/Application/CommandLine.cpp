@@ -769,9 +769,14 @@ namespace
 				device(Type::RTLTCP, count == 1 ? Keys{AIS::KEY_SETTING_URL} : (count & 1) == 0 ? Keys{AIS::KEY_SETTING_HOST, AIS::KEY_SETTING_PORT} : Keys{AIS::KEY_SETTING_PROTOCOL, AIS::KEY_SETTING_HOST, AIS::KEY_SETTING_PORT}, args, ptr, count);
 				break;
 			case 'x':
-				Assert(count >= 2 && (count & 1) == 0, param, "requires two parameters [server] [port] (optionally followed by key value pairs).");
-				device(Type::UDP, {AIS::KEY_SETTING_SERVER, AIS::KEY_SETTING_PORT}, args, ptr, count);
+			{
+				std::string word = count ? arg1 : "";
+				Util::Convert::toLower(word);
+				const bool named = word == "udp" || word == "tcp";
+				Assert(count - named >= 2 && ((count - named) & 1) == 0, param, "requires [server] [port], optionally after udp or tcp, then key value pairs.");
+				device(word == "tcp" ? Type::TCPSERVER : Type::UDP, {AIS::KEY_SETTING_SERVER, AIS::KEY_SETTING_PORT}, args, ptr + named, count - named);
 				break;
+			}
 			case 'D':
 			{
 				// bare target = libpq string; a "sqlite:" or "csv:" prefix picks the backend

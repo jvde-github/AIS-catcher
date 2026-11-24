@@ -235,6 +235,12 @@ export const receiverSchema = {
         server: { label: 'Server Address', type: 'text', placeholder: 'e.g., 127.0.0.1', tooltip: 'Address to listen on', width: 75 },
         port: { label: 'Port', type: 'number', placeholder: 'e.g., 1234', tooltip: 'Port to listen on', width: 25 }
     }),
+    ...device('tcpserver', 'TCPSERVER', {
+        format: { label: 'Format', type: 'select', defaultValue: 'txt', tooltip: 'What the senders send',
+            options: opts(['txt', 'NMEA'], ['n2k', 'NMEA 2000 frames'], ['basestation', 'BASESTATION'], ['raw1090', 'RAW1090']) },
+        server: { label: 'Server Address', type: 'text', placeholder: 'e.g., 0.0.0.0', tooltip: 'IPv4 address to listen on', width: 75 },
+        port: { label: 'Port', type: 'number', placeholder: 'e.g., 1234', tooltip: 'Port to listen on', width: 25 }
+    }),
     ...device('hackrf', 'HACKRF', {
         lna: { label: 'LNA Gain', type: 'number', min: 0, max: 40, step: 8, defaultValue: 8, placeholder: '0-40 (in steps of 8)', tooltip: 'RF gain in dB', width: 50 },
         vga: { label: 'VGA Gain', type: 'number', min: 0, max: 62, step: 2, defaultValue: 20, placeholder: '0-62 (in steps of 2)', tooltip: 'Baseband gain in dB', width: 50 },

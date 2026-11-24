@@ -207,7 +207,7 @@ namespace IO
 		if (!failed && !show_response)
 			return;
 
-		std::string reply = http.getResponse().substr(0, 200);
+		std::string reply = r >= 100 ? http.getResponse().substr(0, 200) : std::string();
 		for (char &c : reply)
 			if ((unsigned char)c < 32)
 				c = ' ';

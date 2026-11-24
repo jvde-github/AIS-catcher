@@ -878,14 +878,13 @@ namespace IO
 		memset(&service, 0, sizeof(service));
 		service.sin_family = AF_INET;
 
-		// Conditional binding based on IP_BIND
-		if (!IP_BIND.empty())
+		service.sin_addr.s_addr = htonl(INADDR_ANY);
+		if (!IP_BIND.empty() && inet_pton(AF_INET, IP_BIND == "localhost" ? "127.0.0.1" : IP_BIND.c_str(), &service.sin_addr) != 1)
 		{
-			service.sin_addr.s_addr = inet_addr(IP_BIND.c_str());
-		}
-		else
-		{
-			service.sin_addr.s_addr = htonl(INADDR_ANY);
+			Error() << "TCP Server: \"" << IP_BIND << "\" is not an IPv4 address to listen on";
+			Net::closeSocket(sock);
+			sock = -1;
+			return false;
 		}
 
 		service.sin_port = htons(port);

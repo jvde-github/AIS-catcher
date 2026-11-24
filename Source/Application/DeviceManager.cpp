@@ -34,6 +34,7 @@
 #include "Device/SoapySDR.h"
 #include "Device/Serial.h"
 #include "Device/UDP.h"
+#include "Device/TCPServerInput.h"
 #include "Device/HYDRASDR.h"
 
 std::vector<Device::Description> DeviceManager::device_list;
@@ -54,7 +55,8 @@ const DeviceManager::DeviceEntry DeviceManager::device_settings[] = {
 	{'t', AIS::KEY_SETTING_RTLTCP, Type::RTLTCP, false, false, "Network", []() -> Device::Device * { return new Device::RTLTCP(); }},
 	{'y', AIS::KEY_SETTING_SPYSERVER, Type::SPYSERVER, false, false, "SpyServer", []() -> Device::Device * { return new Device::SpyServer(); }},
 	{'z', AIS::KEY_SETTING_ZMQ, Type::ZMQ, false, false, "ZMQ", []() -> Device::Device * { return new Device::RTLTCP(Type::ZMQ); }},
-	{0, AIS::KEY_SETTING_UDPSERVER, Type::UDP, false, false, "UDP", []() -> Device::Device * { return new Device::UDP(); }}};
+	{0, AIS::KEY_SETTING_UDPSERVER, Type::UDP, false, false, "UDP", []() -> Device::Device * { return new Device::UDP(); }},
+	{0, AIS::KEY_SETTING_TCPSERVER, Type::TCPSERVER, false, false, "TCP server", []() -> Device::Device * { return new Device::TCPServerInput(); }}};
 
 Device::Device &DeviceManager::object(const DeviceEntry &d)
 {

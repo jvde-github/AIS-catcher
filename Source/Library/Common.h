@@ -123,7 +123,8 @@ enum class Type
 	ZMQ = 12,
 	SPYSERVER = 13,
 	N2K = 14,
-	HYDRASDR = 15
+	HYDRASDR = 15,
+	TCPSERVER = 16
 };
 
 enum class MessageFormat

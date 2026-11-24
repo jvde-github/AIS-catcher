@@ -595,6 +595,6 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
 
     return {
         state, load, add, actions, renderDetail,
-        destroy() { editor.destroy(); }
+        destroy() { revealed.clear(); editor.destroy(); }
     };
 }

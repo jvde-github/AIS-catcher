@@ -1209,7 +1209,7 @@ namespace Services
 		beginMeta(w, count, next);
 		w.kv("more", left);
 		if (brief)
-			w.kv("note", std::string("Short rows, ") + (query.nearest ? "nearest" : "newest") + " first. " + (more ? std::to_string(left) + " more: pass next as cursor, " + (spec.limited ? "raise limit (one call per 25 rows) " : "") + "or narrow the search. " : "") + (count == 0 && query.circle ? "None in this radius: widen radius_nm, up to 1000. " : "") + (spec.limited ? "One vessel in full: " + href("/api/v1/vessels/{mmsi}") + "." : std::string("Every field: view=full, or ask for the one vessel.")));
+			w.kv("note", std::string("Short rows, ") + (query.nearest ? "nearest" : "newest") + " first. " + (more ? std::to_string(left) + " more: pass next as cursor, " + (spec.limited ? "raise limit (one call per " + std::to_string(ROWS_A_CALL) + " rows) " : "") + "or narrow the search. " : "") + (count == 0 && query.circle ? "None in this radius: widen radius_nm, up to 1000. " : "") + (spec.limited ? "One vessel in full: " + href("/api/v1/vessels/{mmsi}") + "." : std::string("Every field: view=full, or ask for the one vessel.")));
 		// a second of overlap, as messages share a second
 		w.kv("poll", href("/api/v1/vessels") + "?cursor=" + cursor("v", {(long long)start - 1}) + carried)
 			.kv("full", full).kv("time", isoTime(now)).kv("expire_s", db.timeHistory()).endObject().endObject();

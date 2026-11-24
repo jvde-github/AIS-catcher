@@ -184,7 +184,7 @@ static std::string configFolder(const std::string &config_file)
 }
 
 // Whether a path, as its reader would open it, is the folder or in it: links
-// and ".." resolved, and for a file not there yet, by the folder it would be in.
+// and ".." resolved, and for one not there yet, by the nearest folder above it that is.
 static bool inFolder(const std::string &path, const std::string &folder)
 {
 #ifdef _WIN32
@@ -197,11 +197,13 @@ static bool inFolder(const std::string &path, const std::string &folder)
 	char full[PATH_MAX], base[PATH_MAX];
 	if (!realpath(folder.c_str(), base))
 		return false;
-	if (!realpath(path.c_str(), full))
+	std::string at = path;
+	while (!realpath(at.c_str(), full))
 	{
-		const auto slash = path.find_last_of('/');
-		if (!realpath(slash == std::string::npos ? "." : (slash == 0 ? "/" : path.substr(0, slash).c_str()), full))
+		const auto slash = at.find_last_of('/');
+		if (at == "." || at == "/" || at.substr(slash == std::string::npos ? 0 : slash + 1) == "..")
 			return false;
+		at = slash == std::string::npos ? "." : slash == 0 ? "/" : at.substr(0, slash);
 	}
 	const size_t n = strlen(base);
 	return strncmp(full, base, n) == 0 && (full[n] == 0 || full[n] == '/' || base[n - 1] == '/');
@@ -408,7 +410,9 @@ bool ControlCore::allowedPaths(const JSON::JSON &saved, std::string &error)
 		// the site's own are read from the configuration's folder, the others from the working folder
 		const bool site_path = v.first == AIS::KEY_SETTING_FILE || v.first == AIS::KEY_SETTING_PLACES ||
 							   v.first == AIS::KEY_SETTING_CERT || v.first == AIS::KEY_SETTING_KEY;
-		const std::string path = site_path ? Util::Helper::resolvePath(v.second, folder) : v.second;
+		// the tracking file as its reader finds it, which may be the working folder's
+		const std::string path = v.first == AIS::KEY_SETTING_FILE ? SiteReader::backupFile(v.second, folder)
+								 : site_path ? Util::Helper::resolvePath(v.second, folder) : v.second;
 		if (!inFolder(path, folder))
 		{
 			error = quoted + " is outside the configuration's folder (" + folder + "): a path elsewhere can only be written in the file by hand.";
@@ -445,6 +449,10 @@ bool ControlCore::setConfig(const std::string &json, std::string &error)
 			return false;
 		// the password is changed by /api/password alone, whatever the document says
 		putAuth(doc);
+		// and the engine's switch by Start and Stop: a save keeps what the file has
+		const JSON::Document current = load();
+		if (const JSON::Value *engine = current.root[AIS::KEY_SETTING_ENGINE])
+			doc.root.Set(AIS::KEY_SETTING_ENGINE, engine->to_string(), doc.pool);
 		JSON::Serializer serializer(JSON_DICT_SETTING);
 		serializer.stringify(doc.root, out);
 	}

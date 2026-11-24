@@ -44,8 +44,8 @@ namespace Services
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
 		bool metered(const Request &r) const override { return r.path != "/api/v1" && r.path != "/api/v1/openapi.json"; }
-		// a limited server pages 25 rows unless asked for more, 250 at most; every 25 rows of a page count as one call
-		static const int ROWS_A_CALL = 25, LIMITED_PAGE_MAX = 250;
+		// a limited server pages 100 rows unless asked for more, 1000 at most; every 100 rows of a page count as one call
+		static const int ROWS_A_CALL = 100, LIMITED_PAGE_MAX = 1000;
 		long long pageMax() const { return spec.limited ? LIMITED_PAGE_MAX : LIST_MAX; }
 		int cost(const Request &request) const override
 		{

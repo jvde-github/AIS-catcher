@@ -52,7 +52,7 @@ void printUsage()
 	Info() << "\t[-C [filename] - read configuration settings from file]";
 	Info() << "\t[-D [connection string] - write messages to a database: libpq string, sqlite:[file] or csv:[directory]]";
 	Info() << "\t[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]";
-	Info() << "\t[-E [config file] [bind address:port] [TLS_CERT file TLS_KEY file] - managed mode: engine run from config file with control server, must be only option (defaults: config.json, control port 8118, viewer on control port + 1, local access without password; use 0.0.0.0:port for LAN access with password)]";
+	Info() << "\t[-E [config file] [bind address:port] [TLS_CERT file TLS_KEY file] - managed mode: engine run from config file with control server, must be only option (defaults: config.json, control port 8118, viewer on control port + 1, a password is always set, local access does not ask for it; use 0.0.0.0:port for LAN access with it)]";
 	Info() << "\t[-f [filename] write NMEA lines to file]";
 	Info() << "\t[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]";
 	Info() << "\t[-G [LEVEL level] [SYSTEM on] - control logging (levels: DEBUG, INFO, WARNING, ERROR, CRITICAL) or enable system logging]";
@@ -92,7 +92,7 @@ void printUsage()
 	Info() << "\t[-r [optional: yy] filename - read IQ data from file or stdin (.), short for -r -ga FORMAT yy FILE filename";
 	Info() << "\t[-t [[protocol]] [host [port]] - read IQ data from remote RTL-TCP instance]";
 	Info() << "\t[-w filename - read IQ data from WAV file, short for -w -gw FILE filename]";
-	Info() << "\t[-x [server][port] - UDP input of NMEA messages at port on server";
+	Info() << "\t[-x [[udp/tcp]] [server] [port] - listen at port on server for NMEA over UDP (default), or over TCP for FORMAT TXT, N2K, BASESTATION or RAW1090]";
 	Info() << "\t[-y [host [port]] - read IQ data from remote SpyServer]";
 	Info() << "\t[-z [optional [format]] [optional endpoint] - read IQ data from [endpoint] in [format] via ZMQ (default: format is CU8)]";
 	Info() << "";
