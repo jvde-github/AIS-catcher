@@ -16,7 +16,12 @@
     overflow: hidden;
 }
 
-.header .header-title.no-pill > span:first-child {
+/* without the pill the title needs no room kept for it, and may come closer to the bow */
+.header .header-title.no-pill {
+    padding-right: 40px;
+}
+
+.header .header-title.no-pill > :first-child {
     padding-right: 15px;
 }
 

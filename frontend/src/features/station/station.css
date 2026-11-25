@@ -108,7 +108,7 @@
 .header-status {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 0;
     margin-right: 4px;
 }
 
@@ -130,7 +130,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
+    width: 36px;
     height: 40px;
     padding: 0;
     border: 0;
@@ -185,7 +185,7 @@
 .nav-health-dot {
     position: absolute;
     top: 8px;
-    right: 7px;
+    right: 5px;
     width: 7px;
     height: 7px;
     border-radius: 50%;
@@ -208,12 +208,12 @@
 
 @media (max-width: 600px) {
     .nav-health {
-        width: 44px;
+        width: 38px;
         height: 44px;
     }
 
     .nav-health-dot {
         top: 9px;
-        right: 9px;
+        right: 6px;
     }
 }
