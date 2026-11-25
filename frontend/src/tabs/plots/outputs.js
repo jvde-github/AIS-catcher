@@ -56,9 +56,8 @@ export function render(host, out) {
     };
     const checks = Object.keys(TITLE).map((k) => ({ state: c[k], title: TITLE[k], note: note[k], hint: HINT[k] }));
 
-    // a listener is told as a server is: who is connected now; the others how often they connected again
-    const cells = (o) => (o.clients !== undefined ? cell("Clients now", o.clients.toLocaleString()) : "") + cell("Data sent", formatBytes(o.bytes_out)) + cell("Dropped", o.dropped.toLocaleString())
-        + (o.clients !== undefined ? "" : cell("Reconnects", o.kind === "connection" ? o.reconnects.toLocaleString() : "—"));
+    const count = (label, value) => (value === undefined ? "" : cell(label, value.toLocaleString()));
+    const cells = (o) => count("Clients now", o.clients) + count("Messages sent", o.messages) + cell("Data sent", formatBytes(o.bytes_out)) + count("Dropped", o.dropped) + count("Reconnects", o.reconnects);
     const card = (o, sub, state) => `<article class="hc-rx" style="--tone:${tone(o.status)}">
         <div class="hc-rx-top"><i class="hc-rx-dot"></i><strong>${name(o)}</strong>${sub ? `<small>${sub}</small>` : ""}<span>${state}</span></div>
         <div class="hc-rx-figs">${cells(o)}</div></article>`;

@@ -156,7 +156,8 @@ void Health::readReceivers(const SystemFacts &f)
 		x.heard = r.last_message;
 		x.per_minute = (long long)r.per_minute;
 		x.bytes = r.bytes;
-		x.other = r.text && r.streaming && r.bytes && !r.last_message;
+		x.aircraft = r.aircraft;
+		x.other = r.aircraft || (r.text && r.streaming && r.bytes && !r.last_message);
 		station(r.station).receivers.push_back(x);
 		if (r.lost)
 			note("input_lost", r.station, r.index);
@@ -165,8 +166,14 @@ void Health::readReceivers(const SystemFacts &f)
 	}
 	for (auto &s : stations)
 	{
+		// a station that only takes in aircraft is as quiet as its inputs are: no AIS is expected of it
+		const bool planes = !s.receivers.empty() && std::all_of(s.receivers.begin(), s.receivers.end(), [](const Receiver &r) { return r.aircraft; });
+		std::time_t heard = s.heard;
+		for (const auto &r : s.receivers)
+			if (planes)
+				heard = std::max(heard, r.heard);
 		// a station only heard of through a feed goes by its messages alone
-		const std::time_t since = s.heard ? s.heard : s.receivers.empty() ? at : session;
+		const std::time_t since = heard ? heard : s.receivers.empty() ? at : session;
 		if (settled && at - since > STATION_QUIET_S)
 		{
 			note("no_messages", s.id);
@@ -400,6 +407,7 @@ void Health::readOutputs(const SystemFacts &f, const std::vector<Output> &before
 		x.bytes_out = o.bytes_out;
 		x.dropped = o.dropped;
 		x.reconnects = o.reconnects;
+		x.messages = o.messages;
 		x.sent = at;
 		for (const auto &was : before)
 			if (was.index == x.index && was.type == x.type && was.label == x.label)

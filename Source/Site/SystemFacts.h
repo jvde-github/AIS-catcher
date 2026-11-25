@@ -63,6 +63,7 @@ struct ReceiverState
 	bool lost = false;
 	// it takes in lines of text, which a GPS sends as well as an AIS receiver; a radio only ever brings AIS
 	bool text = false;
+	bool aircraft = false;
 	uint64_t messages = 0;
 	uint64_t per_minute = 0;
 	// this input's own, not its station's

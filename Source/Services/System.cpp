@@ -229,7 +229,7 @@ namespace Services
 						bytes = now_r.bytes;
 					}
 				ageOf("last_msg_age_s", heard);
-				w.kv("msgs_1m", r.per_minute).kv("bytes", bytes).kv("ais", !r.other).endObject();
+				w.kv("msgs_1m", r.per_minute).kv("bytes", bytes).kv("carries", r.carries()).endObject();
 			}
 			w.endObject().endObject();
 			if (s.has_gps)
@@ -277,10 +277,11 @@ namespace Services
 					continue;
 				w.key(std::to_string(o.index)).beginObject().kv("kind", o.kindName()).kv("type", o.type).kv("label", o.label).kv("status", Health::name(o.status));
 				w.kv("state", o.state()).kv("bytes_out", o.bytes_out).kv("dropped", o.dropped);
-				// what listens tells its clients, the others their reconnects
+				if (o.kind != Health::Output::SERVICE)
+					w.kv("messages", o.messages);
 				if (o.kind == Health::Output::LISTENER || o.kind == Health::Output::SERVICE)
 					w.kv("clients", o.clients);
-				else
+				if (o.kind == Health::Output::CONNECTION)
 					w.kv("reconnects", o.reconnects);
 				if (o.kind == Health::Output::SERVICE)
 				{

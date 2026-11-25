@@ -28,8 +28,8 @@ function receiver(r) {
     const other = r.last_msg_age_s === null;
     return `<article class="hc-rx" style="--tone:${tone(r.status)}">
         <div class="hc-rx-top"><i class="hc-rx-dot"></i><strong>${sanitizeString(r.label || "Receiver " + r.id)}</strong>${r.of ? `<small>${sanitizeString(r.of)}</small>` : ""}<span>${state}</span></div>
-        <div class="hc-rx-figs">${cell("AIS messages/min", other ? "—" : r.msgs_1m)}${cell("Last message", other ? "—" : ago(r.last_msg_age_s))}${cell("Data received", formatBytes(r.bytes))}</div>
-        ${other ? `<p class="hc-rx-note">${!r.ais ? "No AIS messages: it carries other data, as a GPS. Not counted as a receiver." : "No AIS message yet."}</p>` : ""}</article>`;
+        <div class="hc-rx-figs">${cell(r.carries === "adsb" ? "ADS-B messages/min" : "AIS messages/min", other ? "—" : r.msgs_1m)}${cell("Last message", other ? "—" : ago(r.last_msg_age_s))}${cell("Data received", formatBytes(r.bytes))}</div>
+        ${r.carries === "adsb" ? `<p class="hc-rx-note">Aircraft, not vessels: not counted as an AIS receiver.</p>` : other ? `<p class="hc-rx-note">${r.carries === "other" ? "No AIS messages: it carries other data, as a GPS. Not counted as a receiver." : "No AIS message yet."}</p>` : ""}</article>`;
 }
 
 // reach: { vessels, range } of the last hour, for a station whose receiver reports nothing of the band
@@ -38,7 +38,7 @@ export function render(host, ais, reach) {
     if (!ais) return;
     const a = ais.a, b = ais.b, pa = a + b ? Math.round((100 * a) / (a + b)) : 0;
     // the receivers that are there for AIS, as the server counts them: all of them when none has passed on a message
-    const mine = ais.receivers.some((r) => r.ais) ? ais.receivers.filter((r) => r.ais) : ais.receivers;
+    const mine = ais.receivers.some((r) => r.carries === "ais") ? ais.receivers.filter((r) => r.carries === "ais") : ais.receivers;
     const up = mine.filter((r) => r.input === "streaming").length, n = mine.length;
     const has = (...codes) => ais.issues.find((i) => codes.includes(i.code));
     const c = { ...ais.checks }, rf = ais.rf || {};

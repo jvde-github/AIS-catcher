@@ -525,7 +525,7 @@ namespace Services
    "label":{"type":"string"},"status":{"enum":["ok","degraded","down"]},"input":{"enum":["starting","streaming","lost"]},
    "last_msg_age_s":{"type":["integer","null"],"description":"null for an input that passed on no AIS message, as one that carries a GPS"},"msgs_1m":{"type":"integer"},
    "bytes":{"type":"integer","description":"Everything it took in since the start"},
-   "ais":{"type":"boolean","description":"false for an input that streams and never passed on an AIS message: it is not counted as a receiver"}}}}}},
+   "carries":{"enum":["ais","adsb","other"],"description":"What its messages are. adsb: aircraft, from a BaseStation, Beast or raw 1090 feed; other: it streams text and never passed on an AIS message, as a GPS. Only ais counts as a receiver of the station; msgs_1m is of whatever it carries"}}}}}},
  "gps":{"type":["object","null"],"properties":{
   "status":{"enum":["ok","degraded","down"]},
   "fix":{"enum":["3d","2d","none","unknown"]},
@@ -545,7 +545,7 @@ namespace Services
   "kind":{"enum":["sender","connection","listener","service"],"description":"sender: it sends without a connection of its own, as UDP or HTTP; connection: it dials out and holds a connection; listener: it listens for clients; service: a server of the installation"},
   "type":{"type":"string","description":"The type of output, or Service for a server"},"label":{"type":"string","description":"An output's description, or its type and number, never where it sends; a server's port"},"status":{"enum":["ok","degraded","down"]},
   "state":{"enum":["connected","disconnected","listening","closed","sending","idle"],"description":"connected or disconnected for an output that dials out; listening for a listener and for a server, closed for a server that could not open its port; sending or idle for one that holds no connection, as UDP or HTTP"},
-  "bytes_out":{"type":"integer"},"dropped":{"type":"integer"},"reconnects":{"type":"integer","description":"Of an output that dials out or holds no connection"},
+  "bytes_out":{"type":"integer"},"dropped":{"type":"integer"},"messages":{"type":"integer","description":"Of an output: the messages sent"},"reconnects":{"type":"integer","description":"Of an output that dials out"},
   "clients":{"type":"integer","description":"Of a server and of a listener: connected now"},"offers":{"type":"array","items":{"type":"string"},"description":"Of a server: ui, api, mcp, system, geojson, kml, metrics"}}}}}},
 "issues":{"type":"array","description":"What holds now, each behind a status that is not ok","items":{"type":"object","properties":{
  "level":{"enum":["degraded","down"]},"type":{"enum":["ais","gps","output"]},

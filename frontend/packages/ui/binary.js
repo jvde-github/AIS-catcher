@@ -867,7 +867,7 @@ export function glyphsHTML(cats, attrs = '') {
     if (!cats.length) return '';
     const title = cats.map((c) => KIND_LABEL[c] || (c === 'station' ? 'Receiving station' : c)).join(', ') + ' \u00b7 show';
     return `<a href="#" class="msg-count" title="${text(title)}" ${attrs}>` +
-        cats.map((c) => `<img src="${glyphURL(c, true)}" alt="${text(KIND_LABEL[c] || c)}">`).join('') + '</a>';
+        cats.map((c) => `<img src="${glyphURL(c)}" alt="${text(KIND_LABEL[c] || c)}">`).join('') + '</a>';
 }
 
 // The kinds behind a vessel badge: newest first, no repeats. Acknowledgments

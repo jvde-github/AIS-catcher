@@ -3,10 +3,12 @@
 /* the green of health on white; the header's lighter one sits on the blue bar */
 #plots {
     --hc-ok: #15803d;
+    --hc-panel: #fafbfc;
 }
 
 .dark #plots {
     --hc-ok: #4ade80;
+    --hc-panel: var(--color-surface-alt);
 }
 
 /* the health card, AIS and GPS alike: the verdict, four figures, the bar under them, what is checked */
@@ -323,7 +325,7 @@ summary.hc-foot-top:focus-visible {
     padding: 12px;
     border: 1px solid var(--color-border);
     border-radius: 6px;
-    background: var(--color-surface-alt);
+    background: var(--hc-panel);
 }
 
 .hc-rx-top,
@@ -361,7 +363,8 @@ summary.hc-foot-top:focus-visible {
 
 .hc-rx-figs {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     gap: 10px;
 }
 

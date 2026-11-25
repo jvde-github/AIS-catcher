@@ -83,7 +83,8 @@ struct Health
 		// everything it took in: an input with bytes and no messages carries something else, as a GPS
 		unsigned long long bytes = 0;
 		// it streams text and never passed on an AIS message: no receiver of AIS, whatever else it brings
-		bool other = false;
+		bool other = false, aircraft = false;
+		const char *carries() const { return aircraft ? "adsb" : other ? "other" : "ais"; }
 	};
 
 	struct GPS
@@ -171,7 +172,7 @@ struct Health
 			default: return bytes_out ? "sending" : "idle";
 			}
 		}
-		unsigned long long bytes_out = 0, dropped = 0, reconnects = 0;
+		unsigned long long bytes_out = 0, dropped = 0, reconnects = 0, messages = 0;
 		std::time_t sent = 0; // when it last sent, or had nothing to send
 		Run drops, flaps;
 	};
