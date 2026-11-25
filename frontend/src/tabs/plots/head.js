@@ -1,7 +1,7 @@
-// The health card of the AIS and GPS views, drawn the same for both: the verdict with its dot and the
-// count of the checks, four figures, a bar under them (the channels, the constellations), and what
-// is checked: a grid of checks, beside the figures when the card is wide, and a foot that opens on
-// the details. The card is filled in place at every poll: only what changed is written.
+// The health card of the AIS and GPS views, drawn the same for both: the verdict with its dot, four
+// figures, a bar under them (the channels, the constellations), and what is checked: a grid of
+// checks, beside the figures when the card is wide, and a foot that opens on the details. The card
+// is filled in place at every poll: only what changed is written.
 
 // a state is the server's word: ok, degraded, down, learning (no baseline yet) or unknown (not measured)
 const COLOR = { ok: "--hc-ok", degraded: "--color-warning-ink", down: "--color-danger" };
@@ -17,6 +17,7 @@ const ICON = {
 const CHECK = { ok: "ok", degraded: "alert", down: "stop", learning: "clock", unknown: "none" };
 const icon = (name) => `<svg class="hc-icon" viewBox="0 0 24 24" aria-hidden="true">${ICON[name]}</svg>`;
 export const tone = (state) => `var(${COLOR[state] || "--color-text-subtle"})`;
+export const wrong = (state) => state === "degraded" || state === "down";
 
 // written only when it changed, so that what is focused, hovered or about to be clicked stays in place
 const drawn = new WeakMap();
@@ -27,7 +28,7 @@ function put(el, html) {
 }
 
 // opts: state, title, live, label, figures [html, four], aside (html under them),
-// checks [{state, title, note, hint}], sum (the checks counted), foot {more, details}
+// checks [{state, title, note, hint}], foot {more, details}
 export function head(host, opts) {
     // the card's parts are made once and filled; the foot that opens is one element for as long as the card lives
     if (!host.dataset.ready) {
@@ -40,9 +41,8 @@ export function head(host, opts) {
     host.style.setProperty("--state", tone(opts.state));
     const [top, body, more] = host.children;
     const n = opts.checks ? opts.checks.length : 0;
-    const alert = (state) => (state === "degraded" || state === "down" ? " hc-alert" : "");
-    const check = (c) => `<div class="hc-check${alert(c.state)}" style="--tone:${tone(c.state)}" title="${c.hint}">${icon(CHECK[c.state])}<div><div class="hc-check-title">${c.title}</div><div class="hc-check-note">${c.note}</div></div></div>`;
-    put(top, `<span class="hc-dot"></span><h2 class="hc-title">${opts.title}</h2>${opts.sum ? `<span class="hc-sum">${opts.sum}</span>` : ""}<span class="hc-live">${opts.live}</span>`);
+    const check = (c) => `<div class="hc-check${wrong(c.state) ? " hc-alert" : ""}" style="--tone:${tone(c.state)}" title="${c.hint}">${icon(CHECK[c.state])}<div><div class="hc-check-title">${c.title}</div><div class="hc-check-note">${c.note}</div></div></div>`;
+    put(top, `<span class="hc-dot"></span><h2 class="hc-title">${opts.title}</h2><span class="hc-live">${opts.live}</span>`);
     put(body, `<div><div class="hc-figs">${opts.figures.join("")}</div>${opts.aside ? `<div class="hc-aside">${opts.aside}</div>` : ""}</div>
         ${opts.checks ? `<div class="hc-checks" style="--rows2:${Math.ceil(n / 2)};--row1:${n <= 4 ? n : Math.ceil(n / 2)}">${opts.checks.map(check).join("")}</div>` : ""}`);
     const f = opts.foot;
@@ -50,13 +50,6 @@ export function head(host, opts) {
     if (more.hidden) return;
     put(more.firstElementChild, `<span class="hc-foot-more">${f.more}</span>`);
     put(more.lastElementChild, f.details);
-}
-
-// the checks counted
-export function summary(checks) {
-    const n = (...states) => checks.filter((c) => states.includes(c.state)).length;
-    const wrong = n("degraded", "down"), passed = n("ok"), learning = n("learning"), none = n("unknown");
-    return [wrong && `${wrong} need${wrong === 1 ? "s" : ""} a look`, passed && `${passed} check${passed === 1 ? "" : "s"} passed`, learning && `${learning} learning`, none && `${none} not available`].filter(Boolean).join(" · ");
 }
 
 export const figure = (label, value, note, cls = "") => `<div class="hc-fig"><div class="hc-label">${label}</div><div class="hc-value ${cls}">${value}</div><div class="hc-note">${note}</div></div>`;

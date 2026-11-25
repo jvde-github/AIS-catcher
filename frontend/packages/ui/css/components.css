@@ -2219,6 +2219,7 @@
     border: 0;
     border-radius: 12px;
     box-shadow: 0 16px 40px rgba(15, 23, 42, 0.20), 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--color-menu-text);
     font-size: 13.5px;
     line-height: 1.2;
     max-height: calc(100vh - 24px);
@@ -2232,7 +2233,7 @@
 @media (prefers-reduced-motion: reduce) { .floating-menu { animation: none; } }
 .floating-menu li {
     height: auto;
-    min-height: 36px;
+    min-height: 32px;
     gap: 10px;
     padding: 0 10px;
     border-radius: 8px;

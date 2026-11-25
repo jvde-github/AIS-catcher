@@ -27,9 +27,26 @@ async function fetchStatistics() {
     }
 }
 
+// a column's message cells: the cell and the message types it adds up
+const MESSAGES = {
+    msg123: [1, 2, 3],
+    msg5: [5],
+    msg18: [18],
+    msg19: [19],
+    msg68: [6, 8],
+    msg1214: [12, 14],
+    msg24: [24],
+    msg4: [4],
+    msg9: [9],
+    msg21: [21, 28],
+    msg27: [27],
+    msgother: [7, 10, 11, 13, 15, 16, 17, 20, 22, 23, 25, 26],
+};
+
 function updateStat(stat, tf) {
-    const errors = stat[tf].errors || {};
-    const errorCount = document.getElementById("stat_" + tf + "_error_flagged");
+    const s = stat[tf], cell = (name) => document.getElementById("stat_" + tf + "_" + name);
+    const errors = s.errors || {};
+    const errorCount = cell("error_flagged");
     const icon = document.createElement("i");
     icon.className = "info_icon";
     icon.setAttribute("aria-hidden", "true");
@@ -47,26 +64,11 @@ function updateStat(stat, tf) {
             errorRow.click();
         }
     };
-    [0, 1, 2, 3].forEach((e) => (document.getElementById("stat_" + tf + "_channel" + e).innerText = stat[tf].channel[e].toLocaleString()));
-
-    document.getElementById("stat_" + tf + "_count").innerText = stat[tf].count.toLocaleString();
-    if (!stat.range_hidden) document.getElementById("stat_" + tf + "_dist").innerText = getDistanceVal(stat[tf].dist) + " " + getDistanceUnit();
-    document.getElementById("stat_" + tf + "_vessel_count").innerText = stat[tf].vessels.toLocaleString();
-    document.getElementById("stat_" + tf + "_msg123").innerText = (stat[tf].msg[0] + stat[tf].msg[1] + stat[tf].msg[2]).toLocaleString();
-    document.getElementById("stat_" + tf + "_msg5").innerText = stat[tf].msg[4].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg18").innerText = stat[tf].msg[17].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg19").innerText = stat[tf].msg[18].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg68").innerText = (stat[tf].msg[5] + stat[tf].msg[7]).toLocaleString();
-    document.getElementById("stat_" + tf + "_msg1214").innerText = (stat[tf].msg[11] + stat[tf].msg[13]).toLocaleString();
-    document.getElementById("stat_" + tf + "_msg24").innerText = stat[tf].msg[23].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg4").innerText = stat[tf].msg[3].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg9").innerText = stat[tf].msg[8].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg21").innerText = (stat[tf].msg[20] + (stat[tf].msg[27] || 0)).toLocaleString();
-    document.getElementById("stat_" + tf + "_msg27").innerText = stat[tf].msg[26].toLocaleString();
-
-    let count_other = 0;
-    [7, 10, 11, 13, 15, 16, 17, 20, 22, 23, 25, 26].forEach((i) => (count_other += stat[tf].msg[i - 1]));
-    document.getElementById("stat_" + tf + "_msgother").innerText = count_other.toLocaleString();
+    [0, 1, 2, 3].forEach((e) => (cell("channel" + e).textContent = s.channel[e].toLocaleString()));
+    cell("count").textContent = s.count.toLocaleString();
+    if (!stat.range_hidden) cell("dist").textContent = getDistanceVal(s.dist) + " " + getDistanceUnit();
+    cell("vessel_count").textContent = s.vessels.toLocaleString();
+    for (const [name, types] of Object.entries(MESSAGES)) cell(name).textContent = types.reduce((n, t) => n + (s.msg[t - 1] || 0), 0).toLocaleString();
 }
 
 function renderDevices(stat) {
@@ -149,7 +151,7 @@ export async function update() {
         const statSharingElement = document.getElementById("stat_sharing");
         community.updateSharingState(stat.sharing, stat.sharing_uuid, stat.engine_running);
         const [sharingText, sharingClass] = community.sharingDisplay();
-        statSharingElement.innerHTML = `<a href="${stat.sharing_link}" target="_blank" class="${sharingClass}">${sharingText}</a>`;
+        statSharingElement.innerHTML = `<a href="${isHttpUrl(stat.sharing_link) ? sanitizeString(stat.sharing_link) : "#"}" target="_blank" class="${sharingClass}">${sharingText}</a>`;
 
         document.getElementById("stat_update_time").textContent = Number(refreshIntervalMs / 1000).toFixed(1) + " s";
         let title = document.getElementById("stat_station").textContent;

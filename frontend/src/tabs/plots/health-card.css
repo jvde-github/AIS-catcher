@@ -34,8 +34,7 @@
 .hc-top {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 2px 10px;
+    gap: 10px;
     padding: 12px 16px;
     border-bottom: 1px solid var(--color-border);
 }
@@ -255,11 +254,6 @@ summary.hc-foot-top:focus-visible {
     outline-offset: -2px;
 }
 
-.hc-sum {
-    color: var(--color-text-muted);
-    font-size: 12px;
-}
-
 .hc-foot-more {
     display: flex;
     align-items: center;
@@ -326,6 +320,10 @@ summary.hc-foot-top:focus-visible {
     margin-bottom: 12px;
     font-size: 13px;
     font-weight: 600;
+}
+
+.hc-rx-top strong {
+    font-weight: inherit;
 }
 
 .hc-rx-top small {

@@ -263,7 +263,8 @@ namespace IO
 
 		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
 		{
-			SendAll(data, len);
+			if (stats.connected.get())
+				SendAll(data, len);
 		}
 
 	public:
@@ -335,5 +336,7 @@ namespace IO
 		{
 			return MQTTStreamer::applyKey(key == AIS::KEY_SETTING_DEVICE ? AIS::KEY_SETTING_HOST : key, arg);
 		}
+
+		bool hasConnection() const override { return false; }
 	};
 }

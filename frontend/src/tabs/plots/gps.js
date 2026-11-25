@@ -3,7 +3,7 @@
 
 import { cssvar } from './polar.js';
 import { decode, merge } from './gnss-data.js';
-import { head, figure, summary } from './head.js';
+import { head, figure } from './head.js';
 import { setup, ART } from './setup.js';
 import { SYSTEMS, SYSTEM, ID, SIGNAL, USED, L2, L5 } from './sky.js';
 import { gpsTitle } from '../../features/status/health-data.js';
@@ -28,6 +28,8 @@ const dayClock = (t) => {
     const d = new Date(t * 1000), today = new Date();
     return (d.toDateString() === today.toDateString() ? "" : d.toLocaleDateString([], { day: "numeric", month: "short" }) + " ") + clock(t);
 };
+// a sample on a round local time: where an axis draws its line
+const round = (d, i, step) => (d.time(i) - new Date(d.time(i) * 1000).getTimezoneOffset() * 60) % step < d.interval;
 const minutes = (n) => (n < 90 ? Math.round(n) + " min" : (n / 60).toFixed(1) + " h");
 
 // ---------- data ----------
@@ -134,7 +136,7 @@ function status() {
     head($("gps-head"), {
         state: verdict ? verdict.status : "learning", title: verdict ? gpsTitle(verdict) : "Insufficient receiver data",
         live: age === null ? "Unknown" : age < 30 ? "Live" : `${age < 120 ? age + " s" : Math.round(age / 60) + " min"} ago`,
-        label: "GPS receiver health", figures, aside, checks, sum: checks && summary(checks), foot: checks && { more: "Details", details },
+        label: "GPS receiver health", figures, aside, checks, foot: checks && { more: "Details", details },
     });
 }
 
@@ -192,8 +194,8 @@ function timeline() {
     // hour lines and their times: every 3 hours, 6 on a phone, a day apart over the week, 30 min over 3 hours
     const step = d.interval === 600 ? 86400 : range === "1h" ? 900 : range === "3h" ? 1800 : narrow ? 21600 : 10800;
     for (let i = from; i < d.n; i++) {
-        const t = d.time(i), local = t - new Date(t * 1000).getTimezoneOffset() * 60;
-        if (local % step >= d.interval) continue;
+        if (!round(d, i, step)) continue;
+        const t = d.time(i);
         g += `<line x1="${X(i)}" x2="${X(i)}" y1="${ln.sig[0]}" y2="${bottom}" stroke="${grid}"/>`;
         if (X(i) < W - R - 40) g += `<text x="${X(i)}" y="${H - 6}" text-anchor="middle" fill="${ink}">${step === 86400 ? new Date(t * 1000).toLocaleDateString([], { weekday: "short" }) : clock(t)}</text>`;
     }
@@ -274,10 +276,7 @@ function waterfall() {
     const mono = "ui-monospace, SFMono-Regular, Menlo, monospace";
     const step = n <= 30 ? 900 : n <= 90 ? 1800 : n <= 240 ? 7200 : 21600, letter = { 1: "G", 2: "R", 3: "E", 4: "C" };
     const hours = [];
-    for (let i = from; i < day.n; i++) {
-        const t = day.time(i), local = t - new Date(t * 1000).getTimezoneOffset() * 60;
-        if (local % step < day.interval) hours.push(i);
-    }
+    for (let i = from; i < day.n; i++) if (round(day, i, step)) hours.push(i);
     const RH = 16, SH = 12, track = cssvar("--wf-track"), grid = cssvar("--gnss-grid"), amber = cssvar("--gnss-amber"), gap = cssvar("--wf-gap"), ink = cssvar("--color-text-muted");
     host.replaceChildren();
     for (const id of ORDER) {

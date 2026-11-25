@@ -22,6 +22,7 @@ import * as replaybar from '../replay/replaybar.js';
 import * as mapObjects from '../mapobjects/mapobjects.js';
 import * as range from '../range/range.js';
 import { register } from '../../actions.js';
+import { fetchHealth } from '../status/health-data.js';
 
 function focusName() {
     return stationLabel(focus);
@@ -206,7 +207,6 @@ function fillRows(s) {
     card.header.state(HEADER_CLASS[s.status] || "card-dubious");
     set("stationcard_station_id", s.id);
     set("stationcard_status", stationStateText(s) || STATUS_TEXT[s.status] || "No data yet");
-    set("stationcard_ago", s.heard > 0 ? getDeltaTimeVal(clock - s.heard) + " ago" : "-");
     const aboard = s.mmsi ? ships[s.mmsi]?.raw?.shipname || "MMSI " + s.mmsi : null;
     tabs.cells.where.previousElementSibling.textContent = aboard ? "On board" : "Position";
     set("stationcard_where", aboard || (onMap(s) ? getLatValFormat(s) + "  " + getLonValFormat(s) : "-"));
@@ -216,8 +216,11 @@ const json = (url) => fetch(url).then((r) => (r.ok ? r.json() : null)).catch(() 
 
 async function fillFigures(id) {
     figuresAt = Date.now();
-    const [stat, history] = await Promise.all([json("api/stat.json?stations=" + id), json("api/history_full.json?second=0&hour=48&day=0&stations=" + id)]);
+    const [stat, history, health] = await Promise.all([json("api/stat.json?stations=" + id), json("api/history_full.json?second=0&hour=48&day=0&stations=" + id), fetchHealth()]);
     if (cardStation !== id) return;
+    // the station's row tells when it was last heard only when the row changes: its health knows it now
+    const age = health?.stations?.[id]?.ais.last_msg_age_s;
+    set("stationcard_ago", age == null ? "-" : getDeltaTimeVal(age) + " ago");
     set("stationcard_ships", stat ? count(stat.vessel_count) : "-");
     set("stationcard_messages", stat ? count(stat.session?.count) : "-");
     set("stationcard_rate", stat ? (Number(stat.msg_rate) || 0).toFixed(1) + " msg/s" : "-");

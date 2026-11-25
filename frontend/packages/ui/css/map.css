@@ -1913,26 +1913,26 @@ body.ticker-open.ticker-bottom {
    than ringed, and the vessel count with its caption.
    ========================================================================== */
 .map-button-box, .map-button-box.map-pill {
-    --size-map-button: 36px;
+    --size-map-button: 34px;
     gap: 2px;
     padding: 4px;
     border: 0;
-    border-radius: 16px;
+    border-radius: 12px;
     background-color: var(--color-surface-raised, var(--color-surface-alt));
     box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16), 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 .map-button-box .map-button {
-    height: 36px !important;
-    border-radius: 10px !important;
+    height: 34px !important;
+    border-radius: 8px !important;
     background-color: transparent !important;
-    color: var(--color-text) !important;
-    fill: var(--color-text) !important;
+    color: var(--color-menu-text) !important;
+    fill: var(--color-menu-text) !important;
     transition: background-color .12s, color .12s;
 }
 .map-button-box .map-button + .map-button { border-top: 0 !important; border-image: none !important; }
 .map-pill .map-button svg { width: 19px !important; height: 19px !important; }
 @media (hover: hover) {
-    .map-button-box .map-button:hover { background-color: color-mix(in srgb, var(--color-text) 7%, transparent) !important; color: var(--color-text) !important; fill: var(--color-text) !important; }
+    .map-button-box .map-button:hover { background-color: color-mix(in srgb, var(--color-text) 7%, transparent) !important; color: var(--color-menu-text) !important; fill: var(--color-menu-text) !important; }
     .map-button-box .map-button:hover svg { transform: none; }
 }
 .map-button-box .map-button.is-active {
@@ -1942,7 +1942,9 @@ body.ticker-open.ticker-bottom {
 .map-button-box .map-button.is-active::before { display: none; }
 /* the count: the number in weight, "in view" small under it; found by its #markerCount
    (both hosts have it, their button ids differ), the caption drawn here so no host needs markup */
-.map-button-box .map-button:has(> #markerCount) { height: auto !important; min-height: 40px; flex-direction: column !important; gap: 1px; padding: 4px 0 !important; font-size: 13px !important; font-weight: 700; line-height: 1.1; }
+.map-button-box .map-button:has(> #markerCount) { height: auto !important; min-height: 40px; flex-direction: column !important; gap: 1px; padding: 4px 0 7px !important; margin-bottom: 2px !important;
+    --rule: color-mix(in srgb, var(--color-text) 14%, transparent);
+    background: linear-gradient(var(--rule), var(--rule)) center bottom / calc(100% - 10px) 1px no-repeat; font-size: 13px !important; font-weight: 700; line-height: 1.1; }
 .map-button-box .map-button:has(> #markerCount)::after { content: "in view"; font-size: 8.5px; font-weight: 400; color: var(--color-text-muted); }
 /* a little more air between the rail and the side panel */
 .map-button-box { right: 12px; }

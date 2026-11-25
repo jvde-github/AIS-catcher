@@ -2,7 +2,7 @@
 // the header's AIS icon carries, the figures, the six checks behind it, and each receiver below.
 // The verdicts are the server's: nothing is judged here.
 
-import { head, figure, tone, summary, cell } from './head.js';
+import { head, figure, tone, cell, wrong } from './head.js';
 import { aisTitle } from '../../features/status/health-data.js';
 import { formatBytes, sanitizeString } from '@aiscatcher/core/text.js';
 import { getDistanceVal, getDistanceUnit } from '../../core/units.js';
@@ -49,7 +49,7 @@ export function render(host, ais, reach) {
     const level = rf.noise !== undefined ? `${signed(rf.noise)} ${rf.noise_unit || "dB"}` : "", delta = rf.noise_delta_db;
     const figures = [
         figure("Messages/min", ais.msgs, "Last minute"),
-        figure("Receivers", n ? `${up}<small>/${n}</small>` : "—", n ? "Streaming" : "Heard through a feed", c.input === "degraded" || c.input === "down" ? "warn" : ""),
+        figure("Receivers", n ? `${up}<small>/${n}</small>` : "—", n ? "Streaming" : "Heard through a feed", wrong(c.input) ? "warn" : ""),
         ...(ais.rf ? [
             figure("Noise change", delta != null ? `${signed(delta)} <small>dB</small>` : "—", delta != null ? (ais.several ? "Largest deviation" : `Now ${level}`) : level ? `Now ${level}` : "Not available", noise ? "warn" : ""),
             figure("Clipping", rf.clip_pct !== undefined ? `${rf.clip_pct.toFixed(1)}<small>%</small>` : "—", rf.clip_pct !== undefined ? (ais.several ? "Highest station value" : "RF samples") : "Not available", clip ? "warn" : ""),
@@ -79,6 +79,6 @@ export function render(host, ais, reach) {
     head(host, {
         state: ais.status, title: aisTitle(ais),
         live: ais.last === null ? "Unknown" : ais.last < 90 ? "Live" : ago(ais.last), label: "AIS receiver health", figures, aside, checks,
-        sum: summary(checks), foot: { more: "Receiver details", details: n ? `<div class="hc-receivers">${ais.receivers.map(receiver).join("")}</div>` : "" },
+        foot: { more: "Receiver details", details: n ? `<div class="hc-receivers">${ais.receivers.map(receiver).join("")}</div>` : "" },
     });
 }

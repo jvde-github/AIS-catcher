@@ -8,6 +8,8 @@
     display: block;
 }
 
+#plots.hide-signal [data-kind="signal"],
+#plots.hide-ppm [data-kind="ppm"],
 #plots[data-mode="compare"] .graph-panel:not(.compare-panel) {
     display: none;
 }

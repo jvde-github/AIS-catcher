@@ -336,8 +336,10 @@ export async function update() {
     if (mode === "compare") {
         settleSourceB();
         const a = focus, b = sourceB === null ? -1 : sourceB;
-        const [ha, hb] = await Promise.all([fetchHistory(a), fetchHistory(b)]);
-        if (ha && hb && token === updateToken) drawCompare(ha, hb, a, b);
+        const [ha, hb, all] = await Promise.all([fetchHistory(a), fetchHistory(b), fetchHealth()]);
+        if (token !== updateToken) return;
+        readings(view(all, focus));
+        if (ha && hb) drawCompare(ha, hb, a, b);
         return;
     }
 

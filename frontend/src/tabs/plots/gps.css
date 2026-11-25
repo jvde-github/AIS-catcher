@@ -14,7 +14,6 @@
     --gnss-amber: #a66b11;
     --gnss-red: #c62828;
     --gnss-grey: #6b7686;
-    --gnss-green: #218451;
     --hc-ok-strong: #218451;
 }
 
@@ -31,7 +30,6 @@
     --gnss-amber: #e8b65c;
     --gnss-red: #f87171;
     --gnss-grey: #8793a3;
-    --gnss-green: #43bd89;
     --hc-ok-strong: #40c990;
 }
 
@@ -743,7 +741,7 @@ i.gps-line {
 }
 
 .ev-end .ev-icon {
-    stroke: var(--gnss-green);
+    stroke: var(--hc-ok-strong);
 }
 
 .ev-end .ev-icon.ev-wait {

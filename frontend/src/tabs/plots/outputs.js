@@ -3,7 +3,7 @@
 // services it answers from, as this viewer and the API. They are the installation's, not a
 // station's. The verdicts are the server's: nothing is judged here.
 
-import { head, figure, tone, summary, cell } from './head.js';
+import { head, figure, tone, cell, wrong } from './head.js';
 import { WORDS, outputsTitle } from '../../features/status/health-data.js';
 import { formatBytes, sanitizeString } from '@aiscatcher/core/text.js';
 
@@ -35,7 +35,7 @@ export function render(host, out) {
         const issue = out.issues.find((i) => i.code === code), o = issue && out.list.find((x) => x.id === issue.output);
         return o ? name(o) : "An output";
     };
-    const bad = (state) => (state === "degraded" || state === "down" ? "warn" : "");
+    const bad = (state) => (wrong(state) ? "warn" : "");
     const many = (k, one) => `${k} ${one}${k === 1 ? "" : "s"}`;
     const figures = [
         // how many there are, and of those that hold a connection how many have it: never a fraction that reads as feeds failing
@@ -69,6 +69,6 @@ export function render(host, out) {
     const group = (title, cards) => (cards.length ? `<div class="hc-group">${title}</div><div class="hc-receivers">${cards.join("")}</div>` : "");
     head(host, {
         state: out.status, title: outputsTitle(out), live: "Live", label: "Output health", figures, aside, checks,
-        sum: summary(checks), foot: { more: "Output details", details: group("Feeds", feeds.map(feed)) + group("Services", services.map(service)) },
+        foot: { more: "Output details", details: group("Feeds", feeds.map(feed)) + group("Services", services.map(service)) },
     });
 }
