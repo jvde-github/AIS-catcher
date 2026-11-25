@@ -134,7 +134,7 @@ function status() {
     head($("gps-head"), {
         state: verdict ? verdict.status : "learning", title: verdict ? gpsTitle(verdict) : "Insufficient receiver data",
         live: age === null ? "Unknown" : age < 30 ? "Live" : `${age < 120 ? age + " s" : Math.round(age / 60) + " min"} ago`,
-        label: "GPS receiver health", figures, aside, checks, foot: checks && { ...summary(checks), more: "Details", details },
+        label: "GPS receiver health", figures, aside, checks, sum: checks && summary(checks), foot: checks && { more: "Details", details },
     });
 }
 

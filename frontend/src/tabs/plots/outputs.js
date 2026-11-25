@@ -69,6 +69,6 @@ export function render(host, out) {
     const group = (title, cards) => (cards.length ? `<div class="hc-group">${title}</div><div class="hc-receivers">${cards.join("")}</div>` : "");
     head(host, {
         state: out.status, title: outputsTitle(out), live: "Live", label: "Output health", figures, aside, checks,
-        foot: { ...summary(checks), more: "Output details", details: group("Feeds", feeds.map(feed)) + group("Services", services.map(service)) },
+        sum: summary(checks), foot: { more: "Output details", details: group("Feeds", feeds.map(feed)) + group("Services", services.map(service)) },
     });
 }

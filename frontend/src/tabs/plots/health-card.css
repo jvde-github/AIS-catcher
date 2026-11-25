@@ -34,7 +34,8 @@
 .hc-top {
     display: flex;
     align-items: center;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 2px 10px;
     padding: 12px 16px;
     border-bottom: 1px solid var(--color-border);
 }
@@ -234,9 +235,7 @@
 .hc-foot-top {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 6px 12px;
+    justify-content: flex-end;
     padding: 11px 16px;
     color: var(--color-text-muted);
     font-size: 12px;
@@ -257,17 +256,8 @@ summary.hc-foot-top:focus-visible {
 }
 
 .hc-sum {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.hc-sum i {
-    flex-shrink: 0;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--tone);
+    color: var(--color-text-muted);
+    font-size: 12px;
 }
 
 .hc-foot-more {

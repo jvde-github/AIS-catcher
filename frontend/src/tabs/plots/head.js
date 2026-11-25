@@ -1,7 +1,7 @@
-// The health card of the AIS and GPS views, drawn the same for both: the verdict with its dot, four
-// figures, a bar under them (the channels, the constellations), and what is checked: a grid of
-// checks, beside the figures when the card is wide, and a foot that counts them and opens on the
-// details. The card is filled in place at every poll: only what changed is written.
+// The health card of the AIS and GPS views, drawn the same for both: the verdict with its dot and the
+// count of the checks, four figures, a bar under them (the channels, the constellations), and what
+// is checked: a grid of checks, beside the figures when the card is wide, and a foot that opens on
+// the details. The card is filled in place at every poll: only what changed is written.
 
 // a state is the server's word: ok, degraded, down, learning (no baseline yet) or unknown (not measured)
 const COLOR = { ok: "--hc-ok", degraded: "--color-warning-ink", down: "--color-danger" };
@@ -27,41 +27,36 @@ function put(el, html) {
 }
 
 // opts: state, title, live, label, figures [html, four], aside (html under them),
-// checks [{state, title, note, hint}], foot {state, text, more, details}
+// checks [{state, title, note, hint}], sum (the checks counted), foot {more, details}
 export function head(host, opts) {
     // the card's parts are made once and filled; the foot that opens is one element for as long as the card lives
     if (!host.dataset.ready) {
         host.dataset.ready = "1";
-        host.innerHTML = `<header class="hc-top"></header><div class="hc-body"></div><div class="hc-foot" hidden><div class="hc-foot-top"></div></div><details class="hc-foot" hidden><summary class="hc-foot-top"></summary><div></div></details>`;
+        host.innerHTML = `<header class="hc-top"></header><div class="hc-body"></div><details class="hc-foot" hidden><summary class="hc-foot-top"></summary><div></div></details>`;
     }
     host.classList.add("health-card");
     host.dataset.state = opts.state;
     host.setAttribute("aria-label", opts.label);
     host.style.setProperty("--state", tone(opts.state));
-    const [top, body, plain, more] = host.children;
+    const [top, body, more] = host.children;
     const n = opts.checks ? opts.checks.length : 0;
     const alert = (state) => (state === "degraded" || state === "down" ? " hc-alert" : "");
     const check = (c) => `<div class="hc-check${alert(c.state)}" style="--tone:${tone(c.state)}" title="${c.hint}">${icon(CHECK[c.state])}<div><div class="hc-check-title">${c.title}</div><div class="hc-check-note">${c.note}</div></div></div>`;
-    put(top, `<span class="hc-dot"></span><h2 class="hc-title">${opts.title}</h2><span class="hc-live">${opts.live}</span>`);
+    put(top, `<span class="hc-dot"></span><h2 class="hc-title">${opts.title}</h2>${opts.sum ? `<span class="hc-sum">${opts.sum}</span>` : ""}<span class="hc-live">${opts.live}</span>`);
     put(body, `<div><div class="hc-figs">${opts.figures.join("")}</div>${opts.aside ? `<div class="hc-aside">${opts.aside}</div>` : ""}</div>
         ${opts.checks ? `<div class="hc-checks" style="--rows2:${Math.ceil(n / 2)};--row1:${n <= 4 ? n : Math.ceil(n / 2)}">${opts.checks.map(check).join("")}</div>` : ""}`);
-    const f = opts.foot, opens = !!(f && f.details);
-    plain.hidden = !f || opens;
-    more.hidden = !opens;
-    if (!f) return;
-    const sum = `<span class="hc-sum" style="--tone:${tone(f.state)}"><i></i>${f.text}</span>`;
-    put((opens ? more : plain).firstElementChild, opens ? `${sum}<span class="hc-foot-more">${f.more}</span>` : sum);
-    if (opens) put(more.lastElementChild, f.details);
+    const f = opts.foot;
+    more.hidden = !(f && f.details);
+    if (more.hidden) return;
+    put(more.firstElementChild, `<span class="hc-foot-more">${f.more}</span>`);
+    put(more.lastElementChild, f.details);
 }
 
-// the checks counted, for the foot
+// the checks counted
 export function summary(checks) {
     const n = (...states) => checks.filter((c) => states.includes(c.state)).length;
     const wrong = n("degraded", "down"), passed = n("ok"), learning = n("learning"), none = n("unknown");
-    return {
-        state: n("down") ? "down" : wrong ? "degraded" : passed ? "ok" : "unknown",
-        text: [wrong && `${wrong} need${wrong === 1 ? "s" : ""} a look`, passed && `${passed} check${passed === 1 ? "" : "s"} passed`, learning && `${learning} learning`, none && `${none} not available`].filter(Boolean).join(" · "),
-    };
+    return [wrong && `${wrong} need${wrong === 1 ? "s" : ""} a look`, passed && `${passed} check${passed === 1 ? "" : "s"} passed`, learning && `${learning} learning`, none && `${none} not available`].filter(Boolean).join(" · ");
 }
 
 export const figure = (label, value, note, cls = "") => `<div class="hc-fig"><div class="hc-label">${label}</div><div class="hc-value ${cls}">${value}</div><div class="hc-note">${note}</div></div>`;

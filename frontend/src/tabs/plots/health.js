@@ -79,6 +79,6 @@ export function render(host, ais, reach) {
     head(host, {
         state: ais.status, title: aisTitle(ais),
         live: ais.last === null ? "Unknown" : ais.last < 90 ? "Live" : ago(ais.last), label: "AIS receiver health", figures, aside, checks,
-        foot: { ...summary(checks), more: "Receiver details", details: n ? `<div class="hc-receivers">${ais.receivers.map(receiver).join("")}</div>` : "" },
+        sum: summary(checks), foot: { more: "Receiver details", details: n ? `<div class="hc-receivers">${ais.receivers.map(receiver).join("")}</div>` : "" },
     });
 }
