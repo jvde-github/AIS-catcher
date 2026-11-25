@@ -3,6 +3,12 @@ import { chart } from './chart.js';
 import * as busy from './busy.js';
 import * as coverage from './coverage.js';
 import * as sky from './sky.js';
+import * as gps from './gps.js';
+import * as healthLine from './health.js';
+import { tone } from './head.js';
+import * as outputsCard from './outputs.js';
+import * as statistics from './stat.js';
+import { fetchHealth, view, aisTitle, gpsTitle, outputsTitle } from '../../features/status/health-data.js';
 import { settings } from '../../core/state.js';
 import { getDistanceConversion, getDistanceUnit } from '../../core/units.js';
 import { config, stationLabel } from '../../core/config.js';
@@ -10,6 +16,7 @@ import { focus } from '../../data.js';
 import { createPicker } from '@aiscatcher/ui/picker.js';
 import { focusOptions, mountFocusPicker } from '../../features/station/station.js';
 import { register } from '../../actions.js';
+import { saveSettings } from '../../settings-store.js';
 
 const C1 = "--color-chart-1", C2 = "--color-chart-2", C4 = "--color-chart-4", C5 = "--color-chart-5", C6 = "--color-chart-6";
 
@@ -91,7 +98,9 @@ const COMPARE = {
 };
 
 const charts = {};
-let mode = "overview";
+// the dashboard's views; the one last open is the one a reload opens
+const MODES = ["overview", "gps", "outputs", "compare", "stat"];
+let mode = MODES.includes(settings.dashboard) ? settings.dashboard : "overview";
 let sourceB = null; // what the station in focus is compared with; -1 for all stations
 let pickerA = null, pickerB = null;
 let updateToken = 0;
@@ -102,14 +111,24 @@ function stationsListed() {
 }
 
 function setMode(next) {
-    if (next !== "compare") next = "overview";
+    if (!MODES.includes(next)) next = "overview";
     if (next === mode) return;
-    mode = next;
+    mode = settings.dashboard = next;
+    saveSettings();
+    reveal();
     if (mode === "compare" && sourceB === null) {
         const other = stationsListed().find((s) => s.id !== focus);
         sourceB = focus < 0 || !other ? -1 : other.id;
     }
     update();
+}
+
+// when the views do not fit the row it scrolls sideways: the one chosen is brought into sight
+function reveal() {
+    const row = document.querySelector("#plots_modes .plot-switch"), tab = row && row.querySelector(`[data-mode="${mode}"]`);
+    if (!tab) return;
+    if (tab.offsetLeft < row.scrollLeft) row.scrollLeft = tab.offsetLeft - 3;
+    else if (tab.offsetLeft + tab.offsetWidth > row.scrollLeft + row.clientWidth) row.scrollLeft = tab.offsetLeft + tab.offsetWidth - row.clientWidth + 3;
 }
 
 // the other station is never the one in focus, and one the server no longer lists goes
@@ -125,20 +144,24 @@ function settleSourceB() {
 
 function applyMode() {
     const multi = stationsListed().length > 1;
-    if (!multi) mode = "overview";
+    if (!multi && mode === "compare") mode = "overview";
 
+    // AIS, GPS, Outputs and Statistics always, so that a station without a GPS sees there is a tab for one; Compare with a second station
     const tabs = document.getElementById("plots_modes");
     if (tabs) {
-        tabs.style.display = multi ? "flex" : "none";
-        for (const tab of tabs.querySelectorAll(".sheet-tab"))
+        for (const tab of tabs.querySelectorAll(".sheet-tab")) {
             tab.classList.toggle("active", tab.dataset.mode === mode);
+            if (tab.dataset.mode === "compare") tab.hidden = !multi;
+        }
     }
 
     const bar = document.getElementById("chart_sources");
     if (bar) bar.style.display = multi && mode === "compare" ? "flex" : "none";
 
     const plots = document.getElementById("plots");
-    if (plots) plots.classList.toggle("compare-mode", mode === "compare");
+    if (plots) plots.dataset.mode = mode;
+    const panel = document.getElementById("gps");
+    if (panel) panel.hidden = mode !== "gps";
 
     if (multi) buildSourceSelectors();
 }
@@ -159,21 +182,48 @@ function buildSourceSelectors() {
 
 const fetched = new Map();
 
-async function fetchHistory(idx) {
-    const used = new Set(Object.values(period)), slots = (f, n) => (used.has(f) ? n : 0), now = Date.now();
-    const url = `api/history_full.json?second=${slots("second", 60)}&minute=${slots("minute", 60)}&hour=168&day=${slots("day", 365)}&stations=${idx}`;
-    for (const [u, last] of fetched) if (now - last.at > 10000) fetched.delete(u);
+// bare: without the figures of any period, for the GPS view, which takes the sky from it and nothing else
+async function fetchHistory(idx, bare) {
+    const used = new Set(bare ? [] : Object.values(period)), slots = (f, n) => (used.has(f) ? n : 0), now = Date.now();
+    const url = `api/history_full.json?second=${slots("second", 60)}&minute=${slots("minute", 60)}&hour=${bare ? 0 : 168}&day=${slots("day", 365)}&slim=1&stations=${idx}`;
+    // the figures change with the minute: asked again when the next one has closed; the sky every ten seconds
+    const until = bare ? now + 10000 : (Math.floor(now / 60000) + 1) * 60000 + 3000;
+    for (const [u, last] of fetched) if (now > last.until) fetched.delete(u);
     if (fetched.has(url) && !used.has("second")) return fetched.get(url).h;
     try {
         const response = await fetch(url);
         if (!response.ok) return null;
         const h = await response.json();
-        fetched.set(url, { at: now, h });
+        fetched.set(url, { until, h });
         return h;
     } catch (error) {
         console.error("plots: history fetch failed:", error);
         return null;
     }
+}
+
+// from the header's status or a station's card: straight to a view
+export function showMode(next) {
+    setMode(next);
+    applyMode();
+    reveal();
+}
+
+// the switch's segments carry the receivers' health and a reading: the header's dots, with a number
+const FIX = { "3d": "3D", "2d": "2D", none: "no fix", unknown: "no fix" };
+function readings(health) {
+    const set = (id, part, text, title) => {
+        const dot = document.getElementById("pm-dot-" + id), read = document.getElementById("pm-read-" + id);
+        if (!dot || !read) return;
+        if (part) dot.style.setProperty("--dot", tone(part.status));
+        else dot.style.removeProperty("--dot");
+        read.textContent = text;
+        dot.parentElement.title = title;
+    };
+    const { ais, gps, outputs } = health;
+    set("out", outputs, outputs ? String(outputs.list.length) : "none", outputs ? outputsTitle(outputs) : "No outputs");
+    set("ais", ais, ais ? ais.msgs + "/min" : "", ais ? aisTitle(ais) : "");
+    set("gps", gps, gps ? `${FIX[gps.fix]}, ${gps.sats} sats` : "no GPS", gps ? gpsTitle(gps) : "No GPS on this station");
 }
 
 export function setAbsoluteTime(on) {
@@ -260,7 +310,6 @@ function drawOverview(h) {
     busy.update(h);
     if (h.range_hidden) return;
     coverage.update(h);
-    sky.update(h);
 }
 
 function init() {
@@ -292,16 +341,40 @@ export async function update() {
         return;
     }
 
-    const h = await fetchHistory(focus);
+    if (mode === "stat" || mode === "outputs") {
+        const [all] = await Promise.all([fetchHealth(), mode === "stat" && statistics.update()]);
+        if (token !== updateToken) return;
+        const health = view(all, focus);
+        readings(health);
+        if (mode === "outputs") outputsCard.render(document.getElementById("outputs-status"), health.outputs);
+        return;
+    }
+
+    const [h, all] = await Promise.all([fetchHistory(focus, mode === "gps"), fetchHealth()]);
+    const health = view(all, focus);
     if (!h || token !== updateToken) return;
+    readings(health);
+
+    if (mode === "gps") {
+        await gps.update(h, focus, health.gps);
+        if (!h.range_hidden && token === updateToken) sky.update(h);
+        return;
+    }
 
     document.getElementById("plots").classList.toggle("range-hidden", !!h.range_hidden);
+    // the last hour and the one under way, whichever saw more
+    const hours = h.hour && h.hour.stat.length ? h.hour.stat.slice(-2) : [];
+    healthLine.render(document.getElementById("ais-status"), health.ais, {
+        vessels: hours.length ? Math.max(...hours.map((s) => s.vessels)) : null,
+        range: h.range_hidden || !hours.length ? null : Math.max(...hours.map((s) => s.dist)),
+    });
     drawOverview(h);
 }
 
 export function updateColors() {
     coverage.repaint();
     sky.repaint();
+    gps.repaint();
 }
 
 register({
@@ -314,4 +387,5 @@ register({
     setBusyMeasure: (e, d) => busy.setMeasure(d.measure),
     setCoveragePeriod: (e, d) => coverage.setPeriod(d.period),
     setCoverageMeasure: (e, d) => coverage.setMeasure(d.measure),
+    ...gps.actions,
 });

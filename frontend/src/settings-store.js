@@ -94,6 +94,7 @@ const DEFAULT_SETTINGS = {
         metric: "DEFAULT",
         setcoord: true,
         tab: "map",
+        dashboard: "overview",
         show_labels: "dynamic",
         labels_declutter: true,
         labels_prioritize_active: true,
@@ -127,7 +128,7 @@ const DEFAULT_SETTINGS = {
         realtime_background_streaming: false,
         realtime_filters: [],
         ship_filter: {},
-        binary_messages: "highlight",
+        binary_messages: "badge",
         binary_color_class: true,
         binary_id_labels: true,
         binary_group_areas: false,
@@ -158,6 +159,13 @@ function updateForLegacySettings() {
             if (!saved[cls] || String(saved[cls]).toLowerCase() === TRACK_COLORS_BEFORE_TINT[cls]) saved[cls] = now[cls];
         }
         settings.track_class_colors = saved;
+    }
+
+    // the white ring around a vessel with a message was the default: it is a choice now, and off
+    // until it is made. Once, for settings saved before that.
+    if (!settings.badge_ring_asked) {
+        settings.badge_ring_asked = true;
+        if (settings.binary_messages === "highlight") settings.binary_messages = "badge";
     }
 
     if (!("showPlanesAtFirst" in settings)) {

@@ -8,6 +8,9 @@
 @import "./features/station/station.css";
 @import "./tabs/realtime/realtime.css";
 @import "./tabs/plots/plots.css";
+@import "./tabs/plots/health-card.css";
+@import "./tabs/plots/setup.css";
+@import "./tabs/plots/gps.css";
 @import "./features/about/about.css";
 @import "./features/tablecard/tablecard.css";
 @import "./features/ticker/ticker.css";

@@ -55,10 +55,13 @@ namespace AIS
 	struct Sky
 	{
 		enum System { OTHER = 0, GPS = 1, GLONASS = 2, GALILEO = 3, BEIDOU = 4, QZSS = 5, NAVIC = 6, SBAS = 7 };
+		// L1 is L1, E1, B1 and G1; L5 is L5, E5a and B2a; L2 the bands between: L2, G2, E5b, E6, B2b, B3
+		enum Band { L1 = 0, L2 = 1, L5 = 2, BANDS = 3 };
 		struct Satellite
 		{
 			int system, id;
-			int elevation, azimuth, signal;
+			int elevation, azimuth;
+			int signal[BANDS]; // dB-Hz, -1 where the band is not heard
 			bool used;
 		};
 		std::vector<Satellite> satellites;
@@ -68,23 +71,23 @@ namespace AIS
 
 	class GPS
 	{
-		float lat = 0, lon = 0;
+		double lat = 0, lon = 0;
 		const std::string &source;
 		bool isJSON;
 
 		bool position = true;
 
-		const std::string formatLatLon(float, bool) const;
+		const std::string formatLatLon(double, bool) const;
 
 	public:
 		const Sky *sky = nullptr;
 
-		GPS(float lt, float ln, const std::string &src, bool json) : lat(lt), lon(ln), source(src), isJSON(json) {}
+		GPS(double lt, double ln, const std::string &src, bool json) : lat(lt), lon(ln), source(src), isJSON(json) {}
 		explicit GPS(const std::string &src) : source(src), isJSON(false), position(false) {}
 
 		bool hasPosition() const { return position; }
-		float getLat() const { return lat; }
-		float getLon() const { return lon; }
+		double getLat() const { return lat; }
+		double getLon() const { return lon; }
 
 		const std::string getNMEA() const;
 		const std::string getJSON() const;

@@ -1164,6 +1164,7 @@ body.ticker-open.ticker-bottom {
     background: var(--color-tooltip-bg);
     backdrop-filter: blur(8px);
     border: 1px solid var(--color-ticker-border);
+    border-radius: 8px;
     text-align: center;
     overflow: hidden;
     visibility: hidden;
@@ -1192,6 +1193,116 @@ body.ticker-open.ticker-bottom {
 /* the name on a hover row: each host styles it as its vessel row does */
 .tooltip-name {
     font-weight: inherit;
+}
+
+/* The two rows of a vessel's or an aircraft's hover card: who it is and how fast, then how fresh
+   the reception is and what or who is behind it. The card is dark in both themes, so the three
+   states of the reception wear the header's status colours. */
+.tip-top,
+.tip-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 200px;
+}
+
+.tip-top {
+    gap: 8px;
+}
+
+.tip-top .flag-tooltip {
+    flex-shrink: 0;
+    margin-right: 0;
+    font-size: 15px;
+    opacity: 1;
+}
+
+.tip-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tip-value {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.tip-value small {
+    color: var(--color-ticker-muted);
+    font-size: 11px;
+    font-weight: 400;
+}
+
+/* at the end of the first row when there is no speed: what it is */
+.tip-kind {
+    flex-shrink: 0;
+    color: var(--color-ticker-muted);
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+/* of the stations that heard it, the one that heard it last */
+.tip-last {
+    color: var(--color-ticker-ink);
+    font-weight: 600;
+}
+
+.tip-meta {
+    gap: 12px;
+    margin-top: 4px;
+    color: var(--color-ticker-muted);
+    font-size: 11px;
+}
+
+.tip-rx {
+    --rx: var(--color-ticker-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.tip-rx i {
+    flex-shrink: 0;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--rx);
+}
+
+.tip-rx[data-state="fresh"] {
+    --rx: #4ade80;
+}
+
+.tip-rx[data-state="aging"] {
+    --rx: #fbbf24;
+    color: var(--rx);
+}
+
+.tip-rx[data-state="stale"] {
+    --rx: #f87171;
+    color: var(--rx);
+}
+
+.tip-stations {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.tip-stations .station_icon {
+    flex-shrink: 0;
+    font-size: 12px;
 }
 
 /* ---- the ship card as tabs: one view at a time, the tab remembered -------

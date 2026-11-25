@@ -42,6 +42,7 @@ import { toggleReplaycard, updateReplaycard, setLiveLayersVisible, wire as wireR
 import * as stationcard from './features/station/station.js';
 import { syncFocus, populate as populateStationcard, closeStationcard, stationcardVisible } from './features/station/station.js';
 import * as shipcard from './features/targetcard/shipcard.js';
+import * as status from './features/status/status.js';
 import * as planecard from './features/planecard/planecard.js';
 import { installPluginApi, loadPlugins } from './plugin-api.js';
 // their settings' effects and their actions register on load
@@ -318,6 +319,7 @@ loadSettingsFromURL();
 buildCards();
 syncFocus(false);
 community.applySharingState();
+status.start();
 
 if (config.features.managed) {
     const pollSharingState = async () => {

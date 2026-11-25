@@ -44,7 +44,7 @@ const SETTINGS_TAB_GROUPS = [
         ]
     },
     { title: "Filter", subs: [["Filter", "Vessels"]] },
-    { title: "Plots", subs: [["Graphs", "Plots"]] },
+    { title: "Dashboard", subs: [["Graphs", "Plots"]] },
     { title: "Table", subs: [["Table", "Table"]] },
 ];
 

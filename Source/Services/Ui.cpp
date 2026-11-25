@@ -24,6 +24,7 @@
 #include "Logger.h"
 #include "SHA256.h"
 #include "Streams.h"
+#include "System.h"
 #include "WebDB.h"
 
 #include <climits>
@@ -76,9 +77,9 @@ namespace Services
 		}
 	}
 
-	Ui::Ui(const Context &context, std::function<int()> clients)
+	Ui::Ui(const Context &context)
 		: tracker(context.tracker), spec(context.spec), stations(context.stations), options(context.spec.viewer), view(context.spec.view),
-		  facts(context.facts), clients(std::move(clients))
+		  facts(context.facts)
 	{
 		for (const auto &p : options.plugins)
 			plugins.addPlugin(p);
@@ -406,6 +407,7 @@ namespace Services
 			slots("minute", told.minutes);
 			slots("hour", told.hours);
 			slots("day", told.days);
+			told.slim = request.param("slim") == "1";
 			const auto write = [&](Figures &f) { UiFormat::history(w, f, shown.hidesRange(of, f.total.maxDistance()), told); };
 			if (of.empty())
 				tracker.withAll(write);
@@ -414,6 +416,25 @@ namespace Services
 			w.finish();
 			response = Response::json(out);
 		}
+		else if (p == "/api/gnss.json")
+		{
+			// a station whose range is hidden shows no sky, nor its GPS over time
+			std::string out;
+			JSON::Writer w(out);
+			const std::vector<int> of = figuresOf(focus);
+			bool hidden = !shown.all(of);
+			const auto check = [&](Figures &f) { hidden = hidden || shown.hidesRange(of, f.total.maxDistance()); };
+			if (of.empty())
+				tracker.withAll(check);
+			else
+				tracker.withStations(of, check);
+			if (hidden || !tracker.gnssOf(of, w, request.param("span") == "week", (int)MAX(0, MIN(toInt(request.param("last"), 0), 100000))))
+				w.raw("{}");
+			w.finish();
+			response = Response::json(out);
+		}
+		else if (p == "/api/health")
+			response = healthResponse(tracker, spec, stations, facts, healthAsk(request));
 		else if (p == "/api/sharing_state.json")
 		{
 			// the community icon's poll: the engine's part of the stat page, with the settings version
@@ -570,7 +591,6 @@ namespace Services
 			std::unique_ptr<Figures> none(new Figures());
 			UiFormat::counters(w, *none, false);
 		}
-		w.kv("tcp_clients", clients ? clients() : 0);
 		const SystemFacts f = facts();
 		writeSharing(w, f);
 		w.kv("engine_running", f.running);

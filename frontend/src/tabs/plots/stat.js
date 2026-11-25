@@ -1,5 +1,5 @@
-// The statistics tab: the system, the receiver's throughput and outputs, and
-// the message counts over five periods, from api/stat.json at every refresh.
+// The dashboard's statistics: the system, the receiver's throughput and outputs,
+// and the message counts over five periods, from api/stat.json at every refresh.
 
 import { getDistanceVal, getDistanceUnit } from '../../core/units.js';
 import { getDeltaTimeVal, sanitizeString, formatBytes, isHttpUrl } from '@aiscatcher/core/text.js';
@@ -8,16 +8,20 @@ import { focus } from '../../data.js';
 import { refreshIntervalMs } from '../../poll.js';
 import { showDialogPlain, objectToTableHtml } from '../../dialog.js';
 import * as community from '../../overlays/community.js';
-import { hasStationChoice, mountFocusPicker } from '../../features/station/station.js';
+import { hasStationChoice } from '../../features/station/station.js';
 import { stationLabel } from '../../core/config.js';
 import { setPageTitle } from '../../panels.js';
+import { fetchHealth } from '../../features/status/health-data.js';
 
-// fetches main statistics from the server
+// the statistics of the station looked at, asked every ten seconds at most however often the page refreshes
+let last = null;
 async function fetchStatistics() {
+    if (last && last.of === focus && Date.now() - last.at < 10000) return last.stat;
     try {
         const response = await fetch("api/stat.json?stations=" + focus);
         if (!response.ok) return;
-        return await response.json();
+        last = { of: focus, at: Date.now(), stat: await response.json() };
+        return last.stat;
     } catch (error) {
         return;
     }
@@ -82,9 +86,13 @@ function renderDevices(stat) {
         label.textContent = i === 0 ? "Device" : "";
         const icon = document.createElement("i");
         icon.className = "info_icon";
+        // the receiver's health, as api/health tells it: receivers count from 1
+        const dot = document.createElement("i");
+        dot.className = "device-dot";
+        dot.dataset.receiver = i + 1;
         const value = document.createElement("span");
         value.className = "device-value";
-        value.append(name, icon);
+        value.append(dot, name, icon);
         const row = document.createElement("div");
         row.className = "device-row";
         row.title = "Show device details";
@@ -99,29 +107,31 @@ function renderDevices(stat) {
         row.onclick = () => showDialogPlain(objectToTableHtml(info));
         el.appendChild(row);
     }
+    fetchHealth().then((h) => {
+        if (!h) return;
+        const receivers = Object.assign({}, ...Object.values(h.stations).map((x) => x.ais.receivers));
+        el.querySelectorAll(".device-dot").forEach((dot) => {
+            const r = receivers[dot.dataset.receiver];
+            if (!r) return;
+            dot.dataset.state = r.status;
+            dot.title = r.input === "streaming" ? `Streaming, ${r.msgs_1m} messages in the last minute` : r.input === "lost" ? "The device is lost" : "Starting";
+        });
+    });
 }
 
-// the station the figures are of, at the end of the tab's row as on the plots
-let scopePicker = null;
-
-function syncScope() {
-    const strip = document.getElementById("stat_modes");
-    if (!strip) return;
-    const several = hasStationChoice();
-    strip.style.display = several ? "flex" : "none";
-    if (several && !scopePicker) scopePicker = mountFocusPicker(document.getElementById("stat_scope"), { scope: true });
-}
+let shown = null;
 
 export async function update() {
-    syncScope();
     const stat = await fetchStatistics();
 
-    if (stat) {
+    // the same answer as last time is on the page already
+    if (stat && stat !== shown) {
+        shown = stat;
         document.getElementById("stat").classList.toggle("range-hidden", !!stat.range_hidden);
 
         // in bulk....
         const statText = (v) => (Array.isArray(v) ? v.join(", ") : v != null ? v : "");
-        ["os", "tcp_clients", "hardware", "processor", "build_describe", "build_date", "station"].forEach(
+        ["os", "hardware", "processor", "build_describe", "build_date", "station"].forEach(
             (e) => (document.getElementById("stat_" + e).textContent = statText(e === "station" ? decodeHTMLEntities(stat[e]) : stat[e])),
         );
 

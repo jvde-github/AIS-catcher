@@ -28,6 +28,8 @@
 
 #include "DB.h"
 #include "Figures.h"
+#include "Gnss.h"
+#include "Health.h"
 #include "Journal.h"
 #include "Metrics.h"
 #include "PlaceCatalogue.h"
@@ -72,6 +74,8 @@ public:
 	StreamIn<AIS::GPS> &gps() { return gps_intake; }
 	StreamIn<AIS::Control> &control() { return db; }
 	bool skyOf(const std::vector<int> &ids, AIS::Sky &out, int &age);
+	// the GPS history of the station of `ids` heard last, false when none has one
+	bool gnssOf(const std::vector<int> &ids, JSON::Writer &w, bool week, int last = 0);
 	StreamIn<Plane::ADSB> &adsb() { return adsb_intake; }
 	StreamIn<AIS::Metric> &metric() { return metric_intake; }
 	std::vector<MetricTable::Row> metricsOf(const std::vector<int> &ids) { return metric_table.of(ids); }
@@ -187,7 +191,12 @@ public:
 		return true;
 	}
 
+	// once a minute: the ships' upkeep
 	void tick(std::time_t now) { db.tick(now); }
+	// every half minute: the health worked out anew; what began and ended is returned for the journal
+	std::vector<Health::Change> judge(std::time_t now, const SystemFacts &f, const StationRegistry &registry);
+	// the last verdict, with when each station and its GPS were last heard as of now
+	Health healthNow();
 
 	bool save(const std::string &file);
 	// what a backup file turned out to be: read, not there, another program's, or damaged
@@ -229,6 +238,12 @@ private:
 
 	std::mutex sky_mtx;
 	std::map<int, std::pair<std::time_t, AIS::Sky>> skies;
+	std::map<int, GnssHistory> gnss; // a station's GPS over the day and week, under sky_mtx
+	// under sky_mtx: a station's sky when it is no older than two minutes
+	const AIS::Sky *freshSky(int id, std::time_t now) const;
+
+	std::mutex health_mtx;
+	Health health;
 
 	struct MetricIntake : public StreamIn<AIS::Metric>
 	{

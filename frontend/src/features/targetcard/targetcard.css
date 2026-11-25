@@ -133,6 +133,29 @@
     padding-right: 34px;
 }
 
+/* a receiver's health before its name: grey until it is known */
+#stat_devices .device-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: 7px;
+    border-radius: 50%;
+    vertical-align: 1px;
+    background: var(--color-text-subtle);
+}
+
+#stat_devices .device-dot[data-state="ok"] {
+    background: var(--color-success);
+}
+
+#stat_devices .device-dot[data-state="degraded"] {
+    background: var(--color-warning-ink);
+}
+
+#stat_devices .device-dot[data-state="down"] {
+    background: var(--color-danger);
+}
+
 #stat_devices .device-value .info_icon,
 .stat-error-row .info_icon {
     position: absolute;

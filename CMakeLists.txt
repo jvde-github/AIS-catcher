@@ -321,6 +321,8 @@ endif()
 if(API)
     list(APPEND CPP
         Source/Tracking/Journal.cpp
+        Source/Tracking/Gnss.cpp
+        Source/Tracking/Health.cpp
         Source/Tracking/Tracker.cpp
         Source/Tracking/ViewFilter.cpp
         Source/Services/Http.cpp

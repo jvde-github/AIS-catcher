@@ -1,12 +1,19 @@
 <div class="tabcontent addscrollbar" id="plots" style="display: none;">
-	<div class="sheet-tabs" id="plots_modes" style="display: none;">
-		<div class="sheet-tab active" data-action="setPlotsMode" data-mode="overview">Overview</div>
-		<div class="sheet-tab" data-action="setPlotsMode" data-mode="compare">Compare</div>
+	<div class="plot-modes" id="plots_modes">
+		<div class="plot-switch" role="tablist" aria-label="View">
+			<button type="button" role="tab" class="sheet-tab active" data-action="setPlotsMode" data-mode="overview"><i class="pm-dot" id="pm-dot-ais"></i>AIS<span class="pm-read" id="pm-read-ais"></span></button>
+			<button type="button" role="tab" class="sheet-tab" data-action="setPlotsMode" data-mode="gps"><i class="pm-dot" id="pm-dot-gps"></i>GPS<span class="pm-read" id="pm-read-gps"></span></button>
+			<button type="button" role="tab" class="sheet-tab" data-action="setPlotsMode" data-mode="outputs"><i class="pm-dot" id="pm-dot-out"></i>Outputs<span class="pm-read" id="pm-read-out"></span></button>
+			<button type="button" role="tab" class="sheet-tab" data-action="setPlotsMode" data-mode="compare">Compare</button>
+			<button type="button" role="tab" class="sheet-tab" data-action="setPlotsMode" data-mode="stat">Stats</button>
+		</div>
 		<div class="sheet-scope" id="plots_scope"></div>
 	</div>
 	<div class="chart-sources" id="chart_sources" style="display: none;">
 		<span>Compared with</span><span id="chart_source_b"></span>
 	</div>
+	<section class="plots-head" id="ais-status" hidden></section>
+	<section class="plots-head" id="outputs-status" hidden></section>
 	<div class="graphtab" data-on-contextmenu="plotsContextMenu">
 		<div class="graph-panel compare-panel">
 			<header>Messages — A vs B</header>
@@ -141,18 +148,79 @@
 			</div>
 			<div id="chart-distance"></div>
 		</div>
-		<div class="graph-panel range-panel polar-panel polar-none">
-			<header>GNSS Sky</header>
-			<div class="polar-plot">
-				<canvas id="chart-sky" role="img"></canvas>
-				<div class="polar-tip" hidden></div>
-			</div>
-			<div class="polar-sub"></div>
-			<div class="polar-legend"></div>
-		</div>
-		<div class="graph-panel range-panel fill-panel polar-none">
-			<header>Satellite Signals</header>
-			<div class="sat-bars" id="sky-signals"></div>
-		</div>
 	</div>
+	<div class="gps" id="gps" hidden>
+		<div class="setup-card" id="gps-empty" hidden></div>
+		<div class="gps-body" id="gps-body">
+			<section class="plots-head" id="gps-head"></section>
+			<div class="gps-grid">
+				<section class="graph-panel polar-panel gps-sky gps-history" aria-label="Sky view">
+					<header>Sky view</header>
+					<div class="gh-toolbar"><div class="gh-sub">Satellites now, by direction and elevation</div></div>
+					<div class="polar-plot">
+						<canvas id="chart-sky" role="img"></canvas>
+						<div class="polar-tip" hidden></div>
+					</div>
+					<div class="polar-sub"></div>
+					<div class="polar-legend"></div>
+				</section>
+				<section class="graph-panel gps-wide gps-history" aria-label="Satellite signals">
+					<header>Satellite signals</header>
+					<div class="gh-toolbar"><div class="gh-sub">Per satellite and band, now · C/N₀ in dB-Hz</div></div>
+					<div id="gps-signals-plot"></div>
+					<div class="gh-key"><span><i style="--c:var(--color-text-muted)"></i>Used</span><span><i style="--c:transparent;box-shadow:inset 0 0 0 1.5px var(--color-text-muted)"></i>Not used</span><span><i style="--c:var(--color-text-muted);opacity:.55"></i>Second band, L2 or L5</span><span><i style="--c:var(--color-surface-alt);box-shadow:inset 0 0 0 1px var(--color-border)"></i>Weak, under 25 dB-Hz</span></div>
+				</section>
+				<section class="graph-panel gps-full gps-history" aria-label="GNSS reception history">
+					<header>Reception history</header>
+					<div class="gh-toolbar">
+						<div class="gh-sub">GNSS · local time</div>
+						<div class="plot-seg" aria-label="Time range">
+							<button type="button" data-action="setGpsRange" data-gps-range="1h">1h</button>
+							<button type="button" data-action="setGpsRange" data-gps-range="3h">3h</button>
+							<button type="button" data-action="setGpsRange" data-gps-range="24h">24h</button>
+							<button type="button" data-action="setGpsRange" data-gps-range="7d">7d</button>
+						</div>
+					</div>
+					<div class="gh-events" id="gps-chips" aria-label="Recorded events"></div>
+					<div class="gps-hist-plot" id="gps-hist-plot">
+						<div id="gps-timeline"></div>
+						<div class="gps-crossline" id="gps-crossline" hidden></div>
+						<div class="gps-tip" id="gps-tip" hidden></div>
+					</div>
+					<div class="gh-legend" id="gps-tl-legend" aria-label="Signal series"></div>
+					<div class="gh-key" id="gps-tl-key"></div>
+				</section>
+				<section class="graph-panel gps-wide gps-history" aria-label="Signal waterfall">
+					<header>Signal waterfall</header>
+					<div class="gh-toolbar">
+						<div class="gh-sub" id="gps-wf-sub">Signal strength per satellite</div>
+					</div>
+					<div class="wf-bar">
+						<div class="plot-seg" aria-label="Band">
+							<button type="button" data-action="setGpsBand" data-band="0">L1</button>
+							<button type="button" data-action="setGpsBand" data-band="1">L2</button>
+							<button type="button" data-action="setGpsBand" data-band="2">L5</button>
+						</div>
+						<button type="button" class="gps-link" id="gps-wf-all" data-action="toggleGpsRows"></button>
+					</div>
+					<div class="wf-count" id="gps-wf-count"></div>
+					<div id="gps-wf-host"></div>
+					<p class="gps-none" id="gps-wf-week" hidden>Signal strength per satellite is kept for 24 hours.</p>
+					<div class="gps-legend wf-legend" id="gps-wf-legend"></div>
+				</section>
+				<section class="graph-panel gps-history" aria-label="Position stability">
+					<header>Position stability</header>
+					<div class="gh-toolbar"><div class="gh-sub" id="gps-pos-sub">Horizontal deviation</div></div>
+					<div class="pos-metrics" id="gps-pos-metrics"></div>
+					<div id="gps-position-plot"></div>
+					<div class="gh-key pos-legend" id="gps-pos-legend"></div>
+					<div id="gps-pos-event"></div>
+					<p class="pos-note">Spread relative to the median, not absolute positioning accuracy.</p>
+				</section>
+				<section class="graph-panel gps-full gps-events" id="gps-events-body"></section>
+			</div>
+		</div>
+		<div class="setup-card" id="gps-private" hidden><div class="sc-intro"><h2 class="sc-title">GPS details are private</h2><p class="sc-text">The sky and the GPS history are not shown, as the satellites and the position would tell where the station is.</p></div></div>
+	</div>
+	<!-- @include tabs/plots/stat.html -->
 </div>

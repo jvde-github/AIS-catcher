@@ -48,6 +48,8 @@ namespace Services
 
 		bool open();
 		const ServerSpec &spec() const { return spec_; }
+		// what it sent, how many it serves now and what a slow client lost: counted as an output's is
+		const IO::OutputStats &traffic() const { return traffic_; }
 		Tracker &reads() { return tracker; }
 		// New settings on the same port and address: the services and streams
 		// are built again, the listener, its connections and a mount stay
@@ -68,6 +70,7 @@ namespace Services
 
 	private:
 		ServerSpec spec_;
+		IO::OutputStats traffic_;
 		Tracker &tracker;
 		std::function<StationRegistry(const ServerSpec &)> stations;
 		std::function<SystemFacts()> system;

@@ -11,7 +11,7 @@ export function frame(canvas) {
     const size = Math.floor(canvas.parentElement.getBoundingClientRect().width);
     if (!size) return null;
     const dpr = window.devicePixelRatio || 1;
-    if (canvas.width !== Math.round(size * dpr)) {
+    if (canvas.width !== Math.round(size * dpr) || canvas.height !== Math.round(size * dpr)) {
         canvas.width = canvas.height = Math.round(size * dpr);
         canvas.style.width = canvas.style.height = size + "px";
     }

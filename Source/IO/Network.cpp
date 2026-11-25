@@ -204,6 +204,9 @@ namespace IO
 		counts += ", " + std::to_string(pos_snap) + " positions";
 
 		const bool failed = r < 200 || r > 299;
+		// a post that failed lost its batch
+		if (failed)
+			stats.dropped += (uint64_t)sent;
 		if (!failed && !show_response)
 			return;
 

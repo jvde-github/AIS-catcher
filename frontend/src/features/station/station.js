@@ -15,7 +15,7 @@ import { getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat } fro
 import { closeDialog } from '../../dialog.js';
 import { replaycardVisible, applyMenuLabels } from '../../panels.js';
 import { ui, cardLayout } from '../../ui.js';
-import { showTab } from '../../tabs/index.js';
+import { showDashboard } from '../../tabs/index.js';
 import { closeSearch } from '../search/search-panel.js';
 import { closeTargetcard, openOnTab } from '../targetcard/card.js';
 import * as replaybar from '../replay/replaybar.js';
@@ -290,7 +290,7 @@ register({
     closeStationcard: () => closeStationcard(),
     stationcardStatistics: () => {
         if (cardStation !== null && focus !== cardStation && offered(cardStation)) onStationChange(cardStation);
-        showTab('stat');
+        showDashboard('stat');
     },
     stationcardNearby: () => {
         const s = cardStation !== null ? stationRow(cardStation) : null;

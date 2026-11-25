@@ -75,6 +75,7 @@ void Engine::publishReceivers()
 			s.input = device->getProduct();
 			s.streaming = device->isStreaming() && device->isConnected();
 			s.lost = device->isLost();
+			s.text = device->getFormat() == Format::TXT;
 		}
 		s.label = receiverLabel(receivers, k);
 		s.messages = r.messages();

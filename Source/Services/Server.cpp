@@ -38,6 +38,7 @@ namespace Services
 				   std::function<SystemFacts()> system)
 		: spec_(spec), tracker(tracker), stations(std::move(stations)), system(std::move(system))
 	{
+		setStats(&traffic_);
 		build();
 	}
 
@@ -127,7 +128,7 @@ namespace Services
 #ifdef HASWEBVIEWER
 		if (spec_.ui)
 		{
-			services.push_back(std::unique_ptr<Service>(new Ui(context, [this] { return numberOfClients(); })));
+			services.push_back(std::unique_ptr<Service>(new Ui(context)));
 			if (spec_.viewer.realtime)
 			{
 				messages.reset(new MessageStream(*this, !spec_.viewer.decoder));

@@ -98,6 +98,8 @@ namespace Services
 			std::vector<MetricTable::Row> reception;
 			std::unique_ptr<MetricHistory> reception_history;
 			int seconds = 60, minutes = 60, hours = 24, days = 90;
+			// without the errors, the channels and the class B radar of each slot: the plots draw none of them
+			bool slim = false;
 		};
 		static void history(JSON::Writer &w, Figures &f, bool hidden, const Told &told);
 		// the aircraft: in full, and as the map's rows

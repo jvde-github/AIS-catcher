@@ -95,7 +95,7 @@ namespace AIS
 		bool partEmpty(int i) const { return partLen(i) == 0; }
 		int partInt(int i) const;
 		static const int MAX_NMEA_LINE = 1024;
-		static const int MAX_JSON_LINE = 2048;
+		static const int MAX_JSON_LINE = 16384; // gpsd's SKY lists up to 128 satellites, about 110 bytes each
 		static const int MAX_BINARY_LINE = 1024;
 
 		ParseState state = ParseState::FIND_START;
@@ -104,6 +104,10 @@ namespace AIS
 		Sky sky;
 		std::vector<std::pair<int, int>> sky_used;
 		std::time_t sky_sent = 0;
+		int gpsd_mode = 0; // the fix of gpsd's last TPV: 1 none, 2 2D, 3 3D
+		Sky gpsd_sky;	   // gpsd's last SKY with satellites, sent with the next TPV
+		bool gpsd_pending = false;
+		std::string gpsd_time;
 		int count = 0;
 
 		// Scan context — set by Receive(), used by scanners
@@ -143,7 +147,7 @@ namespace AIS
 		static bool isHexDigit(char c) { return Util::Convert::isHexDigit(c); }
 		static int hexDigitValue(char c) { return Util::Convert::hexDigitValue(c); }
 
-		float GpsToDecimal(const char *, int len, char, bool &error);
+		double GpsToDecimal(const char *, int len, char, bool &error);
 
 		bool cfg_regenerate = false;
 		bool cfg_crc_check = false;
@@ -184,6 +188,9 @@ namespace AIS
 		bool processTagBlock(const std::string &s, TAG &tag);
 		bool processNMEAline(const char *data, int len, TAG &tag);
 		void processGSV(const char *data, int len);
+		void processSKY(const JSON::Value &satellites, float hdop);
+		void sendSKY(TAG &tag);
+		void addSatellite(Sky &into, int system, int id, int elevation, int azimuth, int band, int signal, bool used);
 		void processGSA(const char *data, int len);
 		void sendGPS(GPS gps, TAG &tag);
 		void sendMetric(Metric &m, int key, double value, TAG &tag);

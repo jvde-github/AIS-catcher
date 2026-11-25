@@ -100,6 +100,8 @@
     <ClCompile Include="..\Source\Services\UiFormat.cpp" />
     <ClCompile Include="..\Source\Site\Site.cpp" />
     <ClCompile Include="..\Source\Tracking\Journal.cpp" />
+    <ClCompile Include="..\Source\Tracking\Gnss.cpp" />
+    <ClCompile Include="..\Source\Tracking\Health.cpp" />
     <ClCompile Include="..\Source\Tracking\PlaceCatalogue.cpp" />
     <ClCompile Include="..\Source\Tracking\PlaceGeometry.cpp" />
     <ClCompile Include="..\Source\Tracking\Tracker.cpp" />
@@ -213,6 +215,8 @@
     <ClInclude Include="..\Source\Tracking\Figures.h" />
     <ClInclude Include="..\Source\Tracking\FixSampler.h" />
     <ClInclude Include="..\Source\Tracking\Journal.h" />
+    <ClInclude Include="..\Source\Tracking\Gnss.h" />
+    <ClInclude Include="..\Source\Tracking\Health.h" />
     <ClInclude Include="..\Source\Tracking\PathStore.h" />
     <ClInclude Include="..\Source\Tracking\PlaceCatalogue.h" />
     <ClInclude Include="..\Source\Tracking\PlaceGeometry.h" />

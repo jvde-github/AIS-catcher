@@ -63,7 +63,7 @@ namespace Services
 				{"system_status", "Installation", "The installation: version, uptime, memory, and whether the engine runs.", "/api/v1/system", {}},
 				{"list_receivers", "Receivers", "Each receiver: its station, device, state, and messages in the last minute.", "/api/v1/system/receivers", {}},
 				{"list_outputs", "Outputs", "Each output: where it sends and how it fares.", "/api/v1/system/outputs", {}},
-				{"health", "Health", "pass, warn or fail, with the checks behind it.", "/api/v1/health", {}},
+				{"health", "Health", "ok, degraded or down for AIS and the GPS, station by station, with the issues behind it.", "/api/v1/health", {}},
 				{"read_log", "Log", "The installation's log, oldest line first.", "/api/v1/system/log", {"cursor", "limit"}, PAGE},
 				{"system_events", "Installation events", "Engine started or stopped, receiver lost or back, station quiet or heard again, backup failed: oldest first.", "/api/v1/system/events", {"cursor", "limit"}, PAGE},
 			};

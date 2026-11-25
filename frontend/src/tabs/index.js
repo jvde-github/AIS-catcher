@@ -32,12 +32,11 @@ const TABS = [
         refresh: () => updateMap(),
     },
     {
-        id: 'stat', label: 'Statistics', title: 'System and receiver statistics', icon: 'business_center',
-        load: () => import('./stat/stat.js'),
+        id: 'plots', label: 'Dashboard', title: 'Health, graphs and statistics of the station', icon: 'leaderboard',
+        load: () => import('./plots/plots.js'),
     },
     {
-        id: 'plots', label: 'Plots', title: 'Graphs of message and vessel counts over time', icon: 'leaderboard',
-        load: () => import('./plots/plots.js'),
+        id: 'search', label: 'Search', title: 'Search vessels, stations and places', icon: 'search', action: 'toggleSearch',
     },
     {
         id: 'ships', label: 'Ships', title: 'Searchable table of received vessels', icon: 'table',
@@ -170,11 +169,21 @@ export async function showTab(id = resolveTab()) {
 
 // the tab the settings name, or the one to fall back on when that one is off
 export function resolveTab() {
+    // Statistics was a tab of its own: it is a view of the dashboard
+    if (settings.tab === "stat") {
+        settings.tab = "plots";
+        settings.dashboard = "stat";
+    }
     const tab = tabOf(settings.tab);
-    if (!tab) settings.tab = "stat";
-    else if (!enabled(tab)) settings.tab = "map";
+    if (!tab || !enabled(tab)) settings.tab = "map";
 
     return settings.tab;
+}
+
+// a view of the dashboard: overview (AIS), gps, compare or stat
+export async function showDashboard(view) {
+    await showTab('plots');
+    loaded('plots')?.showMode(view);
 }
 
 export async function openRealtimeForMMSI(m) {

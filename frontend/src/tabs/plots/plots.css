@@ -4,11 +4,11 @@
     display: none;
 }
 
-#plots.compare-mode .compare-panel {
+#plots[data-mode="compare"] .compare-panel {
     display: block;
 }
 
-#plots.compare-mode .graph-panel:not(.compare-panel) {
+#plots[data-mode="compare"] .graph-panel:not(.compare-panel) {
     display: none;
 }
 
@@ -362,4 +362,113 @@
 
 .busy-day {
     white-space: nowrap;
+}
+
+/* the switch: one segment a receiver, each with its health and a live reading */
+.plot-modes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+    margin: 14px 25px 2px;
+}
+
+/* views that do not fit scroll sideways within the row */
+.plot-switch {
+    position: relative;
+    display: inline-flex;
+    gap: 2px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 3px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.plot-switch::-webkit-scrollbar {
+    display: none;
+}
+
+#plots_modes .sheet-tab {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+    padding: 6px 14px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-medium);
+}
+
+#plots_modes .sheet-tab[hidden] {
+    display: none;
+}
+
+#plots_modes .sheet-tab.active {
+    background: var(--color-surface);
+    color: var(--color-text-strong);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--color-border);
+}
+
+#plots_modes .sheet-tab:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+}
+
+.pm-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid var(--dot, var(--color-border-strong));
+    background: var(--dot, transparent);
+}
+
+.pm-read {
+    color: var(--color-text-muted);
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+}
+
+.pm-read:empty {
+    display: none;
+}
+
+#plots_modes .sheet-scope {
+    margin-left: auto;
+}
+
+#plots[data-mode="gps"] .graphtab,
+#plots[data-mode="gps"] .chart-sources,
+#plots[data-mode="gps"] #ais-status,
+#plots[data-mode="compare"] #ais-status,
+#plots[data-mode="stat"] .graphtab,
+#plots[data-mode="stat"] #ais-status,
+#plots:not([data-mode="stat"]) .stat-tab,
+#plots[data-mode="outputs"] .graphtab,
+#plots[data-mode="outputs"] #ais-status,
+#plots:not([data-mode="outputs"]) #outputs-status {
+    display: none;
+}
+
+@media only screen and (max-width: 640px) {
+    .plot-modes {
+        margin-left: 8px;
+        margin-right: 8px;
+    }
+
+    .pm-read {
+        display: none;
+    }
+}
+
+/* the statistics under the switch, on its margins */
+#plots .stat-tab {
+    max-width: min(calc(100% - 50px), 3000px);
 }

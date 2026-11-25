@@ -60,6 +60,8 @@ export function create(opts) {
     }
 
     window.addEventListener("resize", apply);
+    /* something beside the box came or went: an icon on the right, the chip */
+    if (window.ResizeObserver && box) new ResizeObserver(apply).observe(box);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(apply);
     apply();
     return { apply: apply };

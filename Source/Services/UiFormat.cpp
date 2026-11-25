@@ -1146,7 +1146,8 @@ namespace Services
 	}
 
 	// `hidden` leaves out the range
-	static void stat(JSON::Writer &w, const MessageStatistics::Values &v, bool empty, bool hidden)
+	// slim: without what only the statistics page reads, for the plots' histories
+	static void stat(JSON::Writer &w, const MessageStatistics::Values &v, bool empty, bool hidden, bool slim = false)
 	{
 		float ppm = 0;
 		const bool has_level = !empty && v.hasLevel(), has_ppm = !empty && v.meanPpm(ppm);
@@ -1154,11 +1155,14 @@ namespace Services
 		w.beginObject();
 		w.kv("count", empty ? 0 : v.count);
 		w.kv("vessels", empty ? 0 : v.vessels);
-		w.key("errors").beginObject();
-		const char *names[] = {"flagged", "undersized", "oversized", "checksum"};
-		for (int i = 0; i < 4; i++)
-			w.kv(names[i], empty ? 0 : v.errors[i]);
-		w.endObject();
+		if (!slim)
+		{
+			w.key("errors").beginObject();
+			const char *names[] = {"flagged", "undersized", "oversized", "checksum"};
+			for (int i = 0; i < 4; i++)
+				w.kv(names[i], empty ? 0 : v.errors[i]);
+			w.endObject();
+		}
 		if (has_level)
 			w.kv("level_min", v.level_min).kv("level_max", v.level_max);
 		else
@@ -1175,10 +1179,13 @@ namespace Services
 		else
 			w.kv("dist", v.distance);
 
-		w.key("channel").beginArray();
-		for (int i = 0; i < 4; i++)
-			w.val(empty ? 0 : v.channel[i]);
-		w.endArray();
+		if (!slim)
+		{
+			w.key("channel").beginArray();
+			for (int i = 0; i < 4; i++)
+				w.val(empty ? 0 : v.channel[i]);
+			w.endArray();
+		}
 
 		if (!hidden)
 		{
@@ -1186,7 +1193,9 @@ namespace Services
 			for (int i = 0; i < MessageStatistics::RADAR_BUCKETS; i++)
 				w.val(empty ? 0.0f : v.radarA[i]);
 			w.endArray();
-
+		}
+		if (!hidden && !slim)
+		{
 			w.key("radar_b").beginArray();
 			for (int i = 0; i < MessageStatistics::RADAR_BUCKETS; i++)
 				w.val(empty ? 0.0f : v.radarB[i]);
@@ -1204,7 +1213,7 @@ namespace Services
 	// a history as the plots read it: when its slot under way began, its
 	// interval, and newest first each slot's offset from it and its figures
 	template <typename H>
-	static void historyJSON(JSON::Writer &w, const char *key, H &history, int count, long int interval, bool hidden, const MetricHistory *reception = nullptr, int span = 0)
+	static void historyJSON(JSON::Writer &w, const char *key, H &history, int count, long int interval, bool hidden, const MetricHistory *reception = nullptr, int span = 0, bool slim = false)
 	{
 		if (count < 1)
 			return;
@@ -1229,7 +1238,7 @@ namespace Services
 		w.endArray();
 		w.key("stat").beginArray();
 		for (auto it = slots.rbegin(); it != slots.rend(); ++it)
-			stat(w, it->values, it->empty, hidden);
+			stat(w, it->values, it->empty, hidden, slim);
 		w.endArray();
 		if (reception)
 		{
@@ -1319,10 +1328,10 @@ namespace Services
 		w.beginObject();
 		if (hidden)
 			w.kv("range_hidden", true);
-		historyJSON(w, "second", f.second, told.seconds, 1, hidden);
-		historyJSON(w, "minute", f.minute, told.minutes, 60, hidden, kept, 0);
-		historyJSON(w, "hour", f.hour, told.hours, 3600, hidden, kept, 1);
-		historyJSON(w, "day", f.day, told.days, 86400, hidden, kept, 2);
+		historyJSON(w, "second", f.second, told.seconds, 1, hidden, nullptr, 0, told.slim);
+		historyJSON(w, "minute", f.minute, told.minutes, 60, hidden, kept, 0, told.slim);
+		historyJSON(w, "hour", f.hour, told.hours, 3600, hidden, kept, 1, told.slim);
+		historyJSON(w, "day", f.day, told.days, 86400, hidden, kept, 2, told.slim);
 		if (!told.reception.empty())
 		{
 			w.key("reception");
@@ -1336,7 +1345,7 @@ namespace Services
 			{
 				w.key("gnss").beginObject().kv("age", told.sky_age).kv("fix", sky->fix).kv("hdop", std::round(sky->hdop * 10) / 10.0).key("satellites").beginArray();
 				for (const auto &s : sky->satellites)
-					w.beginArray().val(s.system).val(s.id).val(s.elevation).val(s.azimuth).val(s.signal).val(s.used ? 1 : 0).endArray();
+					w.beginArray().val(s.system).val(s.id).val(s.elevation).val(s.azimuth).val(s.signal[AIS::Sky::L1]).val(s.used ? 1 : 0).val(s.signal[AIS::Sky::L2]).val(s.signal[AIS::Sky::L5]).endArray();
 				w.endArray().endObject();
 			}
 		}

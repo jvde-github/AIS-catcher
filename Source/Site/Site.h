@@ -168,6 +168,11 @@ private:
 	std::atomic<bool> events_wanted{false};
 	std::unique_ptr<Tracker> tracker_;
 	std::vector<std::unique_ptr<Services::Server>> servers;
+	// the servers set up that could not open their port
+	std::vector<ServerSpec> closed;
+	// under engine_mtx: the servers as the status pages tell them, for whoever asks without the site's lock
+	std::vector<ServiceFacts> service_states;
+	void publishServices();
 	// A server's own tracker, shared by the servers with the same filter, zones and groups.
 	struct Own
 	{
@@ -204,7 +209,8 @@ private:
 	std::unique_ptr<MqttState> mqtt_state;
 	void configureDeliveries(const SiteConfig &cfg);
 #endif
-	std::time_t last_tick = 0, last_backup = 0;
+	std::time_t last_tick = 0, last_backup = 0, last_health = 0;
+	void judgeHealth(std::time_t now);
 	std::string backup_file;
 	bool backing_up = false;
 	// the seconds to the next beat

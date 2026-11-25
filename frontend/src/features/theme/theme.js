@@ -1,5 +1,5 @@
-// Day and night: the page's theme, the header's toggle, and what follows the
-// theme - the base map, the charts, the themed rows of the settings panel.
+// Day and night: the page's theme, switched in the settings or the context menu, and what
+// follows the theme - the base map, the charts, the themed rows of the settings panel.
 
 import { settings } from '../../core/state.js';
 import { updateMapLayer } from '../../map.js';
@@ -11,10 +11,6 @@ import { register } from '../../actions.js';
 
 export function updateDarkMode() {
     document.documentElement.classList.toggle("dark", settings.dark_mode);
-    document.getElementById("theme-toggle-moon")?.style.setProperty("display", settings.dark_mode ? "none" : "");
-    document.getElementById("theme-toggle-sun")?.style.setProperty("display", settings.dark_mode ? "" : "none");
-    const themeBtn = document.getElementById("theme-toggle-button");
-    if (themeBtn) themeBtn.title = settings.dark_mode ? "Switch to day" : "Switch to night";
     loadedTab('plots')?.updateColors();
     updateMapLayer();
     redraw();

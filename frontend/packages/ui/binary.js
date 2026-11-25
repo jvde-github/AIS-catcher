@@ -62,10 +62,12 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const text = (v) => sanitizeString(String(v));
 
 // one row of a card; a row function returns a falsy value when its field is absent
-const meteoRow = (label, value) =>
-    `<div style="display: flex; justify-content: space-between; padding: 1px 0; white-space: nowrap;">` +
-    `<span style="font-size: 11px; opacity: 0.6; margin-right: 12px;">${label}</span>` +
-    `<span style="font-size: 11px; font-weight: bold;">${value}</span></div>`;
+// While a summary is being made (`gathered` set) a row is kept as its two parts and not drawn.
+let gathered = null;
+const meteoRow = (label, value) => {
+    if (gathered) { gathered.push([label, value]); return ''; }
+    return `<div class="msg-row"><span>${label}</span><b>${value}</b></div>`;
+};
 
 const rowsOf = (m, table) => table.map(([label, format]) => { const v = format(m); return v ? meteoRow(typeof label === 'function' ? label(m) : label, v) : ''; }).join('');
 
@@ -175,7 +177,7 @@ const GROUP_ROWS = [
     ['Channels', (m) => m.txrx != null && TXRX_MODES[m.txrx]],
     ['Report every', (m) => m.interval != null && m.interval > 0 && INTERVALS[m.interval]],
     ['Quiet time', (m) => m.quiet > 0 && `${m.quiet} min`],
-    ['Area', (m) => m.ne_lon != null && `${m.sw_lat.toFixed(2)}, ${m.sw_lon.toFixed(2)} to ${m.ne_lat.toFixed(2)}, ${m.ne_lon.toFixed(2)}`],
+    ['Area', (m) => m.ne_lon != null && `${m.sw_lat.toFixed(2)}, ${m.sw_lon.toFixed(2)} &ndash; ${m.ne_lat.toFixed(2)}, ${m.ne_lon.toFixed(2)}`],
 ];
 
 const LOCK_STATUS = ['operational', 'limited operation', 'out of order'];
@@ -329,15 +331,14 @@ const dirIcon = (m, ctx) => {
     return '';
 };
 
-// orange caption line of every card
-// the caption row: the kind's glyph at text height, the time and label, and
-// on a list card a pin to the message's place when it has one
-const meteoHeader = (time, label, icon = '', cat = null, pin = '') =>
-    `<div class="msg-head" style="color: #FFA500;">${cat ? glyphImg(cat) : ''}` +
-    `<span>${icon}${time} - ${label}</span>${pin}</div>`;
+// The head of every card: the kind's disc, as the map draws it, and what the message is; at the
+// end what it is on the map, as Area, when that says more than the title, or on a list card a pin
+// to the message's place. When it was heard stands in the foot.
+const meteoHeader = (label, icon = '', cat = null, end = '', square = false) =>
+    `<div class="msg-head">${cat ? glyphImg(cat, square) : ''}<span class="msg-title">${icon}${label}</span>${end}</div>`;
 
-const glyphImg = (cat) => {
-    try { return `<img class="msg-glyph" src="${glyphURL(cat)}" alt="">`; } catch { return ''; }
+const glyphImg = (cat, square) => {
+    try { return `<img class="msg-glyph" src="${glyphURL(cat, square)}" alt="">`; } catch { return ''; }
 };
 
 const PIN_SVG = '<svg viewBox="0 0 24 24"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>';
@@ -362,14 +363,17 @@ const routeLine = (m, ctx) => {
     if (!sender) return '';
     let line;
     if (m.anchor) line = `${name(sender)} &rarr; ${name(m.anchor)}`;
+    // a card that names its senders under its title does not name one again
+    else if (ctx && ctx.source) return '';
     else if (!ctx || ctx.mmsi !== sender) line = `from ${name(sender)}`;
     else return '';
-    return `<div style="font-size: 10px; opacity: 0.6; margin-top: 3px;">${line}</div>`;
+    return `<div class="msg-foot">${line}</div>`;
 };
 
-const seenLine = (m) => m.count > 1
-    ? `<div style="font-size: 10px; opacity: 0.6;">seen ${m.count} times since ${formatDateTime(m.first)}</div>`
-    : '';
+// the foot of a card: how often the message was seen, and when last
+const footLine = (m, time) => (m.count > 1
+    ? `<div class="msg-foot" title="First seen ${formatDateTime(m.first)}">${m.count} reports &middot; ${time}</div>`
+    : `<div class="msg-foot">${time}</div>`);
 
 // The caption of a message no kind claims: its application id when the payload or the
 // store's row carries one, else what the message type is (a type 6 with no data at all).
@@ -379,27 +383,49 @@ const unknownLabel = (m, item) => {
     return item.type == 6 ? 'Binary Message (addressed), no application data' : item.type == 8 ? 'Binary Message, no application data' : `Message type ${item.type}`;
 };
 
+// A message in one line, for a hover: its first two rows, a number with what it measures and
+// words by themselves; a text message's own words when it has no rows.
+function summaryOf(kind, m) {
+    if (!kind) return '';
+    gathered = [];
+    let rest, rows;
+    try { rest = kind.rows(m); } finally { rows = gathered; gathered = null; }
+    const line = rows.length ? rows.slice(0, 2).map(([label, value]) => (/^[-+\u2212\d]/.test(value) ? `${label} ${value}` : value)).join(' &middot; ')
+        : rest.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    return line.charAt(0).toUpperCase() + line.slice(1);
+}
+
 // One card for a kind: the newest of `messages` gives the caption and rows.
-// `ctx.mmsi` names the vessel the card is about.
+// `ctx.mmsi` names the vessel the card is about. A card that stands for an object on the map is
+// headed by what the message is, with what the object is at the end (`ctx.tag`) and who sent it
+// under the title (`ctx.source`), each once. `ctx.brief` asks for the short form of a hover.
 function card(kind, messages, ctx) {
     const sorted = [...messages].sort((a, b) => b.timestamp - a.timestamp);
     const item = sorted[0], m = item.message;
     const label = kind ? kind.label(m, item) : unknownLabel(m, item);
     const cat = kind ? kind.cat : 'data';
+    const tag = ctx && ctx.tag && ctx.tag !== label ? `<span class="msg-tag">${text(ctx.tag)}</span>` : '';
+    // in a hover over its vessel: the kind's mark, what it is and one line of it, and how many more stand behind
+    if (ctx && ctx.brief)
+        return `<div class="meteo-tooltip msg-brief">${glyphImg(cat, true)}<div class="msg-lines"><div class="msg-title">${dirIcon(item, ctx)}${label}</div>` +
+            `<div class="msg-sub">${summaryOf(kind, m)}</div></div>${ctx.more > 0 ? `<span class="msg-tag">+${ctx.more}</span>` : ''}</div>`;
     return cardOpen(cat) +
-        meteoHeader(item.formattedTime, label + (ctx?.acknowledged?.has(item) ? ' <span class="msg-acknowledged" role="img" aria-label="Reception acknowledged" title="Reception acknowledged by AIS equipment; does not indicate that a person read it">&#10003;</span>' : ''), dirIcon(item, ctx), cat, pinHTML(item, ctx)) +
-        (kind ? kind.rows(m) : '') + seenLine(item) + routeLine(item, ctx) + '</div>';
+        meteoHeader(label + (ctx?.acknowledged?.has(item) ? ' <span class="msg-acknowledged" role="img" aria-label="Reception acknowledged" title="Reception acknowledged by AIS equipment; does not indicate that a person read it">&#10003;</span>' : ''), dirIcon(item, ctx), cat, pinHTML(item, ctx) + tag, !!(ctx && ctx.mmsi)) +
+        (ctx && ctx.source ? `<div class="msg-source">${ctx.source}</div>` : '') +
+        (kind ? kind.rows(m) : '') + footLine(item, item.formattedTime) + routeLine(item, ctx) + '</div>';
 }
 
 // The sections of a hover card: one per kind present, in KINDS order. Text
-// only where asked for, since a map point never carries any.
+// only where asked for, since a map point never carries any. What a map object
+// is and who sent it is told on the first card alone.
 export function tooltipSections(messages, includeText = false, ctx = null) {
     if (!messages || messages.length === 0) return '';
     let content = '';
+    const next = () => (content && ctx && (ctx.tag || ctx.source) ? { ...ctx, tag: null, source: null } : ctx);
     for (const kind of KINDS) {
         if (kind.cat === 'text' && !includeText) continue;
         const of = messages.filter((msg) => kindOf(msg) === kind);
-        if (of.length) content += card(kind, of, ctx);
+        if (of.length) content += card(kind, of, next());
     }
     if (!content) content = card(null, messages, ctx);
     return content;
@@ -642,9 +668,20 @@ export function kindGlyph(ctx, cat, x, y, s) {
     }
 }
 
-function disc(ctx, cat, cx, cy, R, [r, g, b], fade, ring = `rgba(255, 255, 255, ${MAP_MARKER_BORDER_ALPHA * fade})`) {
+// The mark of a kind. Standing on the map by itself it is a disc, as a station is. Carried by a
+// vessel, as its badge or at the head of its message card, it is a square with rounded corners
+// (`square`), so that the badge is not taken for a second marker.
+function disc(ctx, cat, cx, cy, R, [r, g, b], fade, ring = `rgba(255, 255, 255, ${MAP_MARKER_BORDER_ALPHA * fade})`, square = false) {
     ctx.beginPath();
-    ctx.arc(cx, cy, R, 0, 2 * Math.PI);
+    if (square) {
+        const k = R * 0.35, x0 = cx - R, y0 = cy - R, x1 = cx + R, y1 = cy + R;
+        ctx.moveTo(x0 + k, y0);
+        ctx.arcTo(x1, y0, x1, y1, k);
+        ctx.arcTo(x1, y1, x0, y1, k);
+        ctx.arcTo(x0, y1, x0, y0, k);
+        ctx.arcTo(x0, y0, x1, y0, k);
+        ctx.closePath();
+    } else ctx.arc(cx, cy, R, 0, 2 * Math.PI);
     ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${MAP_MARKER_FILL_ALPHA * fade})`;
     ctx.fill();
     ctx.strokeStyle = ring;
@@ -657,22 +694,23 @@ function disc(ctx, cat, cx, cy, R, [r, g, b], fade, ring = `rgba(255, 255, 255, 
 
 // A nameless marker standing on its own: the disc with its glyph, centred.
 // `ring` overrides the white edge where the disc sits on a light ground.
-export function discCanvas(cat, rgb, fade = 1, ring) {
+export function discCanvas(cat, rgb, fade = 1, ring, square = false) {
     const scale = window.devicePixelRatio || 1;
     const R = MAP_MARKER_RADIUS, SIZE = 2 * (R + 2);
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = SIZE * scale;
     const ctx = canvas.getContext('2d');
     ctx.scale(scale, scale);
-    disc(ctx, cat, SIZE / 2, SIZE / 2, R, rgb, fade, ring);
+    disc(ctx, cat, SIZE / 2, SIZE / 2, R, rgb, fade, ring, square);
     return { canvas, size: SIZE };
 }
 
-// The badge on a vessel marker: the disc at the upper right with a hairline to the
-// vessel's centre. The canvas is centred on the vessel; the host wraps it in an icon.
+// The badge on a vessel marker: a small disc at the upper right with a hairline to the
+// vessel's centre, kept well under the marker's own size so that the vessel stays the thing
+// looked at. The canvas is centred on the vessel; the host wraps it in an icon.
 export function badgeCanvas(cat, rgb, fade = 1) {
     const scale = window.devicePixelRatio || 1;
-    const R = 8, OFF = 10, SIZE = 2 * (OFF + R + 2);
+    const R = 6, OFF = 8, SIZE = 2 * (OFF + R + 2);
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = SIZE * scale;
     const ctx = canvas.getContext('2d');
@@ -685,7 +723,8 @@ export function badgeCanvas(cat, rgb, fade = 1) {
     ctx.moveTo(c, c);
     ctx.lineTo(cx, cy);
     ctx.stroke();
-    disc(ctx, cat, cx, cy, R, rgb, fade);
+    // a station riding the vessel keeps its disc
+    disc(ctx, cat, cx, cy, R, rgb, fade, undefined, cat !== 'station');
     return { canvas, size: SIZE };
 }
 
@@ -703,26 +742,21 @@ export const isDangerArea = (o) => o.atype != null && o.atype >= 0 && o.atype < 
 // a group assignment's rectangle: an area with no notice type
 export const isGroupArea = (o) => !!o.shapes && (o.atype == null || o.atype < 0);
 
-// the head of a marker's hover card: its label or kind, and who sent it
-// the vessel band's colour: its validity, grey when nothing is known
-export const validityBand = (v) => (v === 1 ? '#10b981' : v === -1 ? '#ef4444' : 'lightgrey');
-
-export function markerHead(o, shipLabel, color) {
-    const cat = KIND_CAT[o.kind] || 'data';
-    let html = `<div class="tip-band" style="--band: ${color}"><div class="tooltip-card">` +
-        `<div>${text(o.label || KIND_LABEL[cat] || cat)}</div></div>`;
-    if (o.senders && o.senders.length) {
-        html += '<div style="margin-top: 5px; font-size: 0.9em;"><span class="tooltip-dim">From</span> ' +
-            o.senders.slice(0, 3).map(([mmsi, n]) => `${text(shipLabel(mmsi))} (${n})`).join(', ') +
-            (o.senders.length > 3 ? ` and ${o.senders.length - 3} more` : '') + '</div>';
-    }
-    return html + '</div>';
+// What an object on the map is, in a word, and who sent its messages, each told once on its card:
+// the first three senders by name or number.
+export function markerAbout(o, shipLabel) {
+    const cat = KIND_CAT[o.kind] || 'data', from = o.senders || [];
+    return {
+        tag: o.label || KIND_LABEL[cat] || cat,
+        source: from.length ? from.slice(0, 3).map(([mmsi]) => text(shipLabel(mmsi))).join(', ') + (from.length > 3 ? ` and ${from.length - 3} more` : '') : '',
+    };
 }
 
-// the first line of a marker's hover card, before its members are fetched
-export function markerCaption(o, ref) {
-    const cat = KIND_CAT[o.kind] || 'data';
-    return cardOpen(cat) + meteoHeader(formatTime(o.t), `${text(KIND_LABEL[cat] || cat)} &middot; ${ageText(o.t, ref)}`) + '</div>';
+// a marker's hover card before its messages are fetched: what it is, who sent it, and when
+export function markerCaption(o, ref, shipLabel) {
+    const cat = KIND_CAT[o.kind] || 'data', about = markerAbout(o, shipLabel);
+    return cardOpen(cat) + meteoHeader(text(about.tag), '', cat) + (about.source ? `<div class="msg-source">${about.source}</div>` : '') +
+        `<div class="msg-foot">${ageText(o.t, ref)} &middot; ${formatTime(o.t)}</div></div>`;
 }
 
 // ─── area geometry ───────────────────────────────────────────────────────────
@@ -816,13 +850,13 @@ const glyphUrls = new Map();
 
 // a kind's disc as a data URL, for a card header or a cell
 // Card-header discs use a subtle black edge in day mode and a white edge in dark mode.
-function glyphURL(cat) {
+function glyphURL(cat, square) {
     const dark = document.documentElement.classList.contains('dark');
-    const key = cat + (dark ? ':dark' : ':light');
+    const key = cat + (dark ? ':dark' : ':light') + (square ? ':square' : '');
     let url = glyphUrls.get(key);
     if (!url) {
         const [r, g, b] = hexToRgb(CAT_COLORS[cat] || CAT_COLORS.data);
-        url = discCanvas(cat, [r, g, b], 1, dark ? undefined : 'rgba(0, 0, 0, 0.35)').canvas.toDataURL();
+        url = discCanvas(cat, [r, g, b], 1, dark ? undefined : 'rgba(0, 0, 0, 0.35)', square).canvas.toDataURL();
         glyphUrls.set(key, url);
     }
     return url;
@@ -833,7 +867,7 @@ export function glyphsHTML(cats, attrs = '') {
     if (!cats.length) return '';
     const title = cats.map((c) => KIND_LABEL[c] || (c === 'station' ? 'Receiving station' : c)).join(', ') + ' \u00b7 show';
     return `<a href="#" class="msg-count" title="${text(title)}" ${attrs}>` +
-        cats.map((c) => `<img src="${glyphURL(c)}" alt="${text(KIND_LABEL[c] || c)}">`).join('') + '</a>';
+        cats.map((c) => `<img src="${glyphURL(c, true)}" alt="${text(KIND_LABEL[c] || c)}">`).join('') + '</a>';
 }
 
 // The kinds behind a vessel badge: newest first, no repeats. Acknowledgments

@@ -1242,3 +1242,17 @@ X(KEY_CHANNEL_LOAD, "channel_load", "", "", "", "", "channel_load", "%",
 X(KEY_PEAK, "peak", "", "", "", "", "peak", "dB", "Highest level on a channel", nullptr)
 X(KEY_CLIPPING, "clipping", "", "", "", "", "clipping", "%", "Share of an input's raw samples at full scale", nullptr)
 X(KEY_GAIN, "gain", "", "", "", "", "gain", "dB", "Tuner gain of a receiver", nullptr)
+
+// gpsd's SKY and TPV reports, read on a gpsd input
+X(KEY_GPSD_SATELLITES, "", "", "", "", "", "satellites", "", "gpsd: the satellites in view", nullptr)
+X(KEY_GPSD_PRN, "", "", "", "", "", "PRN", "", "gpsd: satellite number", nullptr)
+X(KEY_GPSD_GNSSID, "", "", "", "", "", "gnssid", "", "gpsd: the satellite's system, u-blox numbering", nullptr)
+X(KEY_GPSD_SVID, "", "", "", "", "", "svid", "", "gpsd: the satellite's number in its system", nullptr)
+X(KEY_GPSD_SIGID, "", "", "", "", "", "sigid", "", "gpsd: the signal, u-blox numbering", nullptr)
+X(KEY_GPSD_EL, "", "", "", "", "", "el", "degrees", "gpsd: elevation", nullptr)
+X(KEY_GPSD_AZ, "", "", "", "", "", "az", "degrees", "gpsd: azimuth", nullptr)
+X(KEY_GPSD_SS, "", "", "", "", "", "ss", "dB-Hz", "gpsd: signal strength", nullptr)
+X(KEY_GPSD_USED, "", "", "", "", "", "used", "", "gpsd: used for the fix", nullptr)
+X(KEY_GPSD_HDOP, "", "", "", "", "", "hdop", "", "gpsd: horizontal dilution of precision", nullptr)
+X(KEY_GPSD_MODE, "", "", "", "", "", "mode", "", "gpsd: fix, 1 none, 2 2D, 3 3D", nullptr)
+X(KEY_GPSD_TIME, "", "", "", "", "", "time", "", "gpsd: the time of a fix", nullptr)

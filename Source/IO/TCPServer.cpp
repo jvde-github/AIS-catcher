@@ -551,12 +551,6 @@ namespace IO
 		}
 	}
 
-	// the slots are the Run() thread's: it counts them once a second, any thread may ask
-	int TCPServer::numberOfClients()
-	{
-		return clients_now;
-	}
-
 	int TCPServer::findFreeClient()
 	{
 		for (int i = 0; i < Limits::CONNECTIONS; i++)
@@ -729,13 +723,14 @@ namespace IO
 					reloadTLS(now);
 					cleanUp(now);
 
-					int n = 0;
-					for (auto &c : client)
-						if (c.isConnected())
-							n++;
-					clients_now = n;
 					if (pstats)
+					{
+						int n = 0;
+						for (auto &c : client)
+							if (c.isConnected())
+								n++;
 						pstats->connected = n;
+					}
 				}
 			}
 			catch (const std::exception &e)

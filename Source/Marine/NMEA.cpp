@@ -263,9 +263,9 @@ namespace AIS
 	}
 
 	// stackoverflow variant (need to find the reference)
-	float NMEA::GpsToDecimal(const char *nmeaPos, int nmeaLen, char quadrant, bool &error)
+	double NMEA::GpsToDecimal(const char *nmeaPos, int nmeaLen, char quadrant, bool &error)
 	{
-		float v = 0;
+		double v = 0;
 		if (nmeaPos && nmeaLen > 5)
 		{
 			char integerPart[3 + 1];
@@ -281,8 +281,8 @@ namespace AIS
 				return 0;
 			}
 
-			float minutes = (float)atof(nmeaPos);
-			if ((minutes == 0 && nmeaPos[0] != '0') || minutes >= 60.0f)
+			double minutes = atof(nmeaPos);
+			if ((minutes == 0 && nmeaPos[0] != '0') || minutes >= 60.0)
 			{
 				error |= true;
 				return 0;
@@ -290,8 +290,8 @@ namespace AIS
 
 			v = degrees + minutes / 60.0;
 
-			float limit = (quadrant == 'N' || quadrant == 'S') ? 90.0f : 180.0f;
-			if (!isFinite(v) || v < 0.0f || v > limit)
+			double limit = (quadrant == 'N' || quadrant == 'S') ? 90.0 : 180.0;
+			if (!std::isfinite(v) || v < 0.0 || v > limit)
 			{
 				error |= true;
 				return 0;
@@ -351,8 +351,8 @@ namespace AIS
 			return false;
 
 		bool error = false;
-		float lat = GpsToDecimal(partPtr(lat_idx), partLen(lat_idx), partAt(ns_idx, 0), error);
-		float lon = GpsToDecimal(partPtr(lon_idx), partLen(lon_idx), partAt(ew_idx, 0), error);
+		double lat = GpsToDecimal(partPtr(lat_idx), partLen(lat_idx), partAt(ns_idx, 0), error);
+		double lon = GpsToDecimal(partPtr(lon_idx), partLen(lon_idx), partAt(ew_idx, 0), error);
 
 		if (error)
 		{
@@ -538,6 +538,11 @@ namespace AIS
 		return true;
 	}
 
+	static double number(const JSON::Value &v, double missing)
+	{
+		return v.isFloat() ? v.getFloat() : v.isInt() ? (double)v.getInt() : missing;
+	}
+
 	void NMEA::processJSONsentence(TAG &tag)
 	{
 		tag.clear();
@@ -555,6 +560,7 @@ namespace AIS
 				CLS_UNKNOWN,
 				CLS_AIS,
 				CLS_TPV,
+				CLS_SKY,
 				CLS_ERROR,
 				CLS_WARNING,
 				CLS_INFO,
@@ -572,8 +578,11 @@ namespace AIS
 			const std::string *topic = nullptr;
 			const JSON::JSON *payload = nullptr;
 			const JSON::Value *nmea_array = nullptr;
-			float tpv_lat = 0, tpv_lon = 0;
+			double tpv_lat = 0, tpv_lon = 0;
 			bool has_lat = false, has_lon = false;
+			const JSON::Value *satellites = nullptr;
+			const std::string *tpv_time = nullptr;
+			float hdop = -1;
 
 			// the most exact upstream time wins, whatever the order of the fields
 			int toa_rank = 0;
@@ -597,6 +606,8 @@ namespace AIS
 						cls = CLS_AIS;
 					else if (s == "TPV")
 						cls = CLS_TPV;
+					else if (s == "SKY")
+						cls = CLS_SKY;
 					else if (s == "error")
 						cls = CLS_ERROR;
 					else if (s == "warning")
@@ -678,12 +689,26 @@ namespace AIS
 						nmea_array = &p.Get();
 					break;
 				case AIS::KEY_LAT:
-					tpv_lat = p.Get().isFloat() ? p.Get().getFloat() : (p.Get().isInt() ? (float)p.Get().getInt() : 0.0f);
+					tpv_lat = number(p.Get(), 0);
 					has_lat = true;
 					break;
 				case AIS::KEY_LON:
-					tpv_lon = p.Get().isFloat() ? p.Get().getFloat() : (p.Get().isInt() ? (float)p.Get().getInt() : 0.0f);
+					tpv_lon = number(p.Get(), 0);
 					has_lon = true;
+					break;
+				case AIS::KEY_GPSD_SATELLITES:
+					if (p.Get().isArray())
+						satellites = &p.Get();
+					break;
+				case AIS::KEY_GPSD_HDOP:
+					hdop = (float)number(p.Get(), -1);
+					break;
+				case AIS::KEY_GPSD_MODE:
+					gpsd_mode = (int)number(p.Get(), 0);
+					break;
+				case AIS::KEY_GPSD_TIME:
+					if (p.Get().isString())
+						tpv_time = &p.Get().getString();
 					break;
 				}
 			}
@@ -735,10 +760,27 @@ namespace AIS
 			if (cls == CLS_METRIC && uuid_match)
 				processMetric(jsonDoc.root, tag);
 
+			// gpsd repeats the TPV as each sentence comes in: a new time opens the next cycle
+			if (cls == CLS_TPV && cfg_GPS && tpv_time && *tpv_time != gpsd_time)
+			{
+				gpsd_time = *tpv_time;
+				sendSKY(tag);
+			}
+
 			if (cls == CLS_TPV && cfg_GPS && has_lat && has_lon && isValidCoord(tpv_lat, tpv_lon))
 			{
 				GPS gps(tpv_lat, tpv_lon, line, true);
 				outGPS.Send(&gps, 1, tag);
+			}
+
+			// gpsd's sky: the satellites only every few reports, the rest carry the precision alone,
+			// and one of those, or a sky smaller than the last, closes the cycle too
+			if (cls == CLS_SKY && cfg_GPS)
+			{
+				if (!satellites || satellites->getArray().size() < gpsd_sky.satellites.size())
+					sendSKY(tag);
+				if (satellites)
+					processSKY(*satellites, hdop);
 			}
 		}
 		catch (std::exception const &e)
@@ -1063,27 +1105,146 @@ namespace AIS
 		return Sky::OTHER;
 	}
 
+	// the band of an NMEA 4.11 signal id; a sentence without one is taken as L1
+	static int band(int system, int signal)
+	{
+		switch (system)
+		{
+		case Sky::GPS:
+		case Sky::QZSS:
+		case Sky::SBAS:
+			return signal == 7 || signal == 8 ? Sky::L5 : signal >= 5 || (signal == 4 && system == Sky::GPS) ? Sky::L2 : Sky::L1;
+		case Sky::GALILEO:
+			return signal == 1 || signal == 3 ? Sky::L5 : signal == 2 || signal == 4 || signal == 5 ? Sky::L2 : Sky::L1;
+		case Sky::GLONASS:
+			return signal == 3 || signal == 4 ? Sky::L2 : Sky::L1;
+		case Sky::BEIDOU:
+			return signal == 5 || signal == 7 ? Sky::L5 : signal == 6 || signal >= 8 ? Sky::L2 : Sky::L1;
+		case Sky::NAVIC:
+			return signal == 5 ? Sky::L1 : Sky::L5;
+		}
+		return Sky::L1;
+	}
+
+	void NMEA::addSatellite(Sky &into, int system, int id, int elevation, int azimuth, int b, int signal, bool used)
+	{
+		auto known = std::find_if(into.satellites.begin(), into.satellites.end(), [&](const Sky::Satellite &o) { return o.system == system && o.id == id; });
+		if (known == into.satellites.end())
+		{
+			if (into.satellites.size() >= 128)
+				return;
+			into.satellites.push_back(Sky::Satellite{system, id, elevation, azimuth, {-1, -1, -1}, used});
+			known = into.satellites.end() - 1;
+		}
+		if (known->elevation < 0 || known->azimuth < 0)
+		{
+			known->elevation = elevation;
+			known->azimuth = azimuth;
+		}
+		known->signal[b] = MAX(known->signal[b], signal);
+		known->used |= used;
+	}
+
 	void NMEA::processGSV(const char *data, int len)
 	{
 		std::vector<Field> f;
-		if (!cfg_GPS || !fields(data, len, f))
+		if (!cfg_GPS || !fields(data, len, f) || f.size() < 4)
 			return;
 		const int system = talkerSystem(data);
+		// NMEA 4.11 ends the sentence with the signal id, one hex digit
+		const Field &last = f.back();
+		const int signal = (f.size() - 4) % 4 == 1 && last.second == 1 && Util::Convert::isHexDigit(last.first[0]) ? Util::Convert::hexDigitValue(last.first[0]) : 0;
 		for (std::size_t g = 4; g + 3 < f.size(); g += 4)
 		{
 			const int id = number(f[g], -1);
 			if (id < 0)
 				continue;
-			Sky::Satellite s{system == Sky::GPS && id > 32 ? (int)Sky::SBAS : system, id, number(f[g + 1], -1), number(f[g + 2], -1), number(f[g + 3], -1), false};
-			auto known = std::find_if(sky.satellites.begin(), sky.satellites.end(), [&](const Sky::Satellite &o) { return o.system == s.system && o.id == s.id; });
-			if (known == sky.satellites.end())
-			{
-				if (sky.satellites.size() < 128)
-					sky.satellites.push_back(s);
-			}
-			else
-				known->signal = MAX(known->signal, s.signal);
+			const int sys = system == Sky::GPS && id > 32 ? (int)Sky::SBAS : system;
+			// GLONASS is numbered 65 to 96 in NMEA, by its slot 1 to 32 elsewhere
+			addSatellite(sky, sys, sys == Sky::GLONASS && id > 64 ? id - 64 : id, number(f[g + 1], -1), number(f[g + 2], -1), band(sys, signal), number(f[g + 3], -1), false);
 		}
+	}
+
+	// gpsd numbers satellites by the u-blox scheme: gnssid 0 GPS, 1 SBAS, 2 Galileo, 3 BeiDou, 5 QZSS, 6 GLONASS, 7 NavIC,
+	// and sigid 0 is L1 everywhere; an older gpsd gives only the PRN, a range per system. Fed NMEA 4.11, gpsd 3.25 sends
+	// a SKY per system as the GSVs come in, each with the systems before it, and leaves out the sigid of GPS L5 and
+	// Galileo E5a: a satellite heard twice without one is taken as L1 first, the second band after.
+	void NMEA::processSKY(const JSON::Value &list, float hdop)
+	{
+		static const int systems[] = {Sky::GPS, Sky::SBAS, Sky::GALILEO, Sky::BEIDOU, Sky::OTHER, Sky::QZSS, Sky::GLONASS, Sky::NAVIC};
+		Sky next;
+		for (const auto &v : list.getArray())
+		{
+			if (!v.isObject())
+				continue;
+			int prn = -1, gnssid = -1, svid = -1, sigid = -1, elevation = -1, azimuth = -1, signal = -1;
+			bool used = false;
+			for (const auto &p : v.getObject().getMembers())
+				switch (p.Key())
+				{
+				case AIS::KEY_GPSD_PRN: prn = (int)number(p.Get(), -1); break;
+				case AIS::KEY_GPSD_GNSSID: gnssid = (int)number(p.Get(), -1); break;
+				case AIS::KEY_GPSD_SVID: svid = (int)number(p.Get(), -1); break;
+				case AIS::KEY_GPSD_SIGID: sigid = (int)number(p.Get(), -1); break;
+				case AIS::KEY_GPSD_EL: elevation = (int)std::lround(number(p.Get(), -1)); break;
+				case AIS::KEY_GPSD_AZ: azimuth = (int)std::lround(number(p.Get(), -1)); break;
+				case AIS::KEY_GPSD_SS: signal = (int)std::lround(number(p.Get(), -1)); break;
+				case AIS::KEY_GPSD_USED: used = p.Get().isBool() && p.Get().getBool(); break;
+				}
+			int system = Sky::OTHER, id = svid;
+			if (gnssid >= 0 && gnssid < 8 && svid > 0)
+				system = systems[gnssid];
+			else if (prn > 0)
+			{
+				static const struct { int from, to, system, base; } ranges[] = {{1, 32, Sky::GPS, 0}, {33, 64, Sky::SBAS, 0}, {65, 96, Sky::GLONASS, 64},
+					{120, 158, Sky::SBAS, 0}, {193, 202, Sky::QZSS, 192}, {201, 237, Sky::BEIDOU, 200}, {301, 336, Sky::GALILEO, 300}, {401, 437, Sky::BEIDOU, 400}};
+				id = prn;
+				for (const auto &r : ranges)
+					if (prn >= r.from && prn <= r.to)
+					{
+						system = r.system;
+						id = prn - r.base;
+						break;
+					}
+			}
+			if (id <= 0)
+				continue;
+			int b = Sky::L1;
+			if (sigid > 0)
+				switch (system)
+				{
+				case Sky::GPS: b = sigid >= 6 ? Sky::L5 : Sky::L2; break;
+				case Sky::QZSS: b = sigid >= 8 ? Sky::L5 : sigid >= 4 ? Sky::L2 : Sky::L1; break;
+				case Sky::GALILEO: b = sigid >= 5 ? Sky::L2 : sigid >= 3 ? Sky::L5 : Sky::L1; break;
+				case Sky::BEIDOU: b = sigid == 4 || sigid == 7 || sigid == 8 ? Sky::L5 : sigid == 2 || sigid == 3 || sigid >= 9 ? Sky::L2 : Sky::L1; break;
+				case Sky::GLONASS: b = sigid >= 2 ? Sky::L2 : Sky::L1; break;
+				case Sky::NAVIC: b = Sky::L5; break;
+				}
+			else if (sigid < 0)
+			{
+				auto seen = std::find_if(next.satellites.begin(), next.satellites.end(), [&](const Sky::Satellite &o) { return o.system == system && o.id == id; });
+				if (seen != next.satellites.end() && seen->signal[Sky::L1] >= 0)
+					b = system == Sky::GLONASS ? Sky::L2 : Sky::L5;
+			}
+			addSatellite(next, system, id, elevation, azimuth, b, signal, used);
+		}
+		if (next.satellites.empty())
+			return;
+		next.fix = gpsd_mode;
+		next.hdop = hdop > 0 && hdop < 99 ? hdop : -1;
+		gpsd_sky = next;
+		gpsd_pending = true;
+	}
+
+	// the cycle's last SKY is its whole sky: sent when the next cycle opens with a TPV
+	void NMEA::sendSKY(TAG &tag)
+	{
+		if (!gpsd_pending)
+			return;
+		gpsd_pending = false;
+		GPS gps(line);
+		gps.sky = &gpsd_sky;
+		outGPS.Send(&gps, 1, tag);
 	}
 
 	void NMEA::processGSA(const char *data, int len)
@@ -1097,8 +1258,15 @@ namespace AIS
 			sky.hdop = hdop;
 		const int system = f.size() > 18 ? number(f[18], Sky::OTHER) : talkerSystem(data);
 		for (int i = 3; i < 15; i++)
-			if (number(f[i], -1) >= 0 && sky_used.size() < 128)
-				sky_used.emplace_back(system, number(f[i], -1));
+		{
+			const int id = number(f[i], -1);
+			if (id < 0 || sky_used.size() >= 128)
+				continue;
+			if (id > 64 && id <= 96 && (system == Sky::GLONASS || system == Sky::OTHER))
+				sky_used.emplace_back(Sky::GLONASS, id - 64);
+			else
+				sky_used.emplace_back(system, id);
+		}
 	}
 
 	void NMEA::sendGPS(GPS gps, TAG &tag)
@@ -1114,7 +1282,7 @@ namespace AIS
 		}
 		for (auto &s : sky.satellites)
 			for (const auto &u : sky_used)
-				s.used |= u.second == s.id && (u.first == s.system || u.first == Sky::OTHER || (u.first == Sky::GPS && s.system == Sky::SBAS));
+				s.used |= u.second == s.id && (u.first == s.system || (u.first == Sky::OTHER && s.system != Sky::GLONASS) || (u.first == Sky::GPS && s.system == Sky::SBAS));
 		gps.sky = &sky;
 		outGPS.Send(&gps, 1, tag);
 		sky = Sky();

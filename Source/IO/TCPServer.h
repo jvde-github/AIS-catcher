@@ -248,7 +248,6 @@ namespace IO
 		}
 
 		int findFreeClient();
-		int numberOfClients();
 		void acceptClients();
 		void readClients();
 		void writeClients();
@@ -273,7 +272,6 @@ namespace IO
 		bool tls_warned = false;
 		// seconds since the epoch, enough to 2106; 32 bits as a 64-bit atomic needs libatomic on armv6
 		std::atomic<uint32_t> tls_until{0};
-		std::atomic<int> clients_now{0};
 		LogMinute refusals;
 		void refuse(SOCKET s, const char *why);
 	};

@@ -59,7 +59,7 @@ export function stationBand(s) {
     const chip = s.id ? `<span class="station-chip">${text(s.id)}</span>` : '';
     const pick = s.id ? ` data-station="${Number(s.id)}"` : '';
     const state = stationStateText(s);
-    return `<div class="tip-band"${pick} style="--band: ${stationColor(s.status)}"><div class="tooltip-card">${flag}` +
+    return `<div class="tip-band tip-barred"${pick} style="--band: ${stationColor(s.status)}"><div class="tooltip-card">${flag}` +
         `<div><span class="tooltip-name">${text(decodeHTMLEntities(s.name) || 'Receiving station')}</span>${chip}` +
         (state ? `<div class="tooltip-dim">${text(state)}</div>` : '') + `</div></div></div>`;
 }
