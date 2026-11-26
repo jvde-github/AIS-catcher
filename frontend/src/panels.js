@@ -17,7 +17,7 @@ import { register } from './actions.js';
 
 // set once by script.js, so that this module imports no features
 const features = {
-    closeCard: () => {}, positionCard: () => {}, fitCard: () => {}, closeSettings: () => {}, closeSearch: () => {}, updateTable: () => {},
+    closeCard: () => {}, positionCard: () => {}, fitCard: () => {}, closeSettings: () => {}, updateTable: () => {},
     clearTableHover: () => {}, countsTooltip: () => {}, measureCount: () => 0, setTicker: () => {},
 };
 export function wire(parts) {
@@ -236,7 +236,8 @@ export function showMenu() {
 
 function toggleMenu() {
     const menubar = document.getElementById("menubar");
-    if (menubar.classList.toggle("visible")) features.closeSearch();
+    if (!menubar.classList.contains("visible")) ui.dismiss();   // the menu takes the stage
+    menubar.classList.toggle("visible");
     document.getElementById("menubar_mini").classList.toggle("showflex");
     document.getElementById("menubar_mini").classList.toggle("hidden");
 
