@@ -843,6 +843,9 @@ namespace JSON
 			case Value::Type::OBJECT:
 				write_object(v.getObject(), w);
 				break;
+			case Value::Type::CSTRING:
+				w.val(v.getCString());
+				break;
 			case Value::Type::ARRAY_STRING:
 			{
 				const std::vector<std::string> &as = v.getStringArray();
