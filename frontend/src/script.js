@@ -264,6 +264,7 @@ wirePanels({
     positionCard: positionAside,
     fitCard: fitTargetcard,
     closeSettings: () => settingsPanel.close(),
+    closeSearch: () => searchPanel.close(),
     updateTable: updateTablecard,
     clearTableHover: () => tableHover.clear(),
     countsTooltip: updateMarkerCountTooltip,

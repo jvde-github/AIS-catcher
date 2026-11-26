@@ -1476,7 +1476,8 @@
     background: var(--color-scrim);
     opacity: 0;
     visibility: hidden;
-    transition: opacity var(--dur-slow), visibility var(--dur-slow);
+    /* fades in only: a scrim that fades out still takes the clicks */
+    transition: opacity var(--dur-slow);
     z-index: var(--z-overlay);
 }
 

@@ -12,6 +12,7 @@ import { fromLonLat } from 'ol/proj';
 import { settings } from '../../core/state.js';
 import { calcOffset1M } from '@aiscatcher/core/geo.js';
 import { sanitizeString } from '@aiscatcher/core/text.js';
+import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
 import { rangeGeometry } from '@aiscatcher/map/markers.js';
 import { getDistanceUnit } from '../../core/units.js';
 import { focus } from '../../data.js';
@@ -56,7 +57,7 @@ function centres() {
     const named = new Set((config.stations || []).map((s) => s.id).filter((id) => id >= 0));
     if (named.size) {
         const shown = stationsOnMap().filter((s) => named.has(s.id) && (focus < 0 || s.id === focus));
-        if (shown.length) return shown;
+        if (shown.length) return shown.map((s) => ({ ...s, label: decodeHTMLEntities(s.label) }));
     }
     return stationHasLocation() ? [{ id: focus, lat: station.lat, lon: station.lon, label: '' }] : [];
 }
