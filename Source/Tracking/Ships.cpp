@@ -70,6 +70,7 @@ void Ship::reset()
 
 	cog = COG_UNDEFINED;
 	last_signal = last_direct_signal = last_static_signal = {};
+	last_position_signal = {};
 	shipclass = CLASS_UNKNOWN;
 	mmsi_type = MMSI_OTHER;
 
@@ -153,6 +154,7 @@ void Ship::clearFields(uint32_t doomed)
 	{
 		lat = LAT_UNDEFINED;
 		lon = LON_UNDEFINED;
+		last_position_signal = 0;
 		distance = DISTANCE_UNDEFINED;
 		angle = ANGLE_UNDEFINED;
 		setApproximate(0);
@@ -471,7 +473,7 @@ bool Ship::Save(std::ofstream &file) const
 				  W(mmsi_type) && W(shipname) && W(destination) && W(callsign) &&
 				  W(country_code) && W(vin) && W(vendorid) && W(unit_model) &&
 				  W(unit_serial) && W(last_group) && W(idle_since) && W(rest_told) &&
-				  saveHeardList(file, heard) && W(turn));
+				  saveHeardList(file, heard) && W(turn) && W(last_position_signal));
 }
 
 bool Ship::Load(std::ifstream &file)
@@ -481,7 +483,7 @@ bool Ship::Load(std::ifstream &file)
 	if (!R(magic) || !R(version) || magic != _SHIP_MAGIC)
 		return false;
 
-	if (version != _SHIP_VERSION && version != _SHIP_VERSION_HEARD && version != _SHIP_VERSION_RESTED && version != _SHIP_VERSION_PREVIOUS &&
+	if (version != _SHIP_VERSION && version != _SHIP_VERSION_TURNED && version != _SHIP_VERSION_HEARD && version != _SHIP_VERSION_RESTED && version != _SHIP_VERSION_PREVIOUS &&
 		version != _SHIP_VERSION_MATCHED && version != _SHIP_VERSION_UNMATCHED &&
 		version != _SHIP_VERSION_LINKED)
 		return false;
@@ -499,7 +501,8 @@ bool Ship::Load(std::ifstream &file)
 			   R(unit_model) && R(unit_serial) && R(last_group));
 
 	// the rest arrived with version 7, the station list with 8, the rate of turn
-	// with 9; a record from before is under way, heard by none and not turning
+	// with 9, the position time with 10; a record from before is under way,
+	// heard by none, not turning, and its position as old as its signal
 	idle_since = 0;
 	rest_told = false;
 	if (ok && version >= _SHIP_VERSION_RESTED)
@@ -513,8 +516,11 @@ bool Ship::Load(std::ifstream &file)
 	if (ok && version >= _SHIP_VERSION_HEARD)
 		ok = loadHeardList(file, heard);
 	turn = TURN_UNDEFINED;
-	if (ok && version >= _SHIP_VERSION)
+	if (ok && version >= _SHIP_VERSION_TURNED)
 		ok = (bool)R(turn);
+	last_position_signal = isValidCoord(lat, lon) ? last_signal : 0;
+	if (ok && version >= _SHIP_VERSION)
+		ok = (bool)R(last_position_signal);
 	if (ok && version == _SHIP_VERSION_LINKED)
 	{
 		int discard[3];

@@ -84,8 +84,12 @@ namespace Services
 			.kv_unless("model", ship.unit_model, -1)
 			.kv_unless("serial", ship.unit_serial, -1)
 			.kv("repeat", ship.getRepeat())
-			.kv("last_signal", delta_time)
-			.kv("last_group", ship.last_group)
+			.kv("last_signal", delta_time);
+		if (isValidCoord(ship.lat, ship.lon) && ship.last_position_signal > 0)
+			w.kv("last_position", (long)(delta_time + (ship.last_signal > ship.last_position_signal ? ship.last_signal - ship.last_position_signal : 0)));
+		else
+			w.kv_null("last_position");
+		w.kv("last_group", ship.last_group)
 			.kv_unless("altitude", ship.altitude, ALT_UNDEFINED)
 			.kv_unless("received_stations", ship.received_stations,
 					   RECEIVED_STATIONS_UNDEFINED);

@@ -504,6 +504,8 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	if (positionUpdated)
 	{
 		ship.setApproximate(type == 27);
+		if (isValidCoord(ship.lat, ship.lon))
+			ship.last_position_signal = ship.last_signal;
 	}
 
 	if (msg_save)
