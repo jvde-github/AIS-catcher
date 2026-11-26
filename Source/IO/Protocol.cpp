@@ -561,20 +561,16 @@ namespace Protocol
 	}
 #endif
 
-	void TLS::onConnect()
+	bool TLS::createContext()
 	{
-		// Create SSL context
 		ctx = SSL_CTX_new(TLS_client_method());
 		if (!ctx)
-		{
-			Error() << "TLS: Failed to create SSL context for " << getHost() << ":" << getPort();
-			disconnect();
-			return;
-		}
+			return false;
 
 		// Disable weak SSL/TLS protocols (SSLv2, SSLv3, TLS 1.0, TLS 1.1)
 		SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
 
+		ctx_verifies = verify_certificates;
 		if (verify_certificates)
 		{
 			SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
@@ -596,11 +592,34 @@ namespace Protocol
 #endif
 		}
 		else
-		{
 			SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
-			if (!own_server)
-				Warning() << "TLS: Certificate verification DISABLED for " << getHost() << ":" << getPort();
+
+		return true;
+	}
+
+	// with the session: one made under another setting is not offered again
+	void TLS::forgetContext()
+	{
+		SSL_SESSION_free(session);
+		SSL_CTX_free(ctx);
+		session = nullptr;
+		ctx = nullptr;
+	}
+
+	void TLS::onConnect()
+	{
+		if (ctx && ctx_verifies != verify_certificates)
+			forgetContext();
+
+		if (!ctx && !createContext())
+		{
+			Error() << "TLS: Failed to create SSL context for " << getHost() << ":" << getPort();
+			disconnect();
+			return;
 		}
+
+		if (!verify_certificates && !own_server)
+			Warning() << "TLS: Certificate verification DISABLED for " << getHost() << ":" << getPort();
 
 		// Create SSL object
 		ssl = SSL_new(ctx);
@@ -626,6 +645,9 @@ namespace Protocol
 				X509_VERIFY_PARAM_set1_host(param, getHost().c_str(), 0);
 		}
 
+		if (session && session_server == getHost() + ":" + getPort())
+			SSL_set_session(ssl, session);
+
 		// Create custom BIO that uses our TCP connection
 		BIO *bio = BIO_new(BIO_s_socket());
 		BIO_set_fd(bio, getSocket(), BIO_NOCLOSE);
@@ -644,16 +666,18 @@ namespace Protocol
 		{
 			if (handshake_complete)
 			{
+				SSL_SESSION_free(session);
+				session = SSL_get1_session(ssl);
+				session_server = getHost() + ":" + getPort();
+
 				SSL_shutdown(ssl);
 				Debug() << "TLS (" + getHost() + ":" + getPort() + "): Disconnected";
 			}
+			else
+				// after a failed handshake the next one starts from nothing, as a first connection does
+				forgetContext();
 			SSL_free(ssl);
 			ssl = nullptr;
-		}
-		if (ctx)
-		{
-			SSL_CTX_free(ctx);
-			ctx = nullptr;
 		}
 
 		handshake_complete = false;

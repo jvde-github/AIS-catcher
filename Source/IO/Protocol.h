@@ -425,9 +425,15 @@ namespace Protocol
 	class TLS : public ProtocolBase
 	{
 	private:
+		// the context is built once and kept: loading the trusted certificates is the costly part
 		SSL_CTX *ctx = nullptr;
+		bool ctx_verifies = true;
 		SSL *ssl = nullptr;
 		bool handshake_complete = false;
+
+		// the last connection's session, offered to the same server for a short handshake
+		SSL_SESSION *session = nullptr;
+		std::string session_server;
 
 		IO::OutputStats *stats = nullptr;
 
@@ -453,6 +459,7 @@ namespace Protocol
 		~TLS()
 		{
 			disconnect();
+			forgetContext();
 			// OpenSSL cleanup handled by OS at process exit
 		}
 
@@ -485,6 +492,8 @@ namespace Protocol
 		}
 
 	private:
+		bool createContext();
+		void forgetContext();
 		bool performHandshake();
 		std::string getSSLErrorString(int error);
 	};
