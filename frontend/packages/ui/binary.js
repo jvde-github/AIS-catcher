@@ -705,9 +705,9 @@ export function discCanvas(cat, rgb, fade = 1, ring, square = false) {
     return { canvas, size: SIZE };
 }
 
-// The badge on a vessel marker: a small disc at the upper right with a hairline to the
-// vessel's centre, kept well under the marker's own size so that the vessel stays the thing
-// looked at. The canvas is centred on the vessel; the host wraps it in an icon.
+// The badge on a vessel marker: a small mark at the upper left, clear of the name on the right,
+// with a hairline to the vessel's centre, kept well under the marker's own size so that the vessel
+// stays the thing looked at. The canvas is centred on the vessel; the host wraps it in an icon.
 export function badgeCanvas(cat, rgb, fade = 1) {
     const scale = window.devicePixelRatio || 1;
     const R = 6, OFF = 8, SIZE = 2 * (OFF + R + 2);
@@ -715,7 +715,7 @@ export function badgeCanvas(cat, rgb, fade = 1) {
     canvas.width = canvas.height = SIZE * scale;
     const ctx = canvas.getContext('2d');
     ctx.scale(scale, scale);
-    const c = SIZE / 2, cx = c + OFF, cy = c - OFF;
+    const c = SIZE / 2, cx = c - OFF, cy = c - OFF;
     const [r, g, b] = rgb;
     ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${MAP_MARKER_FILL_ALPHA * fade})`;
     ctx.lineWidth = 1.5;
