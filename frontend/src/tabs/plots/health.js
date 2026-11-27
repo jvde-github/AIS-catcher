@@ -23,12 +23,12 @@ const HINT = {
 const INPUT = { streaming: "Streaming", starting: "Starting", lost: "Device lost" };
 
 function receiver(r) {
-    const state = r.status === "down" && r.input !== "lost" ? "Not streaming" : r.status === "degraded" ? "Streaming, no messages" : INPUT[r.input] || r.input;
+    const state = r.status === "down" && r.input !== "lost" ? "Not streaming" : r.input === "streaming" && !r.bytes ? "No data" : r.status === "degraded" ? "Streaming, no messages" : INPUT[r.input] || r.input;
     // an input that streams and passed on no AIS message carries something else, as a GPS; or it heard nothing yet
     const other = r.last_msg_age_s === null;
     return `<article class="hc-rx" style="--tone:${tone(r.status)}">
         <div class="hc-rx-top"><i class="hc-rx-dot"></i><strong>${sanitizeString(r.label || "Receiver " + r.id)}</strong>${r.of ? `<small>${sanitizeString(r.of)}</small>` : ""}<span>${state}</span></div>
-        <div class="hc-rx-figs">${cell(r.carries === "adsb" ? "ADS-B messages/min" : "AIS messages/min", other ? "—" : r.msgs_1m)}${cell("Last message", other ? "—" : ago(r.last_msg_age_s))}${cell("Data received", formatBytes(r.bytes))}</div>
+        <div class="hc-rx-figs">${cell(r.carries === "adsb" ? "ADS-B messages/min" : "AIS messages/min", other ? "—" : r.msgs_1m)}${cell("Last message", other ? "—" : ago(r.last_msg_age_s))}${cell("Data", formatBytes(r.bytes))}</div>
         ${r.carries === "adsb" ? `<p class="hc-rx-note">Aircraft, not vessels: not counted as an AIS receiver.</p>` : other ? `<p class="hc-rx-note">${r.carries === "other" ? "No AIS messages: it carries other data, as a GPS. Not counted as a receiver." : "No AIS message yet."}</p>` : ""}</article>`;
 }
 
