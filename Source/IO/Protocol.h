@@ -691,7 +691,7 @@ namespace Protocol
 			const std::string str = "?WATCH={\"enable\":true,\"json\":true,\"nmea\":false}\n";
 			if (prev)
 			{
-				int len = prev->send(str.c_str(), str.size());
+				int len = prev->send(str.c_str(), (int)str.size());
 				if (len != str.size())
 				{
 					Error() << "GPSD: no or invalid response, likely not a gpsd server.";
@@ -808,11 +808,11 @@ namespace Protocol
 		void applySettings()
 		{
 			std::cerr << "RTLTCP: setting parameters" << std::endl;
-			sendParam(5, freq_offset);
+			sendParam(5, (uint32_t)freq_offset);
 			sendParam(3, tuner_AGC ? 0 : 1);
 
 			if (!tuner_AGC)
-				sendParam(4, tuner_Gain * 10);
+				sendParam(4, (uint32_t)(tuner_Gain * 10));
 			if (RTL_AGC)
 				sendParam(8, 1);
 
@@ -875,7 +875,7 @@ namespace Protocol
 				sample_rate = Util::Parse::Integer(value, 0, 20000000);
 				return false;
 			case AIS::KEY_SETTING_FREQOFFSET:
-				freq_offset = Util::Parse::Float(value, -150, 150);
+				freq_offset = (FLOAT32)Util::Parse::Float(value, -150, 150);
 				return false;
 			case AIS::KEY_SETTING_FREQUENCY:
 				frequency = Util::Parse::Integer(value, 0, 2000000000);

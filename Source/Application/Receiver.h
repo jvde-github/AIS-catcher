@@ -149,7 +149,7 @@ public:
 	// a model by its number (-1 for the default), with the zones of its own
 	AIS::Model &addModel(int m, const std::vector<std::string> &zones = std::vector<std::string>());
 	AIS::Model &model(int i) { return *decoders[i].model; }
-	int modelCount() const { return decoders.size(); }
+	int modelCount() const { return (int)decoders.size(); }
 	std::string modelIndex(int i) const { return "#" + std::to_string(receiver_index) + "-" + std::to_string(i); }
 	std::string modelLabel(int i) const { return decoders[i].model->getName() + " " + modelIndex(i); }
 	void addZone(const std::string &zone) { zones.push_back(zone); }

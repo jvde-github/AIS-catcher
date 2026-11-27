@@ -98,7 +98,7 @@ namespace IO
 			auto timeNow = std::chrono::high_resolution_clock::now();
 			float seconds = 1e-6f * std::chrono::duration_cast<std::chrono::microseconds>(timeNow - time_lastupdate).count();
 
-			msg_count = count - lastcount;
+			msg_count = (int)(count - lastcount);
 			rate += 1.0f * (msg_count / seconds - rate);
 
 			time_lastupdate = timeNow;

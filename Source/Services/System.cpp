@@ -40,7 +40,7 @@ namespace Services
 	{
 		const std::string base = "/api/v1/system";
 		const std::string &p = request.path;
-		const bool mine = p == "/api/v1/health" || (p.compare(0, base.size(), base) == 0 && (p.size() == base.size() || p[base.size()] == '/'));
+		const bool mine = p.compare(0, base.size(), base) == 0 && (p.size() == base.size() || p[base.size()] == '/');
 		return mine ? (int)ApiKey::SYSTEM : NOT_MINE;
 	}
 
@@ -62,15 +62,13 @@ namespace Services
 					response = Response::problem(400, "Bad request", "\"" + p.first + "\" is not a parameter of " + r->path + ".");
 					return true;
 				}
-		const std::string rest = request.path == "/api/v1/health" ? "/health" : request.path.substr(base.size());
+		const std::string rest = request.path.substr(base.size());
 		if (rest.empty() || rest == "/")
 			response = overview();
 		else if (rest == "/receivers")
 			response = receivers();
 		else if (rest == "/outputs")
 			response = outputs();
-		else if (rest == "/health")
-			response = healthResponse(tracker, spec, stations, facts, healthAsk(request));
 		else if (rest == "/log")
 			response = log(request);
 		else if (rest == "/events")
@@ -83,20 +81,22 @@ namespace Services
 	Response System::overview()
 	{
 		const SystemFacts f = facts();
+		const Util::Helper::SystemInfo sys = Util::Helper::getSystemInfo();
 		const std::time_t now = std::time(nullptr);
 		std::string out;
 		JSON::Writer w(out);
 		w.beginObject().kv("name", "AIS-catcher").kv("version", VERSION).kv("describe", VERSION_DESCRIBE).kv("build_date", __DATE__)
-			.kv("os", Util::Helper::getOS()).kv("hardware", Util::Helper::getHardware()).kv("processor", Util::Helper::getProcessor())
-			.kv("uptime_s", age(now, f.born)).kv("memory_bytes", (long long)Util::Helper::getMemoryConsumption())
-			.kv("received_bytes", (unsigned long long)f.received)
-			.key("engine").beginObject().kv("running", f.running);
+			.kv("os", sys.os).kv("hardware", sys.hardware).kv("processor", sys.processor)
+			.kv("uptime_s", age(now, f.born)).kv("memory_bytes", (long long)sys.memory).kv("cpu_percent", std::round(sys.cpu * 10) / 10.0)
+			.kv("received_bytes", (unsigned long long)f.received);
+		if (sys.wifi)
+			w.key("wifi").beginObject().kv("signal_dbm", sys.wifi_dbm).kv("quality", sys.wifi_quality).endObject();
+		w.key("engine").beginObject().kv("running", f.running);
 		if (f.running)
 			w.kv("uptime_s", age(now, f.session));
 		w.kv("receivers", (long long)f.receivers.size()).kv("overruns", (long long)f.overruns).endObject()
 			.key("resources").beginArray();
-		for (const char *r : {"/api/v1/system/receivers", "/api/v1/system/outputs", "/api/v1/system/log", "/api/v1/system/events",
-							  "/api/v1/health"})
+		for (const char *r : {"/api/v1/system/receivers", "/api/v1/system/outputs", "/api/v1/system/log", "/api/v1/system/events"})
 			w.val(r);
 		w.endArray().endObject();
 		w.finish();

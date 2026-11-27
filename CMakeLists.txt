@@ -89,6 +89,8 @@ if(RPATH_LIBRARY_DIR)
     set(CMAKE_BUILD_RPATH "${RPATH_LIBRARY_DIR}")
     set(CMAKE_INSTALL_RPATH "${RPATH_LIBRARY_DIR}")
     set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
+    # the packages take the binary from the build tree: it must carry the installed path alone
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 endif()
 
 # Common compiler flags and options. Release unless a build type is given; Visual Studio picks its own.
@@ -141,7 +143,7 @@ elseif(MSVC)
     if(WARNINGS_AS_ERRORS)
         add_compile_options("/WX")
     endif()
-    set(OPTIMIZATION_FLAGS "-DWIN32_LEAN_AND_MEAN /EHsc /W3 /Oi /Ot /fp:fast") # spellchecker:disable-line
+    set(OPTIMIZATION_FLAGS "-DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS /EHsc /W3 /Oi /Ot /fp:fast") # spellchecker:disable-line
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OPTIMIZATION_FLAGS}")

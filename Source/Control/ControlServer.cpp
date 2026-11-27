@@ -202,6 +202,11 @@ bool ControlServer::loginBlocked(const std::string &peer, int &seconds_left)
 		seconds_left = (int)(it->second.block_until - now);
 		return true;
 	}
+	if (failures_recent >= MAX_FAILURES_A_MINUTE && now < failures_since + 60)
+	{
+		seconds_left = (int)(failures_since + 60 - now);
+		return true;
+	}
 	return false;
 }
 
@@ -218,10 +223,18 @@ void ControlServer::loginFailed(const std::string &peer)
 		login_tries.erase(first);
 	}
 
+	const std::time_t now = std::time(nullptr);
+	if (now >= failures_since + 60)
+	{
+		failures_since = now;
+		failures_recent = 0;
+	}
+	failures_recent++;
+
 	LoginTries &t = login_tries[peer];
 	t.failures++;
 	int block = 1 << MIN(t.failures, 8);
-	t.block_until = std::time(nullptr) + MIN(block, MAX_LOGIN_BLOCK);
+	t.block_until = now + MIN(block, MAX_LOGIN_BLOCK);
 }
 
 void ControlServer::loginSucceeded(const std::string &peer)
@@ -259,8 +272,7 @@ std::string ControlServer::statusJSON(const char *auth, bool authenticated)
 
 	if (authenticated)
 	{
-		static const std::string os = Util::Helper::getOS();
-		static const std::string hardware = Util::Helper::getHardware();
+		const Util::Helper::SystemInfo sys = Util::Helper::getSystemInfo();
 
 		w.key("listening").beginArray();
 		for (int p : runs.serverPorts())
@@ -275,10 +287,10 @@ std::string ControlServer::statusJSON(const char *auth, bool authenticated)
 			.kv("stats_file", core.defaultStatsFile())
 			.kv("version", VERSION_DESCRIBE)
 			.kv("build_date", __DATE__)
-			.kv("os", os)
-			.kv("hardware", hardware)
-			.kv("processor", Util::Helper::getProcessor())
-			.kv("memory", (unsigned long long)Util::Helper::getMemoryConsumption());
+			.kv("os", sys.os)
+			.kv("hardware", sys.hardware)
+			.kv("processor", sys.processor)
+			.kv("memory", (unsigned long long)sys.memory);
 	}
 
 	w.endObject().finish();
@@ -536,7 +548,7 @@ void ControlServer::Request(IO::TCPServerConnection &c,
 	{
 		destroySession(r.cookie);
 		closeAllSSE();
-		sendOK(c, "Set-Cookie: aiscontrol=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict");
+		sendOK(c, std::string("Set-Cookie: aiscontrol=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict") + (hasTLS() ? "; Secure" : ""));
 	}
 	else if (path == "/api/password" && r.method == "POST")
 	{

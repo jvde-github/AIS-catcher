@@ -21,6 +21,7 @@
 #include "Parse.h"
 #include "JournalJSON.h"
 #include "Routes.h"
+#include "System.h"
 
 #include <algorithm>
 #include <cctype>
@@ -573,7 +574,7 @@ namespace Services
 		if (p.compare(0, base.size(), base) != 0 || (p.size() > base.size() && p[base.size()] != '/'))
 			return NOT_MINE;
 		// the system service's, when the server offers it
-		if (p == "/api/v1/health" || p == "/api/v1/system" || p.compare(0, 15, "/api/v1/system/") == 0)
+		if (p == "/api/v1/system" || p.compare(0, 15, "/api/v1/system/") == 0)
 			return NOT_MINE;
 		return ApiKey::DATA;
 	}
@@ -625,6 +626,8 @@ namespace Services
 			at("/api/v1/stations/{id}/statistics", [&] { return statistics((int)n, request); });
 		else if (parts[0] == "statistics" && parts.size() == 1)
 			at("/api/v1/statistics", [&] { return statistics(-1, request); });
+		else if (parts[0] == "health" && parts.size() == 1)
+			at("/api/v1/health", [&] { return healthResponse(tracker, spec, stations, facts, healthAsk(request)); });
 		else if (parts[0] == "vessels" && parts.size() == 1)
 			at("/api/v1/vessels", [&] { return vessels(request); });
 		else if (parts[0] == "vessels" && parts.size() == 2 && Util::Parse::Digits(parts[1], n, 10) && n <= 999999999)

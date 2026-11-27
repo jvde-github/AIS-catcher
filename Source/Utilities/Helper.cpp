@@ -15,8 +15,11 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <climits>
 #include <cstdio>
 #include <fstream>
+#include <mutex>
+#include <sstream>
 #include <random>
 #include <stdexcept>
 #include <fcntl.h>
@@ -95,13 +98,16 @@ namespace Util
 		std::streampos fileSize = file.tellg();
 		file.seekg(0, std::ios::beg);
 
+		if (fileSize < 0)
+			throw std::runtime_error("cannot read file \"" + filename + "\"");
+
 		const std::streampos MAX_FILE_SIZE = 10 * 1024 * 1024;
 		if (fileSize > MAX_FILE_SIZE)
 			throw std::runtime_error("file too large (>10MB): \"" + filename + "\"");
 
 		std::string str((size_t)fileSize, '\0');
-		if (fileSize > 0)
-			file.read(&str[0], fileSize);
+		if (fileSize > 0 && !file.read(&str[0], fileSize))
+			throw std::runtime_error("cannot read file \"" + filename + "\"");
 		return str;
 	}
 
@@ -150,6 +156,15 @@ namespace Util
 #endif
 	}
 
+	bool Helper::replaceFile(const std::string &from, const std::string &to)
+	{
+#ifdef _WIN32
+		return MoveFileExA(from.c_str(), to.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+#else
+		return std::rename(from.c_str(), to.c_str()) == 0;
+#endif
+	}
+
 	bool Helper::writeFileAtomic(const std::string &path, const std::string &content, std::string &error, bool owner_only)
 	{
 		const std::string tmp = path + ".tmp";
@@ -185,10 +200,7 @@ namespace Util
 			return false;
 		}
 
-#ifdef _WIN32
-		std::remove(path.c_str());
-#endif
-		if (std::rename(tmp.c_str(), path.c_str()) != 0)
+		if (!replaceFile(tmp, path))
 		{
 			std::remove(tmp.c_str());
 			error = "cannot rename \"" + tmp + "\" to \"" + path + "\"";
@@ -207,9 +219,9 @@ namespace Util
 		return -1;
 	}
 
-	long Helper::getMemoryConsumption()
+	static uint64_t memoryInUse()
 	{
-		long memory = 0;
+		uint64_t memory = 0;
 #ifdef _WIN32
 		HANDLE hProcess = GetCurrentProcess();
 		PROCESS_MEMORY_COUNTERS_EX pmc;
@@ -228,12 +240,31 @@ namespace Util
 		std::ifstream statm("/proc/self/statm");
 		long size = 0, resident = 0;
 		if (statm >> size >> resident)
-			memory = resident * sysconf(_SC_PAGESIZE);
+			memory = (uint64_t)resident * sysconf(_SC_PAGESIZE);
 #endif
 		return memory;
 	}
 
-	std::string Helper::getOS()
+	static double cpuSeconds()
+	{
+#ifdef _WIN32
+		FILETIME created, ended, kernel, user;
+		if (!GetProcessTimes(GetCurrentProcess(), &created, &ended, &kernel, &user))
+			return 0;
+		const auto ticks = [](const FILETIME &t) { return ((unsigned long long)t.dwHighDateTime << 32) | t.dwLowDateTime; };
+		return (ticks(kernel) + ticks(user)) / 1e7;
+#else
+		struct rusage r;
+		if (getrusage(RUSAGE_SELF, &r) != 0)
+			return 0;
+		return r.ru_utime.tv_sec + r.ru_stime.tv_sec + (r.ru_utime.tv_usec + r.ru_stime.tv_usec) / 1e6;
+#endif
+	}
+
+	static const std::chrono::steady_clock::time_point started = std::chrono::steady_clock::now();
+	static const double cpu_started = cpuSeconds();
+
+	static std::string osName()
 	{
 #ifdef _WIN32
 		return "Windows";
@@ -246,14 +277,6 @@ namespace Util
 #else
 		return "";
 #endif
-	}
-
-	static std::string detectHardware();
-
-	std::string Helper::getHardware()
-	{
-		static const std::string hardware = detectHardware();
-		return hardware;
 	}
 
 	static std::string detectProcessor()
@@ -273,12 +296,6 @@ namespace Util
 			s = u.machine;
 #endif
 		return s + (s.empty() ? "" : ", ") + std::to_string(sizeof(void *) * 8) + "-bit build";
-	}
-
-	std::string Helper::getProcessor()
-	{
-		static const std::string processor = detectProcessor();
-		return processor;
 	}
 
 	static std::string detectHardware()
@@ -389,6 +406,79 @@ namespace Util
 #endif
 
 		return "";
+	}
+
+#if defined(__linux__) && !defined(__ANDROID__)
+	static bool readWifi(std::istream &route, std::istream &wireless, Helper::SystemInfo &info)
+	{
+		std::string line, name;
+		unsigned long long best = ULLONG_MAX;
+		while (std::getline(route, line))
+		{
+			std::istringstream f(line);
+			std::string iface, dest, gateway, mask;
+			unsigned flags = 0;
+			long refcnt = 0, use = 0;
+			unsigned long long metric = 0;
+			if (f >> iface >> dest >> gateway >> std::hex >> flags >> std::dec >> refcnt >> use >> metric >> mask && dest == "00000000" && mask == "00000000" && (flags & 1) && metric < best)
+			{
+				best = metric;
+				name = iface;
+			}
+		}
+		while (!name.empty() && std::getline(wireless, line))
+		{
+			std::istringstream f(line);
+			std::string iface, status;
+			float link = 0, level = 0;
+			if (f >> iface >> status >> link >> level && iface == name + ":")
+			{
+				const int dbm = (int)level - (level > 127 ? 256 : 0);
+				if (dbm >= 0 || dbm < -150)
+					return false;
+				info.wifi_dbm = dbm;
+				info.wifi_quality = dbm >= -40 ? 100 : dbm <= -110 ? 0 : (dbm + 110) * 100 / 70;
+				return true;
+			}
+		}
+		return false;
+	}
+#endif
+
+	Helper::SystemInfo Helper::getSystemInfo()
+	{
+		static std::mutex mtx;
+		static SystemInfo info;
+		static bool read = false, measured = false;
+		static std::chrono::steady_clock::time_point read_at = started;
+		static double cpu_at = cpu_started;
+
+		std::lock_guard<std::mutex> lock(mtx);
+		const auto now = std::chrono::steady_clock::now();
+		const double seconds = std::chrono::duration<double>(now - read_at).count();
+		if (measured && seconds < 30)
+			return info;
+		if (!read)
+		{
+			info.os = osName();
+			info.hardware = detectHardware();
+			info.processor = detectProcessor();
+			read = true;
+		}
+		const double cpu = cpuSeconds();
+		if (seconds >= 1 && cpu >= cpu_at)
+		{
+			info.cpu = (float)(100.0 * (cpu - cpu_at) / seconds);
+			read_at = now;
+			cpu_at = cpu;
+			measured = true;
+		}
+		info.memory = memoryInUse();
+#if defined(__linux__) && !defined(__ANDROID__)
+		std::ifstream route("/proc/net/route"), wireless("/proc/net/wireless");
+		info.wifi = route && wireless && readWifi(route, wireless, info);
+#endif
+		return info;
 	}
 
 	std::vector<std::string> Helper::getFilesWithExtension(const std::string &directory, const std::string &extension)

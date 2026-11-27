@@ -415,5 +415,6 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
+		Setting &applyKey(AIS::Keys key, const std::string &arg) { return key == AIS::KEY_SETTING_FILE && wav.setOptionKey(key, arg) ? *this : Model::applyKey(key, arg); }
 	};
 }

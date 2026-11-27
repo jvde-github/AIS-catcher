@@ -900,9 +900,9 @@ namespace JSON
 					w.kv("description", info.description);
 				if (info.lookup_table && (v.isInt() || v.isFloat()))
 				{
-					int nv = v.isInt() ? v.getInt() : static_cast<int>(v.getFloat());
-					if (nv >= 0 && nv < (int)info.lookup_table->size())
-						w.kv("text", (*info.lookup_table)[nv]);
+					const double nv = v.isInt() ? (double)v.getInt() : (double)v.getFloat();
+					if (nv >= 0 && nv < (double)info.lookup_table->size())
+						w.kv("text", (*info.lookup_table)[(std::size_t)nv]);
 				}
 			}
 			w.endObject();

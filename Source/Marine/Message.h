@@ -285,7 +285,7 @@ namespace AIS
 		{
 			const unsigned ones = ~0u;
 			unsigned u = getUint(start, len);
-			if (u & (1u << (len - 1)))
+			if (len < 32 && (u & (1u << (len - 1))))
 				u |= ones << len;
 			return (int)u;
 		}

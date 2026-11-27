@@ -131,7 +131,7 @@ namespace Device
 				tuner_bandwidth = Util::Parse::Integer(arg, 0, 1000000);
 				break;
 			case AIS::KEY_SETTING_FREQOFFSET:
-				freq_offset = Util::Parse::Float(arg, -150, 150);
+				freq_offset = (FLOAT32)Util::Parse::Float(arg, -150, 150);
 				break;
 			case AIS::KEY_SETTING_FORMAT:
 			{

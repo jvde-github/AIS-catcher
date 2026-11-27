@@ -237,11 +237,11 @@ namespace AIS
 			*sp++ = 's';
 			char tmp[12];
 			int n = 0;
-			int v = station;
-			if (v < 0)
+			unsigned v = (unsigned)station;
+			if (station < 0)
 			{
 				*sp++ = '-';
-				v = -v;
+				v = 0u - v;
 			}
 			do
 			{

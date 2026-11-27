@@ -5,7 +5,7 @@
 
 import { head, figure, tone, cell, wrong } from './head.js';
 import { WORDS, outputsTitle } from '../../features/status/health-data.js';
-import { formatBytes, sanitizeString } from '@aiscatcher/core/text.js';
+import { compactCount, formatBytes, sanitizeString } from '@aiscatcher/core/text.js';
 
 const TITLE = { connected: "Connected", sending: "Sending", dropped: "Dropped messages", reconnects: "Reconnects", feed: "Community feed", services: "Services" };
 const HINT = {
@@ -57,7 +57,8 @@ export function render(host, out) {
     const checks = Object.keys(TITLE).map((k) => ({ state: c[k], title: TITLE[k], note: note[k], hint: HINT[k] }));
 
     const count = (label, value) => (value === undefined ? "" : cell(label, value.toLocaleString()));
-    const cells = (o) => count("Clients now", o.clients) + count("Messages sent", o.messages) + cell("Data sent", formatBytes(o.bytes_out)) + count("Dropped", o.dropped) + count("Reconnects", o.reconnects);
+    const sent = (n) => (n === undefined ? "" : `<div title="${n.toLocaleString()} messages"><span>Messages sent</span><strong>${compactCount(n)}</strong></div>`);
+    const cells = (o) => count("Clients now", o.clients) + sent(o.messages) + cell("Data sent", formatBytes(o.bytes_out)) + count("Dropped", o.dropped) + count("Reconnects", o.reconnects);
     const card = (o, sub, state) => `<article class="hc-rx" style="--tone:${tone(o.status)}">
         <div class="hc-rx-top"><i class="hc-rx-dot"></i><strong>${name(o)}</strong>${sub ? `<small>${sub}</small>` : ""}<span>${state}</span></div>
         <div class="hc-rx-figs">${cells(o)}</div></article>`;

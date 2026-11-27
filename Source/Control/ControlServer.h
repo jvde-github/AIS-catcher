@@ -94,14 +94,18 @@ private:
 	std::unordered_map<std::string, std::time_t> sessions;
 
 	// wrong passwords and setup codes by address, so one address cannot lock out
-	// another; the entry that frees first goes when a new address needs room
+	// another; the entry that frees first goes when a new address needs room.
+	// All addresses together get MAX_FAILURES_A_MINUTE, so many guess no faster
 	struct LoginTries
 	{
 		int failures = 0;
 		std::time_t block_until = 0;
 	};
 	static const std::size_t MAX_LOGIN_PEERS = 16;
+	static const int MAX_FAILURES_A_MINUTE = 20;
 	std::unordered_map<std::string, LoginTries> login_tries;
+	std::time_t failures_since = 0;
+	int failures_recent = 0;
 
 	int log_listener = -1;
 

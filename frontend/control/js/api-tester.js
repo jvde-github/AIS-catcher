@@ -22,7 +22,7 @@ async function loadRoutes() {
     routes = Object.entries(spec.paths || {}).map(([relative, item]) => {
         const path = '/api/v1' + (relative === '/' ? '' : relative);
         const get = item.get || {};
-        const system = path.startsWith('/api/v1/system') || path === '/api/v1/health';
+        const system = path.startsWith('/api/v1/system');
         const part = path.split('/')[3] || '';
         return {
             path, service: system ? 'system' : 'api', summary: get.summary || '',

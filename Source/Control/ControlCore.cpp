@@ -26,6 +26,7 @@
 #include <vector>
 #ifndef _WIN32
 #include <climits>
+#include <sys/stat.h>
 #include <unistd.h>
 #endif
 
@@ -200,6 +201,9 @@ static bool inFolder(const std::string &path, const std::string &folder)
 	std::string at = path;
 	while (!realpath(at.c_str(), full))
 	{
+		struct stat link;
+		if (lstat(at.c_str(), &link) == 0)
+			return false;
 		const auto slash = at.find_last_of('/');
 		if (at == "." || at == "/" || at.substr(slash == std::string::npos ? 0 : slash + 1) == "..")
 			return false;
@@ -260,16 +264,16 @@ static void pathValues(const JSON::Value &v, PathValues &out)
 
 // what a receiver writes: a serial port's dump_file and a decoding model's dump,
 // a path before "_A.wav" and "_B.wav"; a serial port's own "dump" is a switch
-static void dumpValues(const JSON::JSON &section, bool serial, PathValues &out)
+static void dumpValues(const JSON::JSON &section, bool serial, PathValues &out, bool engine = false)
 {
 	for (const auto &m : section.getMembers())
-		if (m.Key() == AIS::KEY_SETTING_DUMP_FILE || (m.Key() == AIS::KEY_SETTING_DUMP && !serial))
+		if (m.Key() == AIS::KEY_SETTING_DUMP_FILE || (m.Key() == AIS::KEY_SETTING_DUMP && !serial) || (m.Key() == AIS::KEY_SETTING_FILE && engine && !m.Get().isObject()))
 		{
 			if (!JSON::text(m.Get()).empty())
-				out.emplace_back(m.Key(), JSON::text(m.Get()));
+				out.emplace_back(m.Key() == AIS::KEY_SETTING_FILE ? AIS::KEY_SETTING_ENGINES : m.Key(), JSON::text(m.Get()));
 		}
 		else if (m.Get().isObject())
-			dumpValues(m.Get().getObject(), serial || m.Key() == AIS::KEY_SETTING_SERIALPORT, out);
+			dumpValues(m.Get().getObject(), serial || m.Key() == AIS::KEY_SETTING_SERIALPORT, out, m.Key() == AIS::KEY_SETTING_SETTINGS);
 		else if (m.Get().isArray())
 			for (const auto &entry : m.Get().getArray())
 				if (entry.isObject())
@@ -387,11 +391,16 @@ bool ControlCore::allowedPaths(const JSON::JSON &saved, std::string &error)
 	for (const auto &v : known)
 		if (v.first == AIS::KEY_SETTING_KEY)
 			tls_keys.push_back(Util::Helper::resolvePath(v.second, folder));
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		if (!cli_tls_key.empty())
+			tls_keys.push_back(cli_tls_key);
+	}
 	for (const auto &v : values)
 	{
 		if (known.count(v))
 			continue;
-		const std::string quoted = "\"" + AIS::settingName(v.first) + "\": \"" + v.second + "\"";
+		const std::string quoted = "\"" + AIS::settingName(v.first == AIS::KEY_SETTING_ENGINES ? AIS::KEY_SETTING_FILE : v.first) + "\": \"" + v.second + "\"";
 		if (v.first == AIS::KEY_SETTING_STYLE && !hasExtension(v.second, ".css") && !hasExtension(v.second, ".pss"))
 		{
 			error = quoted + " is not a .css or .pss file.";
@@ -411,16 +420,18 @@ bool ControlCore::allowedPaths(const JSON::JSON &saved, std::string &error)
 		const bool site_path = v.first == AIS::KEY_SETTING_FILE || v.first == AIS::KEY_SETTING_PLACES ||
 							   v.first == AIS::KEY_SETTING_CERT || v.first == AIS::KEY_SETTING_KEY;
 		// the tracking file as its reader finds it, which may be the working folder's
-		const std::string path = v.first == AIS::KEY_SETTING_FILE ? SiteReader::backupFile(v.second, folder)
-								 : site_path ? Util::Helper::resolvePath(v.second, folder) : v.second;
+		const std::string named = v.first == AIS::KEY_SETTING_FILE ? SiteReader::backupFile(v.second, folder)
+								  : site_path ? Util::Helper::resolvePath(v.second, folder) : v.second;
+		// a model's dump is a prefix: its files are <dump>_A.wav and <dump>_B.wav
+		const std::string path = v.first == AIS::KEY_SETTING_DUMP ? named + "_A.wav" : named;
 		if (!inFolder(path, folder))
 		{
 			error = quoted + " is outside the configuration's folder (" + folder + "): a path elsewhere can only be written in the file by hand.";
 			return false;
 		}
-		if (isSameFile(path, config_file))
+		if (isSameFile(path, config_file) || isSameFile(path, config_file + ".bak") || isSameFile(path, config_file + ".tmp"))
 		{
-			error = quoted + " is the configuration itself.";
+			error = quoted + " is the configuration itself or its copy.";
 			return false;
 		}
 		if (v.first != AIS::KEY_SETTING_KEY)
@@ -997,7 +1008,7 @@ void ControlCore::refreshPlaces(const JSON::JSON &root)
 		path = viewer->getObject()[AIS::KEY_SETTING_PLACES];
 	if (path && path->isString() && !path->getString().empty())
 	{
-		directory = path->getString();
+		directory = Util::Helper::resolvePath(path->getString(), configFolder(config_file));
 		enabled = true;
 	}
 	std::lock_guard<std::mutex> lock(place_mtx);

@@ -41,7 +41,7 @@ class DestinationIndex
 		uint32_t id = 0;
 		if (!next.empty())
 		{
-			const auto it = code_ids.emplace(next, codes.size());
+			const auto it = code_ids.emplace(next, (uint32_t)codes.size());
 			if (it.second)
 				codes.push_back(next);
 			id = it.first->second;

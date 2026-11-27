@@ -43,20 +43,19 @@ namespace Services
 	HealthAsk healthAsk(const Request &request);
 	Response healthResponse(Tracker &tracker, const ServerSpec &spec, const std::function<StationRegistry()> &stations, const std::function<SystemFacts()> &facts, const HealthAsk &ask);
 
-	// The system plane: the installation, its receivers and outputs, its
-	// health and its log. Read only; nothing here changes a setting.
+	// The system plane: the installation, its receivers and outputs, and its
+	// log. Read only; nothing here changes a setting.
 	class System : public Service
 	{
 	public:
 
-		explicit System(const Context &context) : tracker(context.tracker), spec(context.spec), stations(context.stations), facts(context.facts) {}
+		explicit System(const Context &context) : tracker(context.tracker), stations(context.stations), facts(context.facts) {}
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
 
 	private:
 		Tracker &tracker;
-		const ServerSpec &spec;
 		std::function<StationRegistry()> stations;
 		std::function<SystemFacts()> facts;
 

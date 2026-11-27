@@ -28,6 +28,7 @@
 #include "WebDB.h"
 
 #include <climits>
+#include <cmath>
 
 #include <algorithm>
 #include <cstdlib>
@@ -592,6 +593,7 @@ namespace Services
 			UiFormat::counters(w, *none, false);
 		}
 		const SystemFacts f = facts();
+		const Util::Helper::SystemInfo sys = Util::Helper::getSystemInfo();
 		writeSharing(w, f);
 		w.kv("engine_running", f.running);
 		// a server with no site behind it has no engine to tell of
@@ -617,7 +619,9 @@ namespace Services
 				w.val(d.upstream);
 			w.endArray();
 			w.kv("received", (unsigned long long)f.received).kv("run_time", std::to_string((long long)(std::time(nullptr) - f.born)))
-				.kv("os", Util::Helper::getOS()).kv("hardware", Util::Helper::getHardware()).kv("processor", Util::Helper::getProcessor());
+				.kv("os", sys.os).kv("hardware", sys.hardware).kv("processor", sys.processor);
+			if (sys.wifi)
+				w.key("wifi").beginObject().kv("signal_dbm", sys.wifi_dbm).kv("quality", sys.wifi_quality).endObject();
 		}
 		w.key("outputs").beginArray();
 		writeOutputs(w, f);
@@ -625,7 +629,7 @@ namespace Services
 		w.kv("sharing_link", "https://www.aiscatcher.org/livemap").kv("station", title()).kv("station_link", options.station_link)
 			.kv("vessel_count", keep ? vessels : db.getCount()).kv("vessel_max", db.getMaxCount())
 			.kv("build_date", __DATE__).kv("build_version", VERSION).kv("build_describe", VERSION_DESCRIBE)
-			.kv("memory", (unsigned long long)Util::Helper::getMemoryConsumption())
+			.kv("memory", (unsigned long long)sys.memory).kv("cpu", std::round(sys.cpu * 10) / 10.0)
 			.kv("track_time", view.track_time > 0 && (tracking.track_time <= 0 || view.track_time < tracking.track_time) ? view.track_time : tracking.track_time)
 			.kv("track_memory", tracking.track_memory > 0 ? tracking.track_memory : (tracking.server_mode ? 4096 : 1024));
 		w.endObject();

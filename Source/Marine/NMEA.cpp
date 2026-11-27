@@ -21,6 +21,7 @@
 #include "Helper.h"
 #include "SWAR.h"
 #include "Logger.h"
+#include <climits>
 #include <cmath>
 #include <cstdint>
 
@@ -257,7 +258,7 @@ namespace AIS
 		int len = partLen(i);
 		bool neg = (len > 0 && p[0] == '-');
 		int64_t v;
-		if (!parse_uint(p + neg, len - neg, v))
+		if (!parse_uint(p + neg, len - neg, v) || v > INT_MAX)
 			return 0;
 		return neg ? -(int)v : (int)v;
 	}
@@ -543,6 +544,12 @@ namespace AIS
 		return v.isFloat() ? v.getFloat() : v.isInt() ? (double)v.getInt() : missing;
 	}
 
+	static int integer(const JSON::Value &v, int missing)
+	{
+		const double d = number(v, missing);
+		return d > INT_MIN && d < INT_MAX ? (int)d : missing;
+	}
+
 	void NMEA::processJSONsentence(TAG &tag)
 	{
 		tag.clear();
@@ -704,7 +711,7 @@ namespace AIS
 					hdop = (float)number(p.Get(), -1);
 					break;
 				case AIS::KEY_GPSD_MODE:
-					gpsd_mode = (int)number(p.Get(), 0);
+					gpsd_mode = integer(p.Get(), 0);
 					break;
 				case AIS::KEY_GPSD_TIME:
 					if (p.Get().isString())
@@ -1182,10 +1189,10 @@ namespace AIS
 			for (const auto &p : v.getObject().getMembers())
 				switch (p.Key())
 				{
-				case AIS::KEY_GPSD_PRN: prn = (int)number(p.Get(), -1); break;
-				case AIS::KEY_GPSD_GNSSID: gnssid = (int)number(p.Get(), -1); break;
-				case AIS::KEY_GPSD_SVID: svid = (int)number(p.Get(), -1); break;
-				case AIS::KEY_GPSD_SIGID: sigid = (int)number(p.Get(), -1); break;
+				case AIS::KEY_GPSD_PRN: prn = integer(p.Get(), -1); break;
+				case AIS::KEY_GPSD_GNSSID: gnssid = integer(p.Get(), -1); break;
+				case AIS::KEY_GPSD_SVID: svid = integer(p.Get(), -1); break;
+				case AIS::KEY_GPSD_SIGID: sigid = integer(p.Get(), -1); break;
 				case AIS::KEY_GPSD_EL: elevation = (int)std::lround(number(p.Get(), -1)); break;
 				case AIS::KEY_GPSD_AZ: azimuth = (int)std::lround(number(p.Get(), -1)); break;
 				case AIS::KEY_GPSD_SS: signal = (int)std::lround(number(p.Get(), -1)); break;

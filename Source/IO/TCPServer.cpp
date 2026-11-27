@@ -559,7 +559,7 @@ namespace IO
 		return -1;
 	}
 
-	void TCPServer::acceptClients()
+	bool TCPServer::acceptClients()
 	{
 		sockaddr_in peer;
 		int addrlen = sizeof(peer);
@@ -575,7 +575,7 @@ namespace IO
 			int e = Net::lastError();
 			if (!Net::wouldBlock(e) && !Net::peerGone(e))
 				Error() << "TCP Server: error accepting connection: " << Net::errorString(e);
-			return;
+			return false;
 		}
 
 		const bool local = (ntohl(peer.sin_addr.s_addr) >> 24) == 127;
@@ -589,20 +589,20 @@ namespace IO
 		if (!local && max_per_address && held >= max_per_address)
 		{
 			Net::closeSocket(conn_socket);
-			return;
+			return true;
 		}
 		// this machine always gets in; the others are turned away before any handshake
 		if (!local && connected >= Limits::CONNECTIONS - Limits::RESERVED_SLOTS)
 		{
 			refuse(conn_socket, "the slots for other machines are taken");
-			return;
+			return true;
 		}
 
 		int ptr = findFreeClient();
 		if (ptr == -1)
 		{
 			refuse(conn_socket, "all slots are taken");
-			return;
+			return true;
 		}
 
 		// Configure fully before Start() publishes the socket to broadcast threads.
@@ -624,12 +624,14 @@ namespace IO
 			if (!Net::peerGone(e))
 				Error() << "TCP Server: cannot make client socket non-blocking: " << Net::errorString(e);
 			Net::closeSocket(conn_socket);
-			return;
+			return true;
 		}
 
 		client[ptr].peer_ipv4 = peer.sin_addr.s_addr;
 		client[ptr].peer_local = local;
 		client[ptr].Start(conn_socket);
+		if (pstats)
+			pstats->connected = connected + 1;
 
 		if (tls_until)
 		{
@@ -637,6 +639,7 @@ namespace IO
 			if (tls_ctx)
 				client[ptr].startTLS(tls_ctx);
 		}
+		return true;
 	}
 
 	// closed at the door, logged a line a minute with the count
@@ -710,7 +713,8 @@ namespace IO
 					wakeup.drain();
 				drainCommands();
 				if (pfds[0].revents & POLLIN)
-					acceptClients();
+					for (int i = 0; i < Limits::CONNECTIONS && acceptClients(); i++)
+						;
 				readClients();
 				processClients();
 				writeClients();
@@ -818,7 +822,6 @@ namespace IO
 					if (cl.isConnected() && !Send(cl, c.data.data(), (int)c.data.size()))
 					{
 						cl.Close();
-						Error() << "TCP listener: client not reading, close connection.";
 						if (pstats)
 							pstats->dropped++;
 					}

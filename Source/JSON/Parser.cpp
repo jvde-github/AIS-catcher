@@ -459,7 +459,7 @@ namespace JSON
 
 	[[noreturn]] void Parser::error_parser(const std::string &err, bool syntax)
 	{
-		error(err, (int)(tokenStart - p_start), syntax);
+		error(err, (int)((tokenStart ? tokenStart : p) - p_start), syntax);
 	}
 
 	std::string Parser::tokenString() const

@@ -571,8 +571,8 @@ function place(f, s, fix) {
         f.marker.setStyle(f.style);
     }
     // the label carries the fade too, so a fading held vessel refreshes its text
-    if (rebuilt || l.label !== label || (label && l.opacity !== opacity))
-        f.style.setText(label ? markers.labelText(label, opacity, s.cls) : null);
+    if (rebuilt || l.label !== label || (label && (l.opacity !== opacity || l.scale !== scale)))
+        f.style.setText(label ? markers.labelText(label, opacity, s.cls, (sp.imgSize / 2) * scale) : null);
     const img = f.style.getImage();
     img.setRotation(sp.rot);
     img.setScale(markers.sheetScale(scale));

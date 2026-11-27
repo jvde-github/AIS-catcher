@@ -307,14 +307,15 @@ export function create(opts) {
         return [new Style({ stroke: stroke(`rgba(0, 0, 0, ${edge})`, w + 2, undefined, "round"), zIndex: -1 }), line];
     }
 
-    /* the text part of a label; `cls` picks the class colour in background mode */
-    function labelText(txt, op, cls) {
+    /* the text part of a label, right of an icon of radius `r`; `cls` picks the class colour in background mode */
+    function labelText(txt, op, cls, r) {
         const s = settings();
         const text = new Text({
             text: txt,
             overflow: true,
-            offsetY: 25,
-            offsetX: 25,
+            textAlign: "left",
+            textBaseline: "middle",
+            offsetX: r + 2 + (s.label_class_background ? 4 : 2.5),
             font: "600 " + s.tooltipLabelFontSize + "px system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif",
         });
 
@@ -350,7 +351,8 @@ export function create(opts) {
             if (s.labels_active_only && !active) return new Style({});
 
             const op = !isShip || active || isHovered(feature.ship) ? 1 : opacity(feature.ship);
-            const text = labelText(name(feature), op, obj.shipclass);
+            const r = (obj.imgSize / 2) * s.icon_scale * (isShip ? iconScale((obj.to_bow || 0) + (obj.to_stern || 0), obj.shipclass) : obj.scaling);
+            const text = labelText(name(feature), op, obj.shipclass, r);
             const onTop = (s.labels_prioritize_active ?? true) && active;
             return new Style({ text: text, zIndex: onTop ? 1000 : 0 });
         };

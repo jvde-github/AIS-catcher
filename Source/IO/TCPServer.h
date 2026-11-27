@@ -248,7 +248,7 @@ namespace IO
 		}
 
 		int findFreeClient();
-		void acceptClients();
+		bool acceptClients();
 		void readClients();
 		void writeClients();
 		virtual void processClients();

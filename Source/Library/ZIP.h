@@ -43,7 +43,7 @@ public:
 
 	bool zip(const std::string &input)
 	{
-		return zip(input.c_str(), input.length());
+		return zip(input.c_str(), (int)input.length());
 	}
 
 	bool zip(const char *data, int len)
@@ -62,7 +62,7 @@ public:
 
 		output.resize(deflateBound(&strm, len));
 		strm.next_out = output.data();
-		strm.avail_out = output.size();
+		strm.avail_out = (uInt)output.size();
 
 		bool ok = deflate(&strm, Z_FINISH) == Z_STREAM_END;
 		if (ok)

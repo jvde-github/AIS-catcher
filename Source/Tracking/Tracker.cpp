@@ -500,10 +500,7 @@ bool Tracker::save(const std::string &file)
 		if (f.fail() || !Util::Helper::syncFile(tmp))
 			return false;
 	}
-#ifdef _WIN32
-	std::remove(file.c_str());
-#endif
-	return std::rename(tmp.c_str(), file.c_str()) == 0;
+	return Util::Helper::replaceFile(tmp, file);
 }
 
 // an existing `to` is kept: a copy made on an earlier start is the one of

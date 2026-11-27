@@ -168,7 +168,7 @@ namespace IO
 	void HTTPClient::createHeader(bool gzip, bool multipart)
 	{
 
-		header = "POST " + path + " HTTP/1.1\r\nHost: " + host + ":" + port + "\r\nAccept: */*\r\nConnection: close\r\n";
+		header = "POST " + path + " HTTP/1.1\r\nHost: " + (host.find(':') == std::string::npos ? host : "[" + host + "]") + ":" + port + "\r\nAccept: */*\r\nConnection: close\r\n";
 		header += Util::Convert::authorizationHeader(username, password, basic);
 		header += extra_headers;
 
@@ -198,7 +198,7 @@ namespace IO
 	int HTTPClient::Get()
 	{
 		message.clear();
-		header = "GET " + path + " HTTP/1.1\r\nHost: " + host + ":" + port + "\r\nAccept: */*\r\nConnection: close\r\n";
+		header = "GET " + path + " HTTP/1.1\r\nHost: " + (host.find(':') == std::string::npos ? host : "[" + host + "]") + ":" + port + "\r\nAccept: */*\r\nConnection: close\r\n";
 		header += Util::Convert::authorizationHeader(username, password, basic);
 		header += extra_headers;
 		header += "\r\n";

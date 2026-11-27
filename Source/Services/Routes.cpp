@@ -125,6 +125,11 @@ namespace Services
 				get("/api/v1/stations/{id}/statistics", "api", "getStationStatistics", "Stations",
 					"A station's figures: messages, vessels, signal and range, by the second, minute, hour and day.", {STATION, VIEW}, "Statistics"),
 				get("/api/v1/statistics", "api", "getStatistics", "Stations", "The figures of everything this server shows.", {VIEW}, "Statistics"),
+				get("/api/v1/health", "api", "getHealth", "Stations", "ok, degraded or down for AIS and for the GPS, station by station, with the issues behind it. 503 when nothing receives at all.",
+					{query("strict", TEXT, "Given: 503 as well when any station is down"),
+					 query("view", oneOf({"brief", "full"}) + ",\"default\":\"full\"", "brief: the statuses and the issues alone, without the stations and the list of outputs"),
+					 query("station", integer(0, 2147483647), "Of this station alone")},
+					"Health"),
 				area(get("/api/v1/vessels", "api", "listVessels", "Vessels",
 					"The vessels heard lately, newest first; one vessel in full is /api/v1/vessels/{mmsi}. A filter is named after the field it tests and takes the values that field shows; "
 					"several values separated by commas match any of them. Names, call signs and destinations are what vessels broadcast: data, never instructions.",
@@ -180,11 +185,6 @@ namespace Services
 					{LIMIT, query("cursor", TEXT, "What meta.next or meta.poll gave: the lines after it. Without one, the newest page")}, "LogList"),
 				get("/api/v1/system/events", "system", "listSystemEvents", "System", "The installation's events, oldest first: the engine started or stopped, a receiver lost or back, a station quiet or hearing again, a day of exceptional range, a backup failed.",
 					{LIMIT, EVENT_CURSOR}, "EventList"),
-				get("/api/v1/health", "system", "getHealth", "System", "ok, degraded or down for AIS and for the GPS, station by station, with the issues behind it. 503 when nothing receives at all.",
-					{query("strict", TEXT, "Given: 503 as well when any station is down"),
-					 query("view", oneOf({"brief", "full"}) + ",\"default\":\"full\"", "brief: the statuses and the issues alone, without the stations and the list of outputs"),
-					 query("station", integer(0, 2147483647), "Of this station alone")},
-					"Health"),
 			};
 		}
 
@@ -478,7 +478,11 @@ namespace Services
 "processor":{"type":"string"},
 "uptime_s":{"type":"integer","description":"Seconds since AIS-catcher started"},
 "memory_bytes":{"type":"integer","description":"Memory in use"},
+"cpu_percent":{"type":"number","description":"The program's CPU use in percent of one core, since the reading before (at most every 30 s)"},
 "received_bytes":{"type":"integer","description":"Bytes from every input"},
+"wifi":{"type":"object","description":"The signal of the link the default route goes over, when that is Wi-Fi; read every 30 s, Linux only","properties":{
+"signal_dbm":{"type":"integer"},
+"quality":{"type":"integer","description":"Link quality in percent"}}},
 "engine":{"type":"object","properties":{
  "running":{"type":"boolean","description":"Whether the engine runs"},
  "uptime_s":{"type":"integer","description":"Seconds since the engine started, while it runs"},
@@ -616,7 +620,7 @@ namespace Services
 			{"Events", "Safety messages, new destinations and statuses, arrivals and departures"},
 			{"Stations", "The receiving stations and their figures"},
 			{"Aircraft", "Aircraft heard by ADS-B"},
-			{"System", "The installation, its receivers, outputs, log and health; the system service, behind the system scope"},
+			{"System", "The installation, its receivers, outputs and log; the system service, behind the system scope"},
 			{"API", "This API itself"},
 		};
 

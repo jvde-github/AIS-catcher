@@ -162,16 +162,17 @@ namespace Util
 	{
 		out.clear();
 		unsigned val = 0;
-		int valb = -8;
+		int valb = -8, padding = 0;
 		for (char c : in)
 		{
 			int d;
+			if (c == '=' && ++padding <= 2) continue;
+			if (padding) return false;
 			if (c >= 'A' && c <= 'Z') d = c - 'A';
 			else if (c >= 'a' && c <= 'z') d = c - 'a' + 26;
 			else if (c >= '0' && c <= '9') d = c - '0' + 52;
 			else if (c == '+' || c == '-') d = 62;
 			else if (c == '/' || c == '_') d = 63;
-			else if (c == '=') break;
 			else return false;
 			val = (val << 6) + d;
 			valb += 6;
@@ -181,7 +182,7 @@ namespace Util
 				valb -= 8;
 			}
 		}
-		return true;
+		return valb != -2 && (!padding || (padding == 1 && valb == -6) || (padding == 2 && valb == -4));
 	}
 
 	void Convert::toUpper(std::string &s)

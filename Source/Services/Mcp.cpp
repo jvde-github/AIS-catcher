@@ -97,12 +97,12 @@ namespace Services
 
 		// told when the installation's tools are there for the caller
 		const char *SYSTEM_INSTRUCTIONS =
-			" The installation itself is here too: its receivers (inputs), outputs, health, log and events. Ask those tools "
+			" The installation itself is here too: its receivers (inputs), outputs, log and events. Ask those tools "
 			"about the station rather than its configuration file.";
 
 		// told when they are there, but not for this caller's key
 		const char *DATA_ONLY_INSTRUCTIONS =
-			" This key reads data alone. The installation's own tools, its receivers (inputs), outputs, health, log and events, "
+			" This key reads data alone. The installation's own tools, its receivers (inputs), outputs, log and events, "
 			"are here for a key with the system scope: ask the station's owner for one if you need them.";
 
 		// the name of a member as the document has it, known key or not

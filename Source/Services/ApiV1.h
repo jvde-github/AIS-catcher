@@ -38,7 +38,7 @@ namespace Services
 	{
 	public:
 		explicit ApiV1(const Context &context)
-			: tracker(context.tracker), stations(context.stations), spec(context.spec), view(context.spec.view), services(context.spec.served()),
+			: tracker(context.tracker), stations(context.stations), facts(context.facts), spec(context.spec), view(context.spec.view), services(context.spec.served()),
 			  table(context.tracker.ships()), ships(context.ships ? *context.ships : table) {}
 
 		int scope(const Request &request) const override;
@@ -69,6 +69,7 @@ namespace Services
 	private:
 		Tracker &tracker;
 		std::function<StationRegistry()> stations;
+		std::function<SystemFacts()> facts;
 		const ServerSpec &spec;
 		const ViewFilter &view;
 		std::vector<std::string> services;

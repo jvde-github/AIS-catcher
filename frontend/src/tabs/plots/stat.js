@@ -156,7 +156,10 @@ export async function update() {
         document.getElementById("stat_update_time").textContent = Number(refreshIntervalMs / 1000).toFixed(1) + " s";
         let title = document.getElementById("stat_station").textContent;
         if (title != "" && title != null) setPageTitle({ station: title });
+        document.getElementById("stat_wifi_row").style.display = stat.wifi ? "" : "none";
+        if (stat.wifi) document.getElementById("stat_wifi").textContent = stat.wifi.signal_dbm + " dBm (" + stat.wifi.quality + "%)";
         document.getElementById("stat_memory").innerText = stat.memory ? Number(stat.memory / 1000000).toFixed(1) + " MB" : "N/A";
+        document.getElementById("stat_cpu").innerText = stat.cpu != null ? Number(stat.cpu).toFixed(1) + "%" : "N/A";
         if (stat.track_time != null) {
             const t = stat.track_time;
             let age = "unlimited";

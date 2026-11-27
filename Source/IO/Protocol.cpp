@@ -1724,7 +1724,7 @@ namespace Protocol
 		request << "GET " << path << " HTTP/1.1\r\n";
 		// the port goes with the host unless it is the scheme's default (RFC 6455 4.1)
 		std::string port = getPort();
-		request << "Host: " << getHost() << (port == "80" || port == "443" ? "" : ":" + port) << "\r\n";
+		request << "Host: " << (getHost().find(':') == std::string::npos ? getHost() : "[" + getHost() + "]") << (port == "80" || port == "443" ? "" : ":" + port) << "\r\n";
 		request << "Upgrade: websocket\r\n";
 		request << "Connection: Upgrade\r\n";
 		request << "Sec-WebSocket-Key: " << upgrade_key << "\r\n";
@@ -2115,10 +2115,10 @@ namespace Protocol
 		switch (key)
 		{
 		case AIS::KEY_SETTING_ORIGIN:
-			origin = value;
-			break;
 		case AIS::KEY_SETTING_PROTOCOLS:
-			protocols = value;
+			if (!Util::Parse::Printable(value))
+				throw std::runtime_error(std::string("WebSocket: ") + (key == AIS::KEY_SETTING_ORIGIN ? "origin" : "protocols") + " may not hold control characters.");
+			(key == AIS::KEY_SETTING_ORIGIN ? origin : protocols) = value;
 			break;
 		case AIS::KEY_SETTING_BINARY:
 			binary = Util::Parse::Switch(value);

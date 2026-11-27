@@ -40,7 +40,7 @@ namespace Util
 			y -= m <= 2;
 			const int era = (y >= 0 ? y : y - 399) / 400;
 			const unsigned yoe = (unsigned)(y - era * 400);
-			const unsigned doy = (153 * (m + (m > 2 ? -3u : 9u)) + 2) / 5 + d - 1;
+			const unsigned doy = (153 * (m > 2 ? m - 3 : m + 9) + 2) / 5 + d - 1;
 			const unsigned doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
 			return (int64_t)era * 146097 + (int64_t)doe - 719468;
 		}
@@ -66,10 +66,7 @@ namespace Util
 		static std::string toString(bool b, FLOAT32 v) { return b ? std::string("AUTO") : std::to_string(v); }
 		static std::string toString(FLOAT32 f)
 		{
-			std::string s = std::to_string(f);
-			if (s == "nan" || s == "-nan")
-				return "null";
-			return s;
+			return isFinite(f) ? std::to_string(f) : "null";
 		}
 
 		static std::string toString(PROTOCOL protocol);
