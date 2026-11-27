@@ -56,7 +56,13 @@ namespace AIS
 		return key >= 0 && key < KEY_COUNT ? std::string(KeyMap[key][JSON_DICT_SETTING].p) : "?";
 	}
 
-	const std::vector<std::string> LookupTable_aid_types = {
+	// out of line, and from C strings: a table costs one call, not a constructor a string
+	AISC_COLD_NOINLINE static std::vector<std::string> names(std::initializer_list<const char *> list)
+	{
+		return std::vector<std::string>(list.begin(), list.end());
+	}
+
+	const std::vector<std::string> LookupTable_aid_types = names({
 		"Default, Type of Aid to Navigation not specified",
 		"Reference point",
 		"RACON (radar transponder marking a navigation hazard)",
@@ -109,10 +115,10 @@ namespace AIS
 		"Underwater Operations Marker",
 		"Military Operation or Restricted Area",
 		"Dynamic Area",
-	};
+	});
 
 	// ITU-R M.1371-6 Table 84 (msg 28 single-slot AtoN report), 3-bit station type.
-	const std::vector<std::string> LookupTable_aton_station_types = {
+	const std::vector<std::string> LookupTable_aton_station_types = names({
 		"Physical AIS AtoN (floating)",
 		"Physical AIS AtoN (fixed)",
 		"Synthetic predicted AIS AtoN",
@@ -121,18 +127,18 @@ namespace AIS
 		"Mobile AIS AtoN",
 		"Reserved",
 		"Reserved",
-	};
+	});
 
 	// ITU-R M.1371-6 Table 84 (msg 28), 2-bit Restricted Use Indicator.
-	const std::vector<std::string> LookupTable_aton_restricted_use = {
+	const std::vector<std::string> LookupTable_aton_restricted_use = names({
 		"Unrestricted use",
 		"Restricted to territorial waters of flag state",
 		"Restricted to Exclusive Economic Zone of flag state",
 		"Restricted as defined by flag state",
-	};
+	});
 
 	// ITU-R M.1371-6 Table 84 (msg 28), 4-bit AtoN Dimensions Type.
-	const std::vector<std::string> LookupTable_aton_dim_type = {
+	const std::vector<std::string> LookupTable_aton_dim_type = names({
 		"Default (msg 21 dimensions)",
 		"AtoN height and structural area",
 		"AtoN swing circle",
@@ -149,18 +155,18 @@ namespace AIS
 		"AtoN large area-quadrilateral",
 		"Reserved",
 		"Reserved",
-	};
+	});
 
 	// ITU-R M.1371-6 Table 77 (msg 24B), 2-bit VDES capabilities.
-	const std::vector<std::string> LookupTable_vdes_capabilities = {
+	const std::vector<std::string> LookupTable_vdes_capabilities = names({
 		"AIS only",
 		"Supports VDES ASM",
 		"Supports VDES ASM/VDE-TER",
 		"Supports VDES ASM/VDE-TER/VDE-SAT",
-	};
+	});
 
 	// ITU-R M.1371-6 Table 84 (msg 28 single-slot AtoN report), 4-bit on-station status.
-	const std::vector<std::string> LookupTable_aton_on_station_status = {
+	const std::vector<std::string> LookupTable_aton_on_station_status = names({
 		"On-station",
 		"On-station or on course (Mobile AtoN)",
 		"On-station, but damaged, occulted, submerged or otherwise not properly visible",
@@ -173,9 +179,9 @@ namespace AIS
 		"Unmarked navigation hazard",
 		"Unmarked obstruction",
 		"Reserved", "Reserved", "Reserved", "Reserved", "Reserved",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_epfd_types = {
+	const std::vector<std::string> LookupTable_epfd_types = names({
 		"Undefined",
 		"GPS",
 		"GLONASS",
@@ -193,9 +199,9 @@ namespace AIS
 		"Inertial navigation system",
 		"Terrestrial radio navigation system",
 		"Internal GNSS",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_interval_types = {
+	const std::vector<std::string> LookupTable_interval_types = names({
 		"As given by the autonomous mode",
 		"10 minutes",
 		"6 minutes",
@@ -212,16 +218,16 @@ namespace AIS
 		"Reserved",
 		"Reserved",
 		"Reserved",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_maneuver_types = {
+	const std::vector<std::string> LookupTable_maneuver_types = names({
 		"Not available (default)",
 		"No special maneuver",
 		"Special maneuver (such as regional passing arrangement)",
-	};
+	});
 
 	// ITU-R M.1371-6 Table 46 (msg 1/2/3 navigational status).
-	const std::vector<std::string> LookupTable_nav_status = {
+	const std::vector<std::string> LookupTable_nav_status = names({
 		"Under way using engine",
 		"At anchor",
 		"Not under command",
@@ -238,9 +244,9 @@ namespace AIS
 		"Reserved",
 		"Active AIS-SART, MOB-AIS or EPIRB-AIS",
 		"Undefined (default)",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_precipation_types = {
+	const std::vector<std::string> LookupTable_precipation_types = names({
 		"Reserved",
 		"Rain",
 		"Thunderstorm",
@@ -249,9 +255,9 @@ namespace AIS
 		"Snow",
 		"Reserved",
 		"N/A (default)",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_seastate_types = {
+	const std::vector<std::string> LookupTable_seastate_types = names({
 		"Calm",
 		"Light air",
 		"Light breeze",
@@ -268,10 +274,10 @@ namespace AIS
 		"N/A (default)",
 		"Reserved",
 		"Reserved",
-	};
+	});
 
 	// ITU-R M.1371-6 Table 51 (8-bit). Codes 100-199 = regional; 200-255 = reserved.
-	const std::vector<std::string> LookupTable_ship_types = {
+	const std::vector<std::string> LookupTable_ship_types = names({
 		"Not available",
 		"Science / Research vessel",
 		"Training vessel",
@@ -372,10 +378,10 @@ namespace AIS
 		"Other Type - Reserved",
 		"Other Type - Reserved",
 		"Other Type - no additional information",
-	};
+	});
 
 	// ITU-R M.1371-6 Table 74 (msg 23 station_type, 4-bit).
-	const std::vector<std::string> LookupTable_station_types = {
+	const std::vector<std::string> LookupTable_station_types = names({
 		"All types of mobiles (default)",
 		"Class A AIS stations only",
 		"All types of Class B mobile stations",
@@ -392,47 +398,47 @@ namespace AIS
 		"Reserved",
 		"Reserved",
 		"Reserved",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_txrx_types = {
+	const std::vector<std::string> LookupTable_txrx_types = names({
 		"TxA/TxB, RxA/RxB (default)",
 		"TxA, RxA/RxB",
 		"TxB, RxA/RxB",
 		"Reserved for future use",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_sync_state = {
+	const std::vector<std::string> LookupTable_sync_state = names({
 		"UTC direct",
 		"UTC indirect",
 		"Synchronized to a base station",
 		"Synchronized to another station",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_racon_status = {
+	const std::vector<std::string> LookupTable_racon_status = names({
 		"No RACON installed",
 		"RACON installed, not monitored",
 		"RACON operational",
 		"RACON error",
-	};
+	});
 
 	// CCNR VTT 1.2 Table 2.7: number of blue cones/lights, 4 = B-flag, 5 = unknown (default).
-	const std::vector<std::string> LookupTable_hazard_types = {
+	const std::vector<std::string> LookupTable_hazard_types = names({
 		"0 blue cones/lights",
 		"1 blue cone/light",
 		"2 blue cones/lights",
 		"3 blue cones/lights",
 		"B-flag",
 		"Unknown (default)",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_loaded_types = {
+	const std::vector<std::string> LookupTable_loaded_types = names({
 		"Not available (default)",
 		"Loaded",
 		"Unloaded",
 		"Reserved",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_route_types = {
+	const std::vector<std::string> LookupTable_route_types = names({
 		"Undefined (default)",
 		"Mandatory route",
 		"Recommended route",
@@ -465,9 +471,9 @@ namespace AIS
 		"Reserved",
 		"Reserved",
 		"Cancel route identified by Message Linkage ID",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_sender_classification = {
+	const std::vector<std::string> LookupTable_sender_classification = names({
 		"Ship",
 		"Authority",
 		"Reserved",
@@ -476,37 +482,37 @@ namespace AIS
 		"Reserved",
 		"Reserved",
 		"Reserved",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_pressuretend = {
+	const std::vector<std::string> LookupTable_pressuretend = names({
 		"Steady",
 		"Decreasing",
 		"Increasing",
 		"N/A (default)",
-	};
+	});
 
 	// ITU-R M.1371-6 Table 50 (msg 5 AIS version indicator).
-	const std::vector<std::string> LookupTable_ais_version = {
+	const std::vector<std::string> LookupTable_ais_version = names({
 		"ITU-R M.1371-1",
 		"ITU-R M.1371-3",
 		"ITU-R M.1371-5",
 		"ITU-R M.1371-6 (or later)",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_vts_target_id_type = {
+	const std::vector<std::string> LookupTable_vts_target_id_type = names({
 		"MMSI",
 		"IMO number",
 		"Call sign",
 		"Other",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_health = {
+	const std::vector<std::string> LookupTable_health = names({
 		"Good",
 		"Alarm",
-	};
+	});
 
 	// Indexed by ITU-R M.1371 message type (1..28). Slot 0 is unused (type=0 is invalid).
-	const std::vector<std::string> LookupTable_message_types = {
+	const std::vector<std::string> LookupTable_message_types = names({
 		"Reserved",
 		"Position report",
 		"Position report (assigned schedule)",
@@ -536,9 +542,9 @@ namespace AIS
 		"Multiple slot binary message",
 		"Long-range position report",
 		"Aid-to-navigation report (single-slot)",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_pressuretend_wmo = {
+	const std::vector<std::string> LookupTable_pressuretend_wmo = names({
 		"Increasing, then decreasing; now same or higher than 3 h ago",
 		"Increasing, then steady; or rising, then rising more slowly",
 		"Increasing steadily or unsteadily",
@@ -555,9 +561,9 @@ namespace AIS
 		"Reserved",
 		"Reserved",
 		"N/A (default)",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_emma_warning_types = {
+	const std::vector<std::string> LookupTable_emma_warning_types = names({
 		"Unknown/default",
 		"Wind",
 		"Rain",
@@ -568,14 +574,14 @@ namespace AIS
 		"High temperature",
 		"Flood",
 		"Forest fire",
-	};
+	});
 
-	const std::vector<std::string> LookupTable_emma_severity = {
+	const std::vector<std::string> LookupTable_emma_severity = names({
 		"Unknown",
 		"Slight",
 		"Medium",
 		"Strong/Heavy",
-	};
+	});
 
 	// Generated from KeyDefs.h
 	const KeyInfo KeyInfoMap[] = {

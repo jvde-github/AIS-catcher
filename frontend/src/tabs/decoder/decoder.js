@@ -71,7 +71,7 @@ export function decode() {
             outputEl.innerHTML = html;
         })
         .catch((error) => {
-            statusEl.innerHTML = `<span class="decoder-error">Network error: ${error.message}</span>`;
+            statusEl.innerHTML = `<span class="decoder-error">Network error: ${sanitizeString(String(error.message))}</span>`;
             console.error('Decode error:', error);
         });
 }

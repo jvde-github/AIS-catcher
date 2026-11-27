@@ -74,16 +74,13 @@ namespace Services
 		w.endObject();
 	}
 
-	// A page of the journal's events that `keep` passes, at `path`: without a
-	// cursor the newest, with one the oldest after it. The journal is read a
-	// chunk at a time until the page is full, and an event passed over still
-	// moves the cursor.
+	// A page of `limit` of the journal's events that `keep` passes, at `path`:
+	// without a cursor the newest, with one the oldest after it. The journal is
+	// read a chunk at a time until the page is full, and an event passed over
+	// still moves the cursor.
 	inline Response pageEvents(const Request &request, const Journal &journal, const std::string &path,
-							   const std::function<bool(const Journal::Entry &)> &keep, long long page_max = LIST_MAX)
+							   const std::function<bool(const Journal::Entry &)> &keep, long long limit)
 	{
-		long long limit = 0;
-		if (!request.integer("limit", limit, std::min<long long>(100, page_max), 1, page_max))
-			return badLimit();
 		const uint64_t epoch = journal.epoch();
 		const std::string from = request.param("cursor");
 		const std::size_t want = (std::size_t)limit, chunk = std::max<std::size_t>(want, 256);

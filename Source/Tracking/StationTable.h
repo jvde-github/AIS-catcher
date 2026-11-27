@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <ctime>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <mutex>
 #include <utility>
@@ -88,6 +89,8 @@ public:
 		if (!isValidCoord(lat, lon))
 		{
 			stations.erase(id);
+			for (auto r = riders.begin(); r != riders.end();)
+				r = r->second == id ? riders.erase(r) : std::next(r);
 			return;
 		}
 		Station &s = stations[id];
@@ -124,7 +127,10 @@ public:
 		auto r = riders.find(mmsi);
 		if (r == riders.end())
 			return -1;
-		Position &p = stations[r->second].now;
+		auto s = stations.find(r->second);
+		if (s == stations.end())
+			return -1;
+		Position &p = s->second.now;
 		p.lat = lat;
 		p.lon = lon;
 		p.source = Position::VESSEL;
@@ -219,7 +225,8 @@ public:
 				it = stations.emplace(id, Station()).first;
 				it->second.mmsi = mmsi;
 			}
-			else if (!((source == Position::GPS && it->second.followsGPS()) || (source == Position::VESSEL && it->second.mmsi == mmsi)))
+			else if (!((source == Position::GPS && it->second.followsGPS()) || (source == Position::VESSEL && it->second.mmsi == mmsi)) ||
+					 (it->second.fixed() && it->second.now.time > p.time))
 				continue;
 			it->second.now = p;
 		}

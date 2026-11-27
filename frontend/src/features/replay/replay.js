@@ -22,10 +22,13 @@ import { focus } from '../../data.js';
 import { register } from '../../actions.js';
 import * as filter from '../../core/filter.js';
 import { setCounts } from '../../core/store.js';
-import { renderCounts } from '../counts/counts.js';
-import { applyFixedCenter } from '../follow/follow.js';
 import { showNotification } from '../../dialog.js';
-import { setLiveLayersVisible, updateReplaycard } from './replaybar.js';
+
+// set once by script.js, so that this module imports no features
+const viewer = { updateReplaycard: () => {}, setLiveLayersVisible: () => {}, renderCounts: () => {}, applyFixedCenter: () => {} };
+export function wire(parts) {
+    Object.assign(viewer, parts);
+}
 
 const markerSource = new VectorSource({ features: [] });
 export const markerLayer = new VectorLayer({ source: markerSource });
@@ -116,7 +119,7 @@ export function getSpeed() { return speed; }
 
 function cycleSpeed() {
     speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
-    updateReplaycard();
+    viewer.updateReplaycard();
 }
 
 export function speeds() { return SPEEDS; }
@@ -124,7 +127,7 @@ export function speeds() { return SPEEDS; }
 function setSpeed(s) {
     if (!SPEEDS.includes(s)) return;
     speed = s;
-    updateReplaycard();
+    viewer.updateReplaycard();
 }
 
 let labels = false;
@@ -133,7 +136,7 @@ export function getLabels() { return labels; }
 function toggleLabels() {
     labels = !labels;
     if (active) draw();
-    updateReplaycard();
+    viewer.updateReplaycard();
 }
 export function getTimeline() {
     if (!bounds.oldest || !bounds.newest || bounds.newest <= bounds.oldest)
@@ -227,7 +230,7 @@ export async function load(at) {
     if (loading) return false;
     loading = true;
     const gen = ++generation;
-    updateReplaycard();
+    viewer.updateReplaycard();
 
     try {
         if (!bounds.now) await refreshBounds();
@@ -266,7 +269,7 @@ export async function load(at) {
         buildFeatures();
         markerLayer.setVisible(true);
         hullLayer.setVisible(true);
-        setLiveLayersVisible(false);
+        viewer.setLiveLayersVisible(false);
         draw();
 
         pump();
@@ -277,7 +280,7 @@ export async function load(at) {
         return false;
     } finally {
         loading = false;
-        updateReplaycard();
+        viewer.updateReplaycard();
     }
 }
 
@@ -318,7 +321,7 @@ async function pump() {
             if (gen !== generation) return;
             buildFeatures();
             if (!playing) draw();
-            updateReplaycard();
+            viewer.updateReplaycard();
         }
     } catch (err) {
         console.log('Replay block fetch failed: ' + err);
@@ -351,15 +354,15 @@ export function play() {
             playing = false;
             raf = null;
             draw();
-            updateReplaycard();
+            viewer.updateReplaycard();
             return;
         }
         draw();
-        updateReplaycard();
+        viewer.updateReplaycard();
         raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    updateReplaycard();
+    viewer.updateReplaycard();
 }
 
 export function pause() {
@@ -368,7 +371,7 @@ export function pause() {
         cancelAnimationFrame(raf);
         raf = null;
     }
-    updateReplaycard();
+    viewer.updateReplaycard();
 }
 
 export function stop() {
@@ -385,8 +388,8 @@ export function stop() {
     for (const mmsi in hulls) releaseHull(mmsi);
     hullSource.clear();
     hullLayer.setVisible(false);
-    setLiveLayersVisible(true);
-    updateReplaycard();
+    viewer.setLiveLayersVisible(true);
+    viewer.updateReplaycard();
 }
 
 export function seek(time) {
@@ -394,7 +397,7 @@ export function seek(time) {
     const tl = getTimeline();
     instant = Math.max(tl.start, Math.min(tl.end, time));
     draw();
-    updateReplaycard();
+    viewer.updateReplaycard();
     pump();
 }
 
@@ -409,11 +412,13 @@ const courseOf = (p) => courseMadeGood(p) ?? headingOf(p);
 const angleOf = (p) =>
     headingOf(p) ?? (p[4] != null && p[4] > underWayUnits ? courseMadeGood(p) : null);
 
-// Shortest way round: a vessel swinging through north must not spin 359 degrees.
+// Shortest way round, -180 to 180: a vessel swinging through north must not spin
+// 359 degrees, nor one crossing the date line sail round the world.
+const turn = (from, to) => ((to - from + 540) % 360) - 180;
 function lerpAngle(from, to, f) {
-    let d = ((to - from + 540) % 360) - 180;
-    return (from + d * f + 360) % 360;
+    return (from + turn(from, to) * f + 360) % 360;
 }
+const lerpLon = (from, to, f) => ((from + turn(from, to) * f + 540) % 360) - 180;
 
 // Speed made good from a to b, for vessels whose own report says nothing.
 // Constant for the segment's lifetime, so this runs once per segment rather than
@@ -424,7 +429,7 @@ function leg(s, a, b) {
 
     const [latA, lonA] = s.pts[a], [latB, lonB] = s.pts[b];
     const dLat = latB - latA;
-    const dLon = (lonB - lonA) * Math.cos(latA * Math.PI / 180);
+    const dLon = turn(lonA, lonB) * Math.cos(latA * Math.PI / 180);
     const metres = Math.hypot(dLat, dLon) * 111320;
     const secs = Math.max(1, s.pts[b][2] - s.pts[a][3]);
 
@@ -495,7 +500,7 @@ function sample(s, T) {
 
         return {
             lat: pa[0] + (pts[b][0] - pa[0]) * f,
-            lon: pa[1] + (pts[b][1] - pa[1]) * f,
+            lon: lerpLon(pa[1], pts[b][1], f),
             knots: underWay ? sog / sogDiv : l.knots,
             hdg: between(angleOf),
             cog: between(courseOf),
@@ -566,8 +571,8 @@ function place(f, s, fix) {
         f.marker.setStyle(f.style);
     }
     // the label carries the fade too, so a fading held vessel refreshes its text
-    if (rebuilt || l.label !== label || (label && l.opacity !== opacity))
-        f.style.setText(label ? markers.labelText(label, opacity, s.cls) : null);
+    if (rebuilt || l.label !== label || (label && (l.opacity !== opacity || l.scale !== scale)))
+        f.style.setText(label ? markers.labelText(label, opacity, s.cls, (sp.imgSize / 2) * scale) : null);
     const img = f.style.getImage();
     img.setRotation(sp.rot);
     img.setScale(markers.sheetScale(scale));
@@ -693,10 +698,10 @@ function draw() {
         countSig = sig;
         // whichever view is on screen owns the counters: replay reports its own fleet
         setCounts({ total, shown, buckets });
-        renderCounts();
+        viewer.renderCounts();
     }
 
-    applyFixedCenter();
+    viewer.applyFixedCenter();
 }
 
 // Hulls are drawn by apparent size, not zoom: the fleet runs from 4 m tenders to

@@ -123,7 +123,8 @@ enum class Type
 	ZMQ = 12,
 	SPYSERVER = 13,
 	N2K = 14,
-	HYDRASDR = 15
+	HYDRASDR = 15,
+	TCPSERVER = 16
 };
 
 enum class MessageFormat
@@ -255,6 +256,8 @@ struct TAG
 	float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 	bool validated = false;
 	std::time_t previous_signal = (std::time_t)0;
+	// the same at the receiving station, for that station's vessel counts
+	std::time_t station_previous_signal = (std::time_t)0;
 	int shipclass = CLASS_UNKNOWN;
 	float speed = SPEED_UNDEFINED;
 	std::string hardware;
@@ -281,7 +284,7 @@ struct TAG
 		angle = ANGLE_UNDEFINED;
 		msg_idx_start = msg_idx_end = 0;
 		validated = false;
-		previous_signal = (std::time_t)0;
+		previous_signal = station_previous_signal = (std::time_t)0;
 		shipclass = CLASS_UNKNOWN;
 		ipv4 = 0;
 		quality = 0;

@@ -308,9 +308,9 @@ public:
 			r.stopped = stopped;
 			return;
 		}
-		const uint32_t elapsed = now - r.last;
+		const uint32_t elapsed = (uint32_t)(now - r.last);
 		const bool watchedStop = stopped && r.stopped && elapsed <= SAMPLE;
-		r.last = now;
+		r.last = (uint32_t)now;
 		r.stopped = stopped;
 		for (auto &v : r.visits)
 		{
@@ -335,7 +335,7 @@ public:
 				if (!in)
 				{
 					v.state = Visit::LEAVING;
-					v.exited = now;
+					v.exited = (uint32_t)now;
 				}
 			}
 			else if (in)
@@ -356,7 +356,7 @@ public:
 					if (auto *v = allocate(r, id, *index))
 					{
 						v->state = Visit::ENTERING;
-						v->entered = now;
+						v->entered = (uint32_t)now;
 					}
 		reindex(slot);
 	}
@@ -484,18 +484,18 @@ public:
 					any = true;
 					if (offsets[v.id] == UINT32_MAX)
 					{
-						offsets[v.id] = table.size();
+						offsets[v.id] = (uint32_t)table.size();
 						table.push_back(v.id);
 					}
 				}
 			count += any;
 		}
-		uint32_t n = table.size();
+		uint32_t n = (uint32_t)table.size();
 		put(out, n);
 		for (auto id : table)
 		{
 			const auto &uuid = index->entries[id].metadata->uuid;
-			uint32_t len = uuid.size();
+			uint32_t len = (uint32_t)uuid.size();
 			put(out, len);
 			out.write(uuid.data(), len);
 		}
@@ -600,8 +600,8 @@ public:
 				}
 				auto &v = records[slot].visits[next++];
 				v.id = ids[offset];
-				v.entered = stamp;
-				v.exited = exit;
+				v.entered = (uint32_t)stamp;
+				v.exited = (uint32_t)exit;
 				v.idle = idle;
 				v.state = state & 1 ? Visit::INSIDE : Visit::DONE;
 				// before version 3 only observed crossings were written

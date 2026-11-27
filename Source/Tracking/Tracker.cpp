@@ -15,8 +15,8 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 #include "Tracker.h"
+#include "SystemFacts.h"
 
 #include <cerrno>
 #include <cmath>
@@ -30,13 +30,13 @@
 namespace
 {
 	const uint32_t TRACKER_MAGIC = 0x54524b52;
-	const uint32_t TRACKER_VERSION = 3; // 2 adds the stations' last fixes, 3 each figures' week and levels
+	const uint32_t TRACKER_VERSION = 4; // 2 adds the stations' last fixes, 3 each figures' week and levels, 4 the GPS history
 }
 
 Tracker::Tracker()
 {
 	router.tracker = this;
-	intake.tracker = gps_intake.tracker = adsb_intake.tracker = this;
+	intake.tracker = gps_intake.tracker = metric_intake.tracker = adsb_intake.tracker = this;
 	db >> router;
 	db.events >> events;
 	// called with the ship table locked: the figures' lock is never taken the other way round
@@ -122,15 +122,13 @@ void Tracker::Router::Receive(const JSON::JSON *data, int len, TAG &tag)
 		if (id >= 0)
 		{
 			tracker->last_heard[id] = std::time(nullptr);
-			auto it = tracker->station_figures.find(id);
-			// figures of its own for a listed station: a feed naming hundreds stays bounded
-			if (it == tracker->station_figures.end() && tracker->listed.count(id) && tracker->station_figures.size() < MAX_STATIONS)
+			// a station's figures go by when that station last heard the vessel
+			if (Figures *f = tracker->stationFigures(id))
 			{
-				it = tracker->station_figures.emplace(id, std::unique_ptr<Figures>(new Figures())).first;
-				it->second->setCutoff(tracker->cutoff);
+				std::swap(tag.previous_signal, tag.station_previous_signal);
+				f->Receive(data, len, tag);
+				std::swap(tag.previous_signal, tag.station_previous_signal);
 			}
-			if (it != tracker->station_figures.end())
-				it->second->Receive(data, len, tag);
 		}
 	}
 }
@@ -190,14 +188,197 @@ void Tracker::Intake::Receive(const JSON::JSON *data, int len, TAG &tag)
 	}
 }
 
+// a hub hears many stations: the GPS history is kept for the first few with a GPS of their own
+static const std::size_t MAX_GNSS_STATIONS = 16;
+
 void Tracker::GpsIntake::Receive(const AIS::GPS *data, int len, TAG &tag)
 {
 	if (!len)
+		return;
+	{
+		std::lock_guard<std::mutex> lock(tracker->sky_mtx);
+		const std::time_t now = std::time(nullptr);
+		if (data[0].sky && (tracker->skies.count(tag.station_id) || tracker->skies.size() < MAX_STATIONS))
+			tracker->skies[tag.station_id] = std::make_pair(now, *data[0].sky);
+		auto g = tracker->gnss.find(tag.station_id);
+		if (g == tracker->gnss.end() && data[0].sky && tracker->gnss.size() < MAX_GNSS_STATIONS)
+			g = tracker->gnss.emplace(tag.station_id, GnssHistory()).first;
+		if (g != tracker->gnss.end())
+			g->second.add(now, data[0]);
+	}
+	if (!data[0].hasPosition())
 		return;
 	std::vector<int> ids;
 	tracker->table->moveByGPS(tag.station_id, data[0].getLat(), data[0].getLon(), ids);
 	for (int id : ids)
 		tracker->moved(id);
+}
+
+// a hub hears many stations: each one's own health only up to this many, beyond it only of those with a receiver here
+static const std::size_t MAX_HEALTH_STATIONS = 64;
+
+const AIS::Sky *Tracker::freshSky(int id, std::time_t now) const
+{
+	auto sky = skies.find(id);
+	return sky != skies.end() && now - sky->second.first < 120 ? &sky->second.second : nullptr;
+}
+
+std::vector<Health::Change> Tracker::judge(std::time_t now, const SystemFacts &f, const StationRegistry &registry)
+{
+	Health next;
+	next.at = now;
+	next.session = f.session;
+	std::vector<Health::Output> before;
+	{
+		std::lock_guard<std::mutex> lock(health_mtx);
+		next.issues = health.issues;
+		before = health.outputs;
+	}
+	std::vector<int> ids;
+	{
+		std::lock_guard<std::mutex> lock(figures_mtx);
+		if (station_figures.size() <= MAX_HEALTH_STATIONS)
+			for (const auto &s : station_figures)
+				ids.push_back(s.first);
+	}
+	for (const auto &r : f.receivers)
+		if (std::find(ids.begin(), ids.end(), r.station) == ids.end())
+			ids.push_back(r.station);
+	for (int id : ids)
+	{
+		const std::time_t heard = lastHeard(id);
+		Health::Station &s = next.station(id);
+		s.heard = heard;
+		withStation(id, [&](Figures &figures) { next.readAIS(s, figures); });
+	}
+	next.readReceivers(f);
+	next.readOutputs(f, before);
+	{
+		std::lock_guard<std::mutex> lock(sky_mtx);
+		for (const auto &g : gnss)
+		{
+			const StationRegistry::Station *known = registry.find(g.first);
+			// a station riding a vessel has no place to hold its GPS against
+			const bool moves = known && known->mmsi;
+			const bool placed = known && !known->gps && !moves && isValidCoord(known->lat, known->lon);
+			const GnssHistory::Now x = g.second.read(now, placed, placed ? known->lat : 0, placed ? known->lon : 0);
+			// a GPS not heard for a day is no longer there
+			if (x.heard && now - x.heard <= 86400)
+				next.readGPS(next.station(g.first), x, freshSky(g.first, now), placed, moves);
+		}
+	}
+	std::vector<Health::Change> changes = next.settle();
+	std::lock_guard<std::mutex> lock(health_mtx);
+	health = std::move(next);
+	return changes;
+}
+
+Health Tracker::healthNow()
+{
+	Health h;
+	{
+		std::lock_guard<std::mutex> lock(health_mtx);
+		h = health;
+	}
+	{
+		std::lock_guard<std::mutex> lock(figures_mtx);
+		for (auto &s : h.stations)
+		{
+			auto it = last_heard.find(s.id);
+			if (it != last_heard.end())
+				s.heard = it->second;
+		}
+	}
+	std::lock_guard<std::mutex> lock(sky_mtx);
+	for (auto &s : h.stations)
+	{
+		auto g = gnss.find(s.id);
+		if (s.has_gps && g != gnss.end())
+		{
+			s.gps.heard = g->second.lastHeard();
+			s.gps.fixed = g->second.lastFix();
+			// the fix and the satellites as they are now, as whoever draws the sky sees them
+			if (const AIS::Sky *sky = freshSky(s.id, std::time(nullptr)))
+				s.gps.see(*sky);
+		}
+	}
+	return h;
+}
+
+bool Tracker::gnssOf(const std::vector<int> &ids, JSON::Writer &w, bool week, int last)
+{
+	std::unique_lock<std::mutex> lock(sky_mtx);
+	int newest = -1;
+	std::time_t at = 0;
+	for (const auto &s : skies)
+		if ((ids.empty() || std::find(ids.begin(), ids.end(), s.first) != ids.end()) && gnss.count(s.first) && (newest < 0 || s.second.first > at))
+		{
+			newest = s.first;
+			at = s.second.first;
+		}
+	if (newest < 0)
+		return false;
+	// written from a copy: the GPS intake waits for the copying alone
+	const GnssHistory history = gnss.at(newest);
+	lock.unlock();
+	history.json(w, std::time(nullptr), week, last);
+	return true;
+}
+
+bool Tracker::skyOf(const std::vector<int> &ids, AIS::Sky &out, int &age)
+{
+	std::lock_guard<std::mutex> lock(sky_mtx);
+	const std::time_t now = std::time(nullptr);
+	const std::pair<std::time_t, AIS::Sky> *newest = nullptr;
+	for (const auto &s : skies)
+		if ((ids.empty() || std::find(ids.begin(), ids.end(), s.first) != ids.end()) && (!newest || s.second.first > newest->first))
+			newest = &s.second;
+	if (!newest)
+		return false;
+	out = newest->second;
+	age = (int)(now - newest->first);
+	return true;
+}
+
+Figures *Tracker::stationFigures(int id)
+{
+	auto it = station_figures.find(id);
+	if (it == station_figures.end() && listed.count(id) && station_figures.size() < MAX_STATIONS)
+	{
+		it = station_figures.emplace(id, std::unique_ptr<Figures>(new Figures())).first;
+		it->second->setCutoff(cutoff);
+	}
+	return it == station_figures.end() ? nullptr : it->second.get();
+}
+
+void Tracker::MetricIntake::Receive(const AIS::Metric *data, int len, TAG &tag)
+{
+	std::lock_guard<std::mutex> lock(tracker->figures_mtx);
+	for (int i = 0; i < len; i++)
+	{
+		const int id = data[i].station >= 0 && tracker->listed.count(data[i].station) ? data[i].station : tag.station_id;
+		MetricTable::Row row;
+		Figures *f = tracker->metric_table.set(id, data[i], row) && MetricHistory::kept(row.key) ? tracker->stationFigures(id) : nullptr;
+		if (!f)
+			continue;
+		if (!f->reception)
+			f->reception.reset(new MetricHistory());
+		f->reception->add(row);
+	}
+}
+
+std::unique_ptr<MetricHistory> Tracker::receptionOf(const std::vector<int> &ids)
+{
+	std::lock_guard<std::mutex> lock(figures_mtx);
+	const MetricHistory *one = nullptr;
+	for (const auto &s : station_figures)
+		if (s.second->reception && (ids.empty() || std::find(ids.begin(), ids.end(), s.first) != ids.end()))
+		{
+			if (one)
+				return nullptr;
+			one = s.second->reception.get();
+		}
+	return std::unique_ptr<MetricHistory>(one ? new MetricHistory(*one) : nullptr);
 }
 
 void Tracker::AdsbIntake::Receive(const Plane::ADSB *data, int len, TAG &tag)
@@ -236,7 +417,7 @@ void Tracker::setStations(const StationRegistry &registry)
 		for (const auto &s : registry.ordered())
 			listed.insert(s.id);
 		for (auto it = station_figures.begin(); it != station_figures.end();)
-			if (listed.count(it->first))
+			if (listed.empty() || listed.count(it->first))
 				++it;
 			else
 				it = station_figures.erase(it);
@@ -275,8 +456,6 @@ void Tracker::remeasure()
 	});
 }
 
-
-
 bool Tracker::save(const std::string &file)
 {
 	const std::string tmp = file + ".tmp";
@@ -304,14 +483,24 @@ bool Tracker::save(const std::string &file)
 		// the stations' last fixes ride in the backup
 		if (!ok || !db.Save(f) || !events.save(f) || !table->save(f))
 			return false;
+		{
+			std::lock_guard<std::mutex> lock(sky_mtx);
+			const uint32_t n = (uint32_t)gnss.size();
+			if (!f.write((const char *)&n, sizeof(n)))
+				return false;
+			for (const auto &g : gnss)
+			{
+				const int32_t id = g.first;
+				const int64_t heard = skies.count(id) ? (int64_t)skies.at(id).first : 0;
+				if (!f.write((const char *)&id, sizeof(id)) || !f.write((const char *)&heard, sizeof(heard)) || !g.second.save(f))
+					return false;
+			}
+		}
 		f.close();
 		if (f.fail() || !Util::Helper::syncFile(tmp))
 			return false;
 	}
-#ifdef _WIN32
-	std::remove(file.c_str());
-#endif
-	return std::rename(tmp.c_str(), file.c_str()) == 0;
+	return Util::Helper::replaceFile(tmp, file);
 }
 
 // an existing `to` is kept: a copy made on an earlier start is the one of
@@ -438,6 +627,29 @@ Tracker::Restored Tracker::restore(const std::string &file)
 	}
 	if (version >= 2)
 		table->load(f);
+	if (version >= 4)
+	{
+		std::lock_guard<std::mutex> lock(sky_mtx);
+		uint32_t n = 0;
+		if (!f.read((char *)&n, sizeof(n)) || n > MAX_GNSS_STATIONS)
+			return RESTORED;
+		for (uint32_t i = 0; i < n; i++)
+		{
+			int32_t id = 0;
+			int64_t heard = 0;
+			GnssHistory g;
+			if (!f.read((char *)&id, sizeof(id)) || !f.read((char *)&heard, sizeof(heard)) || !g.load(f))
+			{
+				Warning() << "Tracker: the GPS history could not be restored from " << file;
+				gnss.clear();
+				return RESTORED;
+			}
+			gnss[id] = g;
+			// the sky itself is not kept: the history shows under the station it was heard last
+			if (heard)
+				skies[id] = std::make_pair((std::time_t)heard, AIS::Sky());
+		}
+	}
 	return RESTORED;
 }
 

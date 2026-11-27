@@ -15,7 +15,7 @@ import { SetupWizard } from './wizard.js';
 import { outputType as outputKind } from './schema.js';
 import { stationsOf, stationLabel } from './stations.js';
 import { describeInput } from './inputs.js';
-import { createFlowEditor, collectOutputs, outputProblem, outputLiveProblem, statsByKey, OUTPUT_STATS } from './flow-editor.js';
+import { createFlowEditor, collectOutputs, outputProblem, outputLiveProblem, statsByKey, VIEWER_STAT } from './flow-editor.js';
 import { createServicesSection, servicesRailItems } from './services-pages.js';
 import { createRail } from './rail.js';
 import { createLogConsole } from './log-console.js';
@@ -85,13 +85,16 @@ import { createMessageBar } from './message-bar.js';
     const logConsole = createLogConsole({ onAlert: level => { alerts[level]++; paintAlerts(); } });
 
     const iframe = document.getElementById('webviewer-frame');
+    let titleWatch = null;
     iframe.addEventListener('load', () => {
+        titleWatch?.disconnect();
         try {
             const doc = iframe.contentDocument;
             const title = doc.querySelector('title') || doc.head.appendChild(doc.createElement('title'));
             const mirror = () => { if (doc.title) document.title = doc.title; };
             mirror();
-            new MutationObserver(mirror).observe(title, { childList: true, characterData: true, subtree: true });
+            titleWatch = new MutationObserver(mirror);
+            titleWatch.observe(title, { childList: true, characterData: true, subtree: true });
         } catch { /* a page of another origin keeps its title */ }
     });
 
@@ -641,7 +644,7 @@ import { createMessageBar } from './message-bar.js';
         if (document.hidden || !!systemOverlay.classList.contains('hidden')) return;
         if (!engineRunning || !ConfigStore.cached) return setLive('outputs', new Map());
         const outs = collectOutputs(ConfigStore.cached);
-        api(OUTPUT_STATS)
+        api(VIEWER_STAT)
             .then(stat => {
                 const next = new Map();
                 statsByKey(stat, outs).forEach((st, key) => {

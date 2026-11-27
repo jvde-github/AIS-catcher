@@ -80,9 +80,9 @@ export function bindVesselHover(body, { enter, leave, idAttribute = 'data-mmsi' 
    changes. Returns 0 while the panel has no height yet, which is the case on
    the frame it opens. */
 export function pageSize(inner, head, sampleRow) {
-    var declared = inner ? parseFloat(getComputedStyle(inner).getPropertyValue('--vessel-row-height')) : NaN;
-    var rowHeight = Math.max(18, sampleRow ? sampleRow.getBoundingClientRect().height : declared || 26);
-    var space = (inner ? inner.getBoundingClientRect().height : 0) -
+    let declared = inner ? parseFloat(getComputedStyle(inner).getPropertyValue('--vessel-row-height')) : NaN;
+    let rowHeight = Math.max(18, sampleRow ? sampleRow.getBoundingClientRect().height : declared || 26);
+    let space = (inner ? inner.getBoundingClientRect().height : 0) -
         (head ? head.getBoundingClientRect().height : 0);
 
     return space < rowHeight ? 0 : Math.max(1, Math.floor(space / rowHeight));
@@ -93,7 +93,7 @@ export function pageSize(inner, head, sampleRow) {
 export function rowsFitting(inner, rows) {
     if (!inner) return 0;
 
-    var bottom = inner.getBoundingClientRect().bottom;
+    let bottom = inner.getBoundingClientRect().bottom;
     return Array.prototype.filter.call(rows, function (tr) {
         return tr.getBoundingClientRect().bottom <= bottom + 1;
     }).length;
@@ -138,8 +138,8 @@ export function renderPager(pager, { page, perPage, total, shown = Math.min(perP
     if (count) count.textContent = shown > 0
         ? `${page * perPage + 1}–${page * perPage + shown} of ${total.toLocaleString()}`
         : `0 of ${total.toLocaleString()}`;
-    var buttons = pager.querySelectorAll("button");
-    var label = pager.querySelector("span");
+    let buttons = pager.querySelectorAll("button");
+    let label = pager.querySelector("span");
 
     if (label) label.textContent = (page + 1) + " / " + pages;
     if (buttons[0]) buttons[0].disabled = loading || page === 0;

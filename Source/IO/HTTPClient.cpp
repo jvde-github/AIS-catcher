@@ -15,12 +15,39 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <cstdlib>
+
 #include "HTTPClient.h"
 #include "Convert.h"
 #include "Logger.h"
 
 namespace IO
 {
+
+	// the body of a chunked reply; false when it stops before its last chunk
+	static bool dechunk(const std::string &in, std::string &out)
+	{
+		out.clear();
+		std::size_t at = 0;
+		while (true)
+		{
+			const std::size_t eol = in.find("\r\n", at);
+			if (eol == std::string::npos)
+				return false;
+			const std::string line = in.substr(at, eol - at);
+			char *end = nullptr;
+			const unsigned long size = std::strtoul(line.c_str(), &end, 16);
+			if (end == line.c_str())
+				return false;
+			at = eol + 2;
+			if (size == 0)
+				return true;
+			if (in.size() - at < 2 || size > in.size() - at - 2)
+				return false;
+			out.append(in, at, size);
+			at += size + 2;
+		}
+	}
 
 	int HTTPClient::parseResponse()
 	{
@@ -41,6 +68,8 @@ namespace IO
 
 			// Parse headers
 			content_type.clear();
+			bool chunked = false, has_length = false;
+			unsigned long length = 0;
 			while (std::getline(iss, line) && line != "\r" && !line.empty())
 			{
 				std::string name = line.substr(0, line.find(':'));
@@ -52,13 +81,21 @@ namespace IO
 					if (!content_type.empty() && content_type.back() == '\r')
 						content_type.pop_back();
 				}
-				if (line.find("Transfer-Encoding:") != std::string::npos)
+				else if (name == "content-length" && line.size() > 15)
 				{
-					if (line.find("chunked") == std::string::npos)
+					has_length = true;
+					length = std::strtoul(line.c_str() + 15, nullptr, 10);
+				}
+				else if (name == "transfer-encoding")
+				{
+					std::string value = line.substr(name.size() + 1);
+					Util::Convert::toLower(value);
+					if (value.find("chunked") == std::string::npos)
 					{
 						Error() << "HTTP Client [" << host << "]: Transfer-Encoding other than chunked not supported.";
 						return HTTP_UNSUPPORTED_ENCODING;
 					}
+					chunked = true;
 				}
 			}
 
@@ -73,6 +110,27 @@ namespace IO
 			{
 				// No body
 				message.clear();
+			}
+
+			// the body as sent, or no answer when it came short of what its framing says
+			if (chunked)
+			{
+				std::string body;
+				if (!dechunk(message, body))
+				{
+					Error() << "HTTP Client [" << host << "]: chunked response ended early.";
+					return HTTP_RESPONSE_INCOMPLETE;
+				}
+				message.swap(body);
+			}
+			else if (has_length)
+			{
+				if (message.size() < length)
+				{
+					Error() << "HTTP Client [" << host << "]: response ended after " << message.size() << " of " << length << " bytes.";
+					return HTTP_RESPONSE_INCOMPLETE;
+				}
+				message.resize(length);
 			}
 
 			return status;
@@ -110,7 +168,7 @@ namespace IO
 	void HTTPClient::createHeader(bool gzip, bool multipart)
 	{
 
-		header = "POST " + path + " HTTP/1.1\r\nHost: " + host + ":" + port + "\r\nAccept: */*\r\nConnection: close\r\n";
+		header = "POST " + path + " HTTP/1.1\r\nHost: " + (host.find(':') == std::string::npos ? host : "[" + host + "]") + ":" + port + "\r\nAccept: */*\r\nConnection: close\r\n";
 		header += Util::Convert::authorizationHeader(username, password, basic);
 		header += extra_headers;
 
@@ -140,7 +198,7 @@ namespace IO
 	int HTTPClient::Get()
 	{
 		message.clear();
-		header = "GET " + path + " HTTP/1.1\r\nHost: " + host + ":" + port + "\r\nAccept: */*\r\nConnection: close\r\n";
+		header = "GET " + path + " HTTP/1.1\r\nHost: " + (host.find(':') == std::string::npos ? host : "[" + host + "]") + ":" + port + "\r\nAccept: */*\r\nConnection: close\r\n";
 		header += Util::Convert::authorizationHeader(username, password, basic);
 		header += extra_headers;
 		header += "\r\n";
@@ -163,7 +221,9 @@ namespace IO
 			connection = &tcp;
 		}
 
-		if (!connection->connect() || !connection->waitConnected())
+		// bounded, so a stalled nameserver cannot hold up a stop; long enough for the lookup, an
+		// address that does not answer and the next one
+		if (!connection->connect() || !connection->waitConnected(3 * (timeout > 0 ? timeout : 10)))
 		{
 			Error() << "HTTP Client [" << host << "]: error connecting to server.";
 			connection->disconnect();
@@ -193,8 +253,10 @@ namespace IO
 		message.clear();
 		int totalBytes = 0;
 		int emptyReads = 0;
+		bool too_large = false;
 		const Net::Clock::time_point start = Net::Clock::now();
-		while (emptyReads < 5 && Net::secondsSince(start) < timeout)
+		// the first byte may take the whole timeout; a reply under way ends after five quiet seconds
+		while ((totalBytes == 0 || emptyReads < 5) && Net::secondsSince(start) < timeout)
 		{
 			int bytes_read = connection->read(&buffer[0], buffer.size(), 1, true);
 			if (bytes_read > 0)
@@ -205,6 +267,7 @@ namespace IO
 				if (totalBytes > 1 * 1024 * 1024)
 				{
 					Error() << "HTTP Client [" << host << "]: response too large";
+					too_large = true;
 					break;
 				}
 			}
@@ -229,9 +292,7 @@ namespace IO
 			return HTTP_CONNECTION_FAILED;
 		}
 
-		int status = parseResponse();
 		connection->disconnect();
-
-		return status;
+		return too_large ? HTTP_RESPONSE_INCOMPLETE : parseResponse();
 	}
 }

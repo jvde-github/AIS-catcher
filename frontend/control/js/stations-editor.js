@@ -341,14 +341,16 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
             return;
         }
         const stations = state.stations.map(clean);
+        // what the save sends: edits made while it is on its way go in the next
+        const sent = state.stations.slice(), deleted = new Set(state.deleted);
+        const moved = new globalThis.Map();
+        for (const s of sent) if (s._from !== null) moved.set(s._from, Number(s.id));
         let receivers = [];
         // what names a station follows it to its new number; a deleted one leaves it
         const saved = await editor.write(cfg => {
-            const moved = new globalThis.Map();
-            for (const s of state.stations) if (s._from !== null) moved.set(s._from, Number(s.id));
             const rewire = (o, ...keys) => keys.forEach(key => {
                 const ids = String(o?.[key] ?? '').split(',').filter(x => x.trim()).map(Number);
-                const next = ids.filter(id => moved.has(id) || !state.deleted.has(id)).map(id => moved.get(id) ?? id);
+                const next = ids.filter(id => moved.has(id) || !deleted.has(id)).map(id => moved.get(id) ?? id);
                 if (String(next) === String(ids)) return;
                 if (!next.length) delete o[key];
                 else o[key] = Array.isArray(o[key]) ? next : next.length > 1 ? next.join(',') : next[0];
@@ -360,10 +362,17 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
             receivers = cfg.receiver || [];
         }, 'the stations');
         if (!saved) return;
-        // from here on the stations are what was saved
-        state.stations = stations.map(s => ({ ...s, _from: s.id, _none: !hasPos(s) && s.gps !== true && !s.mmsi }));
-        state.deleted.clear();
         state.receivers = receivers;
+        if (editor.dirty) {
+            // edits made meanwhile stay, counted from the saved numbers
+            const savedId = new globalThis.Map(sent.map((s, i) => [s, stations[i].id]));
+            state.deleted = new Set(sent.filter(s => !state.stations.includes(s)).map(s => savedId.get(s)));
+            for (const s of state.stations) if (savedId.has(s)) s._from = savedId.get(s);
+        } else {
+            // from here on the stations are what was saved
+            state.stations = stations.map(s => ({ ...s, _from: s.id, _none: !hasPos(s) && s.gps !== true && !s.mmsi }));
+            state.deleted.clear();
+        }
         App.notify('success', 'Stations saved');
         onSaved?.();
         render();

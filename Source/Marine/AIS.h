@@ -68,6 +68,7 @@ namespace AIS
 
 		long long start_idx = 0;
 		long long end_idx = 0;
+		int failed_len = 0;
 
 	public:
 		virtual ~Decoder() {}
@@ -157,6 +158,8 @@ namespace AIS
 						found = processData(position - 7, tag);
 						if (found)
 							NextState(State::FOUNDMESSAGE, 0);
+						else
+							failed_len = position - 7;
 						NextState(State::TRAINING, 0);
 					}
 					else
@@ -183,6 +186,18 @@ namespace AIS
 		void reset() { NextState(State::TRAINING, 0); }
 		State getState() const { return state; }
 		long long getStartIdx() const { return start_idx; }
+
+		int getPosition() const { return position; }
+		int takeFailedLength()
+		{
+			const int len = failed_len;
+			failed_len = 0;
+			return len;
+		}
+		void flipBit(int i) { msg.setBit(i, !msg.getBit(i)); }
+		bool checkCorrected(int len);
+		void deliver(int len, TAG &tag);
+		bool sameFrame(const Decoder &other, int len) const { return msg.sameBits(other.msg, len); }
 
 		// MessageIn
 		virtual void Signal(const DecoderSignals &in);

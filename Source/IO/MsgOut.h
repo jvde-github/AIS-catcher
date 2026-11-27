@@ -238,6 +238,8 @@ namespace IO
 
 			for (int i = 0; i < len; i++)
 			{
+				if (!data[i].hasPosition())
+					continue;
 				json.clear();
 				json += jsonFormat() ? data[i].getJSON() : data[i].getNMEA();
 				json += line_suffix;

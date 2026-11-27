@@ -38,15 +38,15 @@
 import { dismissOnce, draggable as componentDraggable, flagHTML } from "./components.js";
 import { clamp } from "./chrome.js";
 
-var ICON_UNAVAILABLE = "card-icon-unavailable";
-var POPOVER = "card-popover";
-var HEADER_STATES = ["card-validated", "card-not-validated", "card-warning", "card-dubious"];
+let ICON_UNAVAILABLE = "card-icon-unavailable";
+let POPOVER = "card-popover";
+let HEADER_STATES = ["card-validated", "card-not-validated", "card-warning", "card-dubious"];
 
 export function create(opts) {
     if (!opts || !opts.mount) throw new Error("card.create needs a mount");
 
-    var mount = opts.mount;
-    var iconMax = opts.iconMax || 3;
+    let mount = opts.mount;
+    let iconMax = opts.iconMax || 3;
 
     function content() {
         return mount.querySelector(".mapcard-content") || mount;
@@ -58,11 +58,11 @@ export function create(opts) {
 
     /* --- header ------------------------------------------------------------- */
 
-    var header = {
+    let header = {
         title: function () { return mount.querySelector(".mapcard-title"); },
         flag: function (country, name) { mount.querySelector(".mapcard-flag").innerHTML = country ? flagHTML(country, "flag-card", name) : ""; },
         state: function (cls) {
-            var el = mount.querySelector(".mapcard-header");
+            let el = mount.querySelector(".mapcard-header");
             HEADER_STATES.forEach(function (c) { el.classList.toggle(c, c === cls); });
         },
     };
@@ -76,22 +76,22 @@ export function create(opts) {
     /* Shows `popover` hanging off `anchor`, flipped to stay on screen and
        clamped to the card. A second call on an open popover closes it. */
     function togglePopover(popover, anchor) {
-        var wasOpen = popover.style.display === "block";
+        let wasOpen = popover.style.display === "block";
         closePopovers();
         if (wasOpen) return;
 
-        var a = anchor.getBoundingClientRect();
-        var c = mount.getBoundingClientRect();
+        let a = anchor.getBoundingClientRect();
+        let c = mount.getBoundingClientRect();
 
         popover.style.display = "block";
-        var w = popover.offsetWidth, h = popover.offsetHeight;
+        let w = popover.offsetWidth, h = popover.offsetHeight;
 
-        var left = a.left - c.left + 20;
-        var top = a.bottom - c.top + 5;
+        let left = a.left - c.left + 20;
+        let top = a.bottom - c.top + 5;
         if (a.left + w + 20 > window.innerWidth) left = a.right - c.left - w - 5;
         if (a.bottom + h + 5 > window.innerHeight) top = a.top - c.top - h - 5;
 
-        var at = clamp({ left: 5, top: 5, width: c.width - 10, height: Infinity }, w, h, left, top);
+        let at = clamp({ left: 5, top: 5, width: c.width - 10, height: Infinity }, w, h, left, top);
         popover.style.left = at.left + "px";
         popover.style.top = at.top + "px";
 
@@ -100,9 +100,9 @@ export function create(opts) {
 
     /* --- footer ------------------------------------------------------------- */
 
-    var offset = {};        // group -> first visible index
-    var count = {};         // group -> available items
-    var available = opts.itemAvailable || function () { return true; };
+    let offset = {};        // group -> first visible index
+    let count = {};         // group -> available items
+    let available = opts.itemAvailable || function () { return true; };
 
     function isMore(el) { return el.dataset.more === "1"; }
 
@@ -116,19 +116,19 @@ export function create(opts) {
        `action` is a data-action name the host dispatches on; `more` marks
        the paging item, which is shown only when there is something to page. */
     function addItem(item) {
-        var foot = footerEl();
+        let foot = footerEl();
         if (!foot) return null;
 
-        var div = document.createElement("div");
+        let div = document.createElement("div");
         div.title = item.title || "";
         div.dataset.contextType = item.group || "default";
         if (item.id) div.id = item.id;
         if (item.more) div.dataset.more = "1";
         if (item.action) div.dataset.action = item.action;
 
-        var i = document.createElement("i");
+        let i = document.createElement("i");
         i.className = (item.icon || "question_mark") + "_icon";
-        var span = document.createElement("span");
+        let span = document.createElement("span");
         span.textContent = item.label || "";
         div.appendChild(i);
         div.appendChild(span);
@@ -138,16 +138,16 @@ export function create(opts) {
     }
 
     function showGroup(group) {
-        var foot = footerEl();
+        let foot = footerEl();
         if (!foot) return;
-        var items = Array.prototype.slice.call(foot.children);
-        var more = items.filter(function (el) { return isMore(el) && el.dataset.contextType === group; });
-        var shown = items.filter(function (el) { return !isMore(el) && itemShown(el, group); });
+        let items = Array.prototype.slice.call(foot.children);
+        let more = items.filter(function (el) { return isMore(el) && el.dataset.contextType === group; });
+        let shown = items.filter(function (el) { return !isMore(el) && itemShown(el, group); });
 
         count[group] = shown.length;
         if (!(group in offset) || offset[group] >= shown.length) offset[group] = 0;
 
-        var paged = shown.length > iconMax;
+        let paged = shown.length > iconMax;
         items.forEach(function (el) { el.style.display = paged && more.indexOf(el) >= 0 ? "flex" : "none"; });
         shown.slice(offset[group], offset[group] + iconMax).forEach(function (el) { el.style.display = "flex"; });
     }
@@ -165,35 +165,35 @@ export function create(opts) {
 
     /* --- layout --------------------------------------------------------------- */
 
-    var lay = opts.layout || {};
-    var chrome = lay.chrome || null;
-    var fullBleed = lay.fullBleed || function () { return false; };
-    var topInset = lay.topInset || function () { return chrome ? chrome.inset("top") : 10; };
-    var viewSize = lay.viewSize || function () { return [window.innerWidth, window.innerHeight]; };
-    var freeWidth = lay.freeWidth || function () { return viewSize()[0]; };
-    var reserveRight = lay.reserveRight || function () { return 30; };
-    var preferDock = lay.preferDock || function () { return false; };
-    var pinned = lay.pinned || function () { return null; };
-    var aside = lay.aside || "beside";                     // "beside" | "alongCourse"
-    var angle = lay.angle || function () { return 0; };   // alongCourse: the target's course, degrees
-    var besideMargin = lay.margin != null ? lay.margin : 35;
-    var minWidth = lay.minWidth || 280;
+    let lay = opts.layout || {};
+    let chrome = lay.chrome || null;
+    let fullBleed = lay.fullBleed || function () { return false; };
+    let topInset = lay.topInset || function () { return chrome ? chrome.inset("top") : 10; };
+    let viewSize = lay.viewSize || function () { return [window.innerWidth, window.innerHeight]; };
+    let freeWidth = lay.freeWidth || function () { return viewSize()[0]; };
+    let reserveRight = lay.reserveRight || function () { return 30; };
+    let preferDock = lay.preferDock || function () { return false; };
+    let pinned = lay.pinned || function () { return null; };
+    let aside = lay.aside || "beside";                     // "beside" | "alongCourse"
+    let angle = lay.angle || function () { return 0; };   // alongCourse: the target's course, degrees
+    let besideMargin = lay.margin != null ? lay.margin : 35;
+    let minWidth = lay.minWidth || 280;
 
     function gap() { return chrome ? chrome.gap() : 10; }
 
     function pinActive() {
-        var p = pinned();
+        let p = pinned();
         return !!p && p.x != null && p.y != null && !fullBleed();
     }
 
     function parentSize() {
-        var parent = mount.offsetParent;
+        let parent = mount.offsetParent;
         return [parent ? parent.clientWidth : window.innerWidth, parent ? parent.clientHeight : window.innerHeight];
     }
 
     function clampToFree(left, top) {
         if (!chrome) return { left: left, top: top };
-        var box = chrome.freeBox(mount.offsetParent);
+        let box = chrome.freeBox(mount.offsetParent);
         return chrome.clamp(box, mount.offsetWidth, mount.offsetHeight, left, top);
     }
 
@@ -210,15 +210,15 @@ export function create(opts) {
 
     /* a card against an edge loses the rounded corners on that side */
     function flushCorners() {
-        var ps = parentSize();   // all reads first: each toggle would force a new layout
-        var l = mount.offsetLeft, t = mount.offsetTop, r = l + mount.offsetWidth, b = t + mount.offsetHeight;
+        let ps = parentSize();   // all reads first: each toggle would force a new layout
+        let l = mount.offsetLeft, t = mount.offsetTop, r = l + mount.offsetWidth, b = t + mount.offsetHeight;
         mount.classList.toggle("flush-left", l <= 0);
         mount.classList.toggle("flush-top", t <= 0);
         mount.classList.toggle("flush-right", r >= ps[0]);
         mount.classList.toggle("flush-bottom", b >= ps[1]);
     }
 
-    var placedHow = null;   // "pinned" | "beside" | "dock" — what fit() may move
+    let placedHow = null;   // "pinned" | "beside" | "dock" — what fit() may move
 
     /* the stylesheet docks the card (flush in the corner, or with the map gap
        on a roomy pane): no inline position */
@@ -232,15 +232,15 @@ export function create(opts) {
        centred on it ("beside") or leaning away along its course ("alongCourse") */
     function beside(pixel) {
         if (preferDock() || !pixel || !chrome) return null;
-        var vs = viewSize();
-        var rect = mount.getBoundingClientRect();
+        let vs = viewSize();
+        let rect = mount.getBoundingClientRect();
         if (aside === "alongCourse") {
-            var free = chrome.freeBox(mount.offsetParent);
-            var m = besideMargin;
-            var fitsBeside = (free.left + free.width) - (pixel[0] + rect.width + m + reserveRight()) > 0 ||
+            let free = chrome.freeBox(mount.offsetParent);
+            let m = besideMargin;
+            let fitsBeside = (free.left + free.width) - (pixel[0] + rect.width + m + reserveRight()) > 0 ||
                              (pixel[0] - free.left) - (rect.width + m) > 0;
             if (!fitsBeside || free.height <= rect.height + 2 * m) return null;
-            var box = { left: free.left + m, top: free.top + m, width: free.width - 2 * m, height: free.height - 2 * m };
+            let box = { left: free.left + m, top: free.top + m, width: free.width - 2 * m, height: free.height - 2 * m };
             return chrome.alongCourse(box, rect.width, rect.height, pixel, m, angle(pixel));
         }
         return chrome.beside({ width: vs[0], height: vs[1] }, rect.width, rect.height, pixel,
@@ -254,8 +254,8 @@ export function create(opts) {
         if (!mount.offsetParent) return null;
 
         if (pinActive()) {
-            var p = pinned();
-            var at = clampToFree(p.x, p.y);
+            let p = pinned();
+            let at = clampToFree(p.x, p.y);
             floatAt(at.left, at.top);
             placedHow = "pinned";
         } else {
@@ -263,7 +263,7 @@ export function create(opts) {
             mount.style.top = "";
             mount.classList.remove("floating");
 
-            var b = beside(pixel);
+            let b = beside(pixel);
             if (b) {
                 floatAt(b.left, b.top);
                 placedHow = "beside";
@@ -283,12 +283,12 @@ export function create(opts) {
     function fit() {
         if (!mount.offsetParent) return;
 
-        var bleed = fullBleed();
-        var margin = bleed ? 0 : gap();
-        var ps = parentSize();
-        var top = bleed ? 0 : topInset();
-        var bottom = ps[1] - margin;
-        var available = bottom - top;
+        let bleed = fullBleed();
+        let margin = bleed ? 0 : gap();
+        let ps = parentSize();
+        let top = bleed ? 0 : topInset();
+        let bottom = ps[1] - margin;
+        let available = bottom - top;
 
         mount.style.maxHeight = available + "px";
         if (placedHow === "dock") {          // the stylesheet positions and sizes a docked card
@@ -301,11 +301,11 @@ export function create(opts) {
             /* taller than the free area: take all of it */
             floatAt(pinActive() ? null : Math.max(0, Math.min(margin, ps[0] - mount.offsetWidth)), top);
         } else {
-            var overflow = mount.offsetTop + mount.offsetHeight - bottom;
+            let overflow = mount.offsetTop + mount.offsetHeight - bottom;
             if (overflow > 0) setPos(null, Math.max(top, mount.offsetTop - overflow));
             if (pinActive()) {
-                var at = position();
-                var c = clampToFree(at.x, at.y);
+                let at = position();
+                let c = clampToFree(at.x, at.y);
                 setPos(c.left, c.top);
             }
         }
@@ -319,12 +319,12 @@ export function create(opts) {
 
     function applyPinStyle(on) {
         mount.classList.toggle("pinned", !!on);
-        var handle = mount.querySelector(".draggable");
+        let handle = mount.querySelector(".draggable");
         if (handle) handle.classList.toggle("opacity-50", !!on);
     }
 
     function pin() {
-        var at = position();
+        let at = position();
         applyPinStyle(true);
         mount.dispatchEvent(new CustomEvent("card:pin", { detail: at }));
         return at;
@@ -345,7 +345,7 @@ export function create(opts) {
 
     /* places the card for a target at `pixel` and fits it to the pane */
     function openCard(pixel) {
-        var how = place(pixel);
+        let how = place(pixel);
         fit();
         return how;
     }
@@ -353,9 +353,9 @@ export function create(opts) {
     /* runs `fn` (which may rewrite content) and puts the scroll position back:
        a refresh must not move a card the user has scrolled */
     function keepScroll(fn) {
-        var c = content();
-        var top = c.scrollTop;
-        var r = fn();
+        let c = content();
+        let top = c.scrollTop;
+        let r = fn();
         c.scrollTop = top;
         return r;
     }

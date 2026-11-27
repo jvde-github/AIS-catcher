@@ -41,7 +41,7 @@ namespace
 	std::string keyOf(const std::string &secret)
 	{
 		std::string key;
-		if (secret.compare(0, 6, "whsec_") == 0 && Util::Convert::fromBase64(secret.substr(6), key))
+		if (secret.compare(0, 6, "whsec_") == 0 && Util::Convert::fromBase64(secret.substr(6), key) && !key.empty())
 			return key;
 		return secret;
 	}

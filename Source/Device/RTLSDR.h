@@ -90,6 +90,7 @@ namespace Device
 		void setFormat(Format f) override {}
 
 		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
+		void report(std::vector<AIS::Metric> &values) override;
 		std::string Get() override;
 	};
 }

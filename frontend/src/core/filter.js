@@ -18,12 +18,13 @@ const instance = shared.create({
 
 export const {
     get, set, LISTS, isHidden, toggle, setAll, reset, passesAppearance,
-    isActive, describe, shipPasses,
+    isActive, describe, shipPasses, passesUntimed, passesSeen,
 } = instance;
 
-// whether a vessel passes the filter; the verdict stays on the entry until the
-// vessel's data or the filter changes (both clear entry.show)
+// whether a vessel passes the filter; the verdict on all but "seen within" stays on the
+// entry until the vessel's data or the filter changes (both clear entry.show), that
+// term goes by the server clock and is asked each time
 export function visible(entry) {
-    if (entry.show === undefined) entry.show = shipPasses(entry.raw);
-    return entry.show;
+    if (entry.show === undefined) entry.show = passesUntimed(entry.raw);
+    return entry.show && passesSeen(entry.raw);
 }

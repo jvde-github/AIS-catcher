@@ -68,15 +68,16 @@ namespace AIS
 		MODEL_BEAST = 8,
 		MODEL_RAW1090 = 10,
 		MODEL_V2_BASE = 11,
-		MODEL_MAX = 11
+		MODEL_V2_HIGH = 12,
+		MODEL_MAX = 12
 	};
-
 
 	// Abstract demodulation model
 	class Model : public Setting
 	{
 	protected:
 		int station = -1;
+		bool station_fixed = false;
 		int own_mmsi = -1;
 
 		Mode mode = Mode::AB;
@@ -88,6 +89,7 @@ namespace AIS
 		Util::PassThrough<Plane::ADSB> outputADSB;
 		Util::PassThrough<GPS> output_gps;
 		Util::PassThrough<Control> output_control;
+		Util::PassThrough<Metric> output_metric;
 
 	public:
 		Model() : Setting("Model") {}
@@ -101,11 +103,13 @@ namespace AIS
 			outputADSB.setLock(m);
 			output_gps.setLock(m);
 			output_control.setLock(m);
+			output_metric.setLock(m);
 		}
 
 		StreamOut<Message> &Output() { return output; }
 		StreamOut<GPS> &OutputGPS() { return output_gps; }
 		StreamOut<Control> &OutputControl() { return output_control; }
+		StreamOut<Metric> &OutputMetric() { return output_metric; }
 		StreamOut<Plane::ADSB> &OutputADSB() { return outputADSB; }
 
 		void setName(const std::string &s) { setting_name = s; }
@@ -115,7 +119,7 @@ namespace AIS
 		void setMode(Mode m) { mode = m; }
 		void setOwnMMSI(int m) { own_mmsi = m; }
 		// the station of the input, when the decoder has no ID of its own
-		void setDefaultStation(int s) { if (station < 0) station = s; }
+		void setDefaultStation(int s, bool fixed) { if (station < 0) station = s; station_fixed = fixed; }
 		void setDesignation(const std::string &s) { designation = s; }
 		virtual Setting &applyKey(AIS::Keys key, const std::string &arg)
 		{
@@ -140,6 +144,24 @@ namespace AIS
 	};
 
 	// Common front-end downsampling
+	class InputMonitor : public StreamIn<RAW>
+	{
+		Device::Device *device = nullptr;
+		long long window = 0, seen = 0;
+		long long scanned = 0, clipped = 0;
+		unsigned buffers = 0;
+
+	public:
+		Connection<Metric> outMetric;
+
+		void setup(Device::Device *d, int sample_rate)
+		{
+			device = d;
+			window = 10LL * sample_rate;
+		}
+		void Receive(const RAW *raw, int len, TAG &tag);
+	};
+
 	class ModelFrontend : public Model
 	{
 	private:
@@ -157,6 +179,7 @@ namespace AIS
 		DSP::Downsample16_CU8_Exact DS16_CU8_Exact;
 
 		Util::ConvertRAW convert;
+		InputMonitor monitor;
 
 	protected:
 		bool fixedpointDS = false;
@@ -279,11 +302,12 @@ namespace AIS
 	class ModelEngineV2 : public ModelFrontend
 	{
 	public:
-		ModelEngineV2() { setName("AIS engine v2 base"); }
+		explicit ModelEngineV2(bool high) : high(high) { setName(high ? "AIS engine v2 high" : "AIS engine v2 base"); }
 
 	private:
 		V2::Engine V2_a, V2_b;
 		float dd_train = 0.75f, dd_weight = 0.86f;
+		const bool high;
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
@@ -391,5 +415,6 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
+		Setting &applyKey(AIS::Keys key, const std::string &arg) { return key == AIS::KEY_SETTING_FILE && wav.setOptionKey(key, arg) ? *this : Model::applyKey(key, arg); }
 	};
 }

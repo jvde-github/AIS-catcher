@@ -22,7 +22,7 @@ apt-get install -y -qq crossbuild-essential-armhf cmake make pkgconf \
     libssl-dev:armhf zlib1g-dev:armhf libsqlite3-dev:armhf libpq-dev:armhf \
     librtlsdr-dev:armhf libusb-1.0-0-dev:armhf >/dev/null
 
-# CMakeLists.txt replaces CMAKE_CXX_FLAGS, so the target flags ride on the compiler
+# the target flags ride on the compiler, so every compile of the build has them
 for tool in gcc g++; do
     printf '#!/bin/sh\nexec %s-%s -march=armv6+fp -marm "$@"\n' "$TRIPLET" "$tool" > "/usr/local/bin/armv6-$tool"
     chmod +x "/usr/local/bin/armv6-$tool"

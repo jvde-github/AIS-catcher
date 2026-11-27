@@ -103,7 +103,7 @@ namespace IO
 
 	void HTTPStreamer::Receive(const AIS::GPS *data, int len, TAG &tag)
 	{
-		if (!filter.includeGPS() || len <= 0)
+		if (!filter.includeGPS() || len <= 0 || !data[len - 1].hasPosition())
 			return;
 		const std::lock_guard<std::mutex> lock(msg_list_mutex);
 		lat = std::to_string(data[len - 1].getLat());
@@ -203,10 +203,25 @@ namespace IO
 			counts += ", " + std::to_string(drop_snap) + " dropped";
 		counts += ", " + std::to_string(pos_snap) + " positions";
 
-		if (r < 200 || r > 299)
-			Error() << "HTTP Client [" << Util::Parse::URLForLog(url) << "]: " << IO::httpStatusString(r) << " (" << counts << ")";
-		else if (show_response)
-			Info() << "HTTP Client [" << Util::Parse::URLForLog(url) << "]: return code " << r << " (" << counts << ")";
+		const bool failed = r < 200 || r > 299;
+		// a post that failed lost its batch
+		if (failed)
+			stats.dropped += (uint64_t)sent;
+		if (!failed && !show_response)
+			return;
+
+		std::string reply = r >= 100 ? http.getResponse().substr(0, 200) : std::string();
+		for (char &c : reply)
+			if ((unsigned char)c < 32)
+				c = ' ';
+		reply.erase(reply.find_last_not_of(' ') + 1);
+
+		const std::string line = "HTTP Client [" + Util::Parse::URLForLog(url) + "]: " + (failed ? IO::httpStatusString(r) : "return code " + std::to_string(r)) +
+								 " (" + counts + ")" + (reply.empty() ? "" : ": " + reply);
+		if (failed)
+			Error() << line;
+		else
+			Info() << line;
 	}
 
 	void HTTPStreamer::process()
@@ -224,6 +239,15 @@ namespace IO
 	{
 		switch (key)
 		{
+		// the uploads are built from the JSON stream: a format of the message stream would send nothing
+		case AIS::KEY_SETTING_MSGFORMAT:
+			OutputMessage::applyKey(key, arg);
+			if (!usesJSONStream())
+				throw std::runtime_error("HTTP: msgformat " + arg + " is not one an HTTP output sends; for NMEA lines use protocol NMEA");
+			break;
+		case AIS::KEY_SETTING_JSON:
+			Warning() << "HTTP: the json option is ignored; an HTTP output always sends JSON";
+			break;
 		case AIS::KEY_SETTING_URL:
 			http.setURL(arg);
 			url = Util::Parse::URLWithoutCredentials(arg);

@@ -6,12 +6,13 @@
 import { settings } from '../../core/state.js';
 import {
     ships as shipsDB, planes as planesDB, clock, planesSince, hoverMmsi as hoverMMSI, hoverType, setHover,
+    hoverFeature as hover_feature, setHoverFeature,
 } from '../../core/store.js';
 import { getShipName } from '../../core/names.js';
 import { getSpeedVal, getSpeedUnit } from '../../core/units.js';
-import { getDeltaTimeVal, getCountryName, sanitizeString, getICAO } from '@aiscatcher/core/text.js';
+import { getCountryName, sanitizeString, getICAO } from '@aiscatcher/core/text.js';
 import { debounce, flagHTML, isSecondaryClick } from '@aiscatcher/ui/components.js';
-import { vesselBand } from '@aiscatcher/ui/vessel-tooltip.js';
+import { vesselBand, hoverRows } from '@aiscatcher/ui/vessel-tooltip.js';
 import { severalStations, stationLabel } from '../../core/config.js';
 import { toLonLat } from 'ol/proj';
 import { getWidth } from 'ol/extent';
@@ -28,7 +29,6 @@ import * as measure from '../measure/measure.js';
 import * as range from '../range/range.js';
 
 const hover_info = document.getElementById('hover-info');
-export let hover_feature = undefined;
 
 let hoverCircleFeature = undefined;
 
@@ -84,23 +84,18 @@ export const handleClick = function (pixel, target, event) {
 function getTooltipContent(ship) {
     return vesselBand(ship, {
         name: sanitizeString(String(getShipName(ship) || ship.mmsi)),
-        speed: ship.speed != null ? getSpeedVal(ship.speed) + ' ' + getSpeedUnit() : null,
+        speed: ship.speed != null ? `${getSpeedVal(ship.speed)} <small>${getSpeedUnit()}</small>` : null,
         age: clock - ship.last_signal,
         label: severalStations() ? stationLabel : null,
     }) + mapObjects.shipTooltip(ship);
 }
 
 function getTooltipContentPlane(plane) {
-    const altitude = plane.airborne == 1 ? (plane.altitude ? Math.round(plane.altitude) + ' ft' : '-') : 'ground';
-    const speed = plane.speed ? Math.round(plane.speed) : '-';
-    return '<div class="tooltip-card">' +
-        flagHTML(plane.country, 'flag-tooltip', getCountryName(plane.country)) +
-        '<div>' +
-        sanitizeString(plane.callsign || getICAO(plane)) +
-        '<span class="tooltip-dim"> at </span>' + altitude + '/' + speed + ' kn' +
-        '<div class="tooltip-sub">received ' + getDeltaTimeVal(planesSince - plane.last_signal) + ' ago</div>' +
-        '</div>' +
-        '</div>';
+    const altitude = plane.airborne == 1 ? (plane.altitude ? `${Math.round(plane.altitude)} <small>ft</small>` : '') : 'On the ground';
+    return '<div class="tip-band">' + hoverRows({
+        flag: flagHTML(plane.country, 'flag-tooltip', getCountryName(plane.country)), name: sanitizeString(plane.callsign || getICAO(plane)),
+        value: altitude, age: planesSince - plane.last_signal, kind: plane.speed ? Math.round(plane.speed) + ' kn' : '',
+    }) + '</div>';
 }
 
 function mapFreeBox() {
@@ -110,7 +105,7 @@ function mapFreeBox() {
 const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
 
     tooltip.innerHTML = mmsi;
-    tooltip.classList.toggle('tooltip-bands', typeof mmsi === 'string' && mmsi.includes('tip-band'));
+    tooltip.classList.toggle('tooltip-bands', typeof mmsi === 'string' && (mmsi.includes('tip-band') || mmsi.includes('meteo-tooltip')));
 
     if (pixel) {
         const { offsetWidth: tw, offsetHeight: th } = tooltip;
@@ -140,7 +135,7 @@ export const stopHover = function () {
     const sf = hoverType == 'ship' && hoverMMSI in shapeFeatures;
 
     setHover(undefined, undefined);
-    hover_feature = undefined;
+    setHoverFeature(undefined);
 
     if (dc) range.rangeLayer.changed();
 
@@ -162,7 +157,7 @@ export const startHover = function (type, mmsi, pixel, feature) {
         stopHover();
 
         setHover(mmsi, type);
-        hover_feature = feature;
+        setHoverFeature(feature);
 
         const shipRaw = type == 'ship' ? shipsDB[mmsi]?.raw : null;
         const planeRaw = type == 'plane' ? planesDB[mmsi]?.raw : null;

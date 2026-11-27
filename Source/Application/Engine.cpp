@@ -75,9 +75,14 @@ void Engine::publishReceivers()
 			s.input = device->getProduct();
 			s.streaming = device->isStreaming() && device->isConnected();
 			s.lost = device->isLost();
+			const Format format = device->getFormat();
+			s.text = format == Format::TXT;
+			s.aircraft = format == Format::BASESTATION || format == Format::BEAST || format == Format::RAW1090;
 		}
 		s.label = receiverLabel(receivers, k);
 		s.messages = r.messages();
+		s.last_message = r.lastMessage();
+		r.addErrors(s.errors);
 		s.bytes = r.bytesIn().received();
 		if (const IO::OutputStats *link = device ? device->getConnectionStats() : nullptr)
 		{
@@ -132,14 +137,15 @@ bool Engine::follow(Engine &next, const StationRegistry &configured, const Stati
 		return false;
 	Stations::resolve(configured, defaults, next.receivers, *site, false);
 
-	const auto same = [](const std::unique_ptr<Receiver> &a, const std::unique_ptr<Receiver> &b) { return a->told == b->told && a->zones == b->zones; };
+	const auto alike = [](const Receiver &a, const Receiver &b) { return a.told == b.told && a.stampsStation() == b.stampsStation(); };
+	const auto same = [&](const std::unique_ptr<Receiver> &a, const std::unique_ptr<Receiver> &b) { return alike(*a, *b) && a->zones == b->zones; };
 	if (receivers.size() == next.receivers.size() && std::equal(receivers.begin(), receivers.end(), next.receivers.begin(), same))
 		return true;
 
 	// a running receiver takes the place of the one told the same, with the zones that one has
 	for (auto &n : next.receivers)
 	{
-		auto it = std::find_if(receivers.begin(), receivers.end(), [&](const std::unique_ptr<Receiver> &r) { return r && r->told == n->told; });
+		auto it = std::find_if(receivers.begin(), receivers.end(), [&](const std::unique_ptr<Receiver> &r) { return r && alike(*r, *n); });
 		if (it == receivers.end())
 			continue;
 		(*it)->zones = n->zones;
@@ -237,6 +243,8 @@ EngineFacts Engine::facts()
 		d.serial = device->getSerial().empty() ? "-" : device->getSerial();
 		d.sample_rate = device->getRateDescription();
 		d.label = receiverLabel(receivers, k);
+		d.station = r->getStation();
+		d.upstream = r->fromUpstream() && device->getFormat() == Format::TXT;
 		for (int j = 0; j < r->modelCount(); j++)
 			d.model += (j ? "\n" : "") + r->model(j).getName();
 		facts.push_back(d);
@@ -257,6 +265,7 @@ void Engine::feed(Tracker &t, const TrackerSpec *own)
 			r->OutputJSON(j).Connect(&t.json());
 			r->OutputGPS(j).Connect(&t.gps());
 			r->OutputControl(j).Connect(&t.control());
+			r->OutputMetric(j).Connect(&t.metric());
 			r->OutputADSB(j).Connect(&t.adsb());
 		}
 		r->linkJSON();

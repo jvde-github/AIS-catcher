@@ -14,19 +14,19 @@ import { getShipName } from '../../core/names.js';
 import * as stations from '@aiscatcher/ui/stations.js';
 import { map } from '../../map.js';
 import { ui } from '../../ui.js';
-import { refreshIntervalMs, fetchShips } from '../../data.js';
+import { fetchShips } from '../../data.js';
+import { refreshIntervalMs } from '../../poll.js';
 import { saveSettings } from '../../settings-store.js';
 import { showNotification } from '../../dialog.js';
 import { register } from '../../actions.js';
 import { hasValidCoords } from '@aiscatcher/core/geo.js';
-import { selectMapTab } from '../../tabs/index.js';
+import { selectMapTab } from '../targetcard/card.js';
 import * as replay from '../replay/replay.js';
 import * as mapObjects from '../mapobjects/mapobjects.js';
-import { updateFollowOption } from '../targetcard/shipcard.js';
 
 // vessel `m` on the map tab, its card open, the map zoomed in on it
 export async function openFocus(m, z) {
-    await fetchShips(false);
+    await fetchShips();
 
     selectMapTab(m);
 
@@ -97,6 +97,15 @@ function unpinCenter() {
     drawStation();
     updateFollowOption();
     showNotification("No longer following " + vesselLabel(was));
+}
+
+export function updateFollowOption() {
+    const option = document.getElementById("targetcard_follow_option");
+    const following = isFollowing(cardMmsi);
+
+    option.querySelector("#targetcard_follow").innerText = following ? "Unfollow" : "Follow";
+    option.title = following ? "Stop centring the map on this vessel" : "Keep the map centred on this vessel";
+    option.classList.toggle("card-icon-active", following);
 }
 
 export function isFollowing(m) {

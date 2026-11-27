@@ -70,6 +70,8 @@ struct Ship
 	char month, day, hour, minute;
 	float lat, lon, ppm, level, speed, cog, draught, distance;
 	std::time_t last_signal, last_direct_signal, last_static_signal;
+	// when the held position was received, 0 with none
+	std::time_t last_position_signal;
 	char shipname[21], destination[21], callsign[8], country_code[3], vin[9],
 		vendorid[4];
 	std::string msg;
@@ -145,7 +147,8 @@ struct Ship
 
 private:
 	static const int _SHIP_MAGIC = 0x53484950;
-	static const int _SHIP_VERSION = 9;
+	static const int _SHIP_VERSION = 10;
+	static const int _SHIP_VERSION_TURNED = 9; // the rate of turn, no position time
 	static const int _SHIP_VERSION_HEARD = 8; // the station list, no rate of turn
 	static const int _SHIP_VERSION_RESTED = 7; // the rest, no station list
 	static const int _SHIP_VERSION_PREVIOUS = 6; // before the rest on the record

@@ -11,7 +11,6 @@ import { showNotification } from '../../dialog.js';
 import { restoreDefaultSettings, saveSettings, onSaved, effects, runEffect, runAllEffects } from '../../settings-store.js';
 import * as tracks from '../../tracks.js';
 import { closeSearch } from '../search/search-panel.js';
-import { updateFilterUI } from '../filter/filter.js';
 import { register } from '../../actions.js';
 
 // everything back to the defaults but the platform, the theme and the vessel filter
@@ -45,7 +44,7 @@ const SETTINGS_TAB_GROUPS = [
         ]
     },
     { title: "Filter", subs: [["Filter", "Vessels"]] },
-    { title: "Plots", subs: [["Graphs", "Plots"]] },
+    { title: "Dashboard", subs: [["Graphs", "Plots"]] },
     { title: "Table", subs: [["Table", "Table"]] },
 ];
 
@@ -53,13 +52,18 @@ effects({
     label_class_background: () => updateLabelColorRows(),
 });
 
+const opened = [];
+export function onSettingsOpen(fn) {
+    opened.push(fn);
+}
+
 export const settingsPanel = panelLib.create({
     window: document.getElementById("settings"),
     groups: SETTINGS_TAB_GROUPS,
     skipGrouping: ".st-group, .filter-checks, #overlayContainer",
     onOpen: () => {
         closeSearch();
-        updateFilterUI();
+        opened.forEach((fn) => fn());
         updateSettingsTab();
         syncThemedSettings();
         refreshOverlayCredits();

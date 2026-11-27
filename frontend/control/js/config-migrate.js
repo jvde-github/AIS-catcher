@@ -118,6 +118,12 @@ function migrateReceivers(cfg) {
             }
             delete r.model;
         }
+        for (const e of Array.isArray(r.engines) ? r.engines : []) {
+            if (!e || !e.settings || !('sensitivity_high' in e.settings)) continue;
+            if (e.type === 'v2_base' && on(e.settings.sensitivity_high)) e.type = 'v2_high';
+            delete e.settings.sensitivity_high;
+            if (!Object.keys(e.settings).length) delete e.settings;
+        }
     }
 }
 

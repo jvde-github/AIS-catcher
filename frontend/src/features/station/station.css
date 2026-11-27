@@ -103,3 +103,117 @@
     padding: 1px 4px;
     letter-spacing: 1px;
 }
+
+/* the header's status: AIS and GPS, each an icon with its dot; the status itself in the title */
+.header-status {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-right: 4px;
+}
+
+/* a short, quiet line between the status and the settings */
+.header-status::after {
+    content: "";
+    width: 1px;
+    height: 22px;
+    margin-left: 8px;
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.header-status[hidden] {
+    display: none;
+}
+
+.nav-health {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #fff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-hover);
+}
+
+.nav-health[hidden] {
+    display: none;
+}
+
+/* as the settings icon beside them */
+@media (hover: hover) {
+    .nav-health:hover {
+        transform: var(--hover-lift);
+    }
+}
+
+.nav-health:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: -2px;
+}
+
+/* on the blue bar: lighter than the cards' colours, which sit on white */
+.nav-health[data-state="ok"] {
+    --status: #4ade80;
+}
+
+.nav-health[data-state="degraded"] {
+    --status: #fbbf24;
+}
+
+.nav-health[data-state="down"] {
+    --status: #f87171;
+}
+
+/* nothing to judge, as a station without a GPS: the icon stays, grey, without a dot */
+.nav-health[data-state="none"] {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.nav-health[data-state="none"] .nav-health-dot {
+    display: none;
+}
+
+.nav-health-dot {
+    position: absolute;
+    top: 8px;
+    right: 5px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--status, #cbd5e1);
+}
+
+.nav-health-label {
+    display: none;
+}
+
+.nav-health-icon {
+    width: 21px;
+    height: 21px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+@media (max-width: 600px) {
+    .nav-health {
+        width: 38px;
+        height: 44px;
+    }
+
+    .nav-health-dot {
+        top: 9px;
+        right: 6px;
+    }
+}

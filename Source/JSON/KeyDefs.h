@@ -35,7 +35,7 @@ X(KEY_QUALITY, "quality", "quality", "quality", "", "", "quality", "",
   nullptr)
 X(KEY_SCALED, "scaled", "", "scaled", "", "", "", "",
   "Scaled-output flag (true=engineering units)", nullptr)
-X(KEY_CHANNEL, "channel", "channel", "channel", "", "", "", "",
+X(KEY_CHANNEL, "channel", "channel", "channel", "", "", "channel", "",
   "AIS channel letter from the NMEA sentence (A or B; C/D for channels 75/76)", nullptr)
 X(KEY_HARDWARE, "hardware", "hardware", "hardware", "", "", "hardware", "",
   "Hardware/device product name reported by the driver", nullptr)
@@ -278,6 +278,8 @@ X(KEY_SETTING_SPLIT, "", "", "", "", "split", "", "",
 X(KEY_SETTING_SPYSERVER, "", "", "", "", "spyserver", "", "", "", nullptr)
 X(KEY_SETTING_SRC, "", "", "", "", "src", "", "", "", nullptr)
 X(KEY_SETTING_STATION, "", "", "", "", "station", "", "", "", nullptr)
+X(KEY_SETTING_STATION_UPSTREAM, "", "", "", "", "station_upstream", "", "",
+  "An input whose messages keep the station number the incoming data gives, where this install lists it; its own station otherwise.", nullptr)
 X(KEY_SETTING_STATIONS, "", "", "", "", "stations", "", "",
   "The receiving stations of this installation: id, name, position and altitude; 0 is the default station, where inputs stand that name none.", nullptr)
 X(KEY_SETTING_ALT, "", "", "", "", "alt", "", "", "Altitude of a station's antenna in metres.", nullptr)
@@ -304,7 +306,7 @@ X(KEY_SETTING_SCOPES, "", "", "", "", "scopes", "", "", "What a key may do: data
 X(KEY_SETTING_PUBLIC, "", "", "", "", "public", "", "", "A server anyone who reaches it may read, without a key; never together with keys.", nullptr)
 X(KEY_SETTING_AREA_ONLY, "", "", "", "", "area_only", "", "", "A server that offers of the API only the vessels within a bounding box (bbox=west,south,east,north, at most 4 degrees a side) and one vessel by MMSI: the public form of a server with many ships. Off by default.", nullptr)
 X(KEY_SETTING_PUBLIC_URL, "", "", "", "", "public_url", "", "", "Where clients reach this server, as a reverse proxy presents it, such as https://api.example.org/v1: what the API's links and its OpenAPI document say in place of /api/v1.", nullptr)
-X(KEY_SETTING_LIMITED, "", "", "", "", "limited", "", "", "A server that answers the short form whoever asks: lists of 25 rows at most, vessel rows without the station that heard them, one vessel in full without its stations, and 25 data calls an hour from one address. Off by default.", nullptr)
+X(KEY_SETTING_LIMITED, "", "", "", "", "limited", "", "", "A server that answers the short form whoever asks: lists of 100 rows a call, vessel rows without the station that heard them, one vessel in full without its stations, and 25 data calls an hour from one address. Off by default.", nullptr)
 X(KEY_SETTING_API_V0, "", "", "", "", "api_v0", "", "", "A server with the map also answers the ship list and statistics as v0.70 did, for scripts: /ships.json, /stat.json, /api/ships.json and /api/ships_full.json. On for -N and a \"server\" section, off for an entry of \"services\" unless switched on; limited does not cap them.", nullptr)
 X(KEY_SETTING_WEBHOOKS, "", "", "", "", "webhooks", "", "", "Addresses each event is posted to as it happens.", nullptr)
 X(KEY_SETTING_EVENTS, "", "", "", "", "events", "", "", "The kinds of event a webhook posts: safety, destination, status, draught, place_enter, place_exit, system.", nullptr)
@@ -344,6 +346,7 @@ X(KEY_SETTING_SUBSCRIBE, "", "", "", "", "subscribe", "", "", "", nullptr)
 X(KEY_SETTING_SYSTEM, "", "", "", "", "system", "", "", "", nullptr)
 X(KEY_SETTING_TCP, "", "", "", "", "tcp", "", "", "", nullptr)
 X(KEY_SETTING_TCP_LISTENER, "", "", "", "", "tcp_listener", "", "", "", nullptr)
+X(KEY_SETTING_TCPSERVER, "", "", "", "", "tcpserver", "", "", "", nullptr)
 X(KEY_SETTING_TEST, "", "", "", "", "test", "", "", "", nullptr)
 X(KEY_SETTING_TIMEOUT, "", "", "", "", "timeout", "", "", "", nullptr)
 X(KEY_SETTING_TEXT_BUFFER, "", "", "", "", "text_buffer", "", "", "", nullptr)
@@ -1229,3 +1232,27 @@ X(KEY_TOA_NS, "toa_ns", "", "toa_ns", "", "", "toa_ns", "ns",
 X(KEY_PLACE_RANK, "", "", "", "", "rank", "", "", "Place metadata", nullptr)
 X(KEY_SETTING_SETUP_CODE, "", "", "", "", "setup_code", "", "", "", nullptr)
 X(KEY_SETTING_ITERATIONS, "", "", "", "", "iterations", "", "", "", nullptr)
+
+X(KEY_WINDOW, "window", "", "", "", "", "window", "s", "Seconds a reported value was measured over", nullptr)
+X(KEY_UNIT, "unit", "", "", "", "", "unit", "", "Unit of the levels reported, dBm or dBFS", nullptr)
+X(KEY_NOISE_FLOOR, "noise_floor", "", "", "", "", "noise_floor", "dB",
+  "Noise floor of a channel: the level a tenth of its blocks stay under", nullptr)
+X(KEY_CHANNEL_LOAD, "channel_load", "", "", "", "", "channel_load", "%",
+  "Share of the time a channel is more than 6 dB above its noise floor", nullptr)
+X(KEY_PEAK, "peak", "", "", "", "", "peak", "dB", "Highest level on a channel", nullptr)
+X(KEY_CLIPPING, "clipping", "", "", "", "", "clipping", "%", "Share of an input's raw samples at full scale", nullptr)
+X(KEY_GAIN, "gain", "", "", "", "", "gain", "dB", "Tuner gain of a receiver", nullptr)
+
+// gpsd's SKY and TPV reports, read on a gpsd input
+X(KEY_GPSD_SATELLITES, "", "", "", "", "", "satellites", "", "gpsd: the satellites in view", nullptr)
+X(KEY_GPSD_PRN, "", "", "", "", "", "PRN", "", "gpsd: satellite number", nullptr)
+X(KEY_GPSD_GNSSID, "", "", "", "", "", "gnssid", "", "gpsd: the satellite's system, u-blox numbering", nullptr)
+X(KEY_GPSD_SVID, "", "", "", "", "", "svid", "", "gpsd: the satellite's number in its system", nullptr)
+X(KEY_GPSD_SIGID, "", "", "", "", "", "sigid", "", "gpsd: the signal, u-blox numbering", nullptr)
+X(KEY_GPSD_EL, "", "", "", "", "", "el", "degrees", "gpsd: elevation", nullptr)
+X(KEY_GPSD_AZ, "", "", "", "", "", "az", "degrees", "gpsd: azimuth", nullptr)
+X(KEY_GPSD_SS, "", "", "", "", "", "ss", "dB-Hz", "gpsd: signal strength", nullptr)
+X(KEY_GPSD_USED, "", "", "", "", "", "used", "", "gpsd: used for the fix", nullptr)
+X(KEY_GPSD_HDOP, "", "", "", "", "", "hdop", "", "gpsd: horizontal dilution of precision", nullptr)
+X(KEY_GPSD_MODE, "", "", "", "", "", "mode", "", "gpsd: fix, 1 none, 2 2D, 3 3D", nullptr)
+X(KEY_GPSD_TIME, "", "", "", "", "", "time", "", "gpsd: the time of a fix", nullptr)

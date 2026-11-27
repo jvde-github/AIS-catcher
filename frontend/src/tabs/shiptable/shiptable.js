@@ -1,17 +1,3 @@
-import Tabulator from 'tabulator-tables/src/js/core/Tabulator.js';
-import SortModule from 'tabulator-tables/src/js/modules/Sort/Sort.js';
-import FilterModule from 'tabulator-tables/src/js/modules/Filter/Filter.js';
-import PageModule from 'tabulator-tables/src/js/modules/Page/Page.js';
-import PersistenceModule from 'tabulator-tables/src/js/modules/Persistence/Persistence.js';
-import DownloadModule from 'tabulator-tables/src/js/modules/Download/Download.js';
-import ExportModule from 'tabulator-tables/src/js/modules/Export/Export.js';
-import FormatModule from 'tabulator-tables/src/js/modules/Format/Format.js';
-import InteractionModule from 'tabulator-tables/src/js/modules/Interaction/Interaction.js';
-
-Tabulator.registerModule([
-    SortModule, FilterModule, PageModule, PersistenceModule,
-    DownloadModule, ExportModule, FormatModule, InteractionModule,
-]);
 import { getShipDimension, getDimUnit, getDraughtVal, getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat, getSpeedVal, getSpeedUnit } from '../../core/units.js';
 import { getCountryName, getStatusVal, getMmsiTypeVal, getDeltaTimeVal, getEtaVal, getStringfromChannels, getStringfromMsgType, getStringfromGroup, sanitizeString } from '@aiscatcher/core/text.js';
 import { getShipName, getCallSign } from '../../core/names.js';
@@ -23,23 +9,21 @@ import { fetchShips, fetchTableRows } from '../../data.js';
 import { getTableShiptype } from '../../map.js';
 import { saveSettings } from '../../settings-store.js';
 import { settings } from '../../core/state.js';
-import { selectMapTab } from '../index.js';
+import { selectMapTab } from '../../features/targetcard/card.js';
 import { register } from '../../actions.js';
 import { showContextMenu } from '../../features/contextmenu/contextmenu.js';
 
-let table = null;
-let uiWired = false;
+const SIZES = [20, 50, 100];
+const DEFAULT_COLUMNS = ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"];
+const RESET_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
 
-function validatedClass(ship) {
-    return ship.validated == 1 ? "status-ok" : ship.validated == -1 ? "status-bad" : "";
-}
+let host = null, head, body, foot, menu;
+let rows = [], shown = [];
+let page = 0, size = 50;
 
-function validatedColor(ship, pos, neg, neutral = "inherited") {
-    return ship.validated == 1 ? pos : ship.validated == -1 ? neg : neutral;
-}
+const valid = (ship, yes, no, pending) => (ship.validated == 1 ? yes : ship.validated == -1 ? no : pending);
 
-function customShipFilter(data, filterParams) {
-    const query = filterParams.query.toLowerCase();
+function matches(data, query) {
     return (data.shipname || "").toLowerCase().includes(query) ||
         String(data.mmsi ?? "").includes(query) ||
         (data.callsign || "").toLowerCase().includes(query) ||
@@ -53,7 +37,7 @@ function customShipFilter(data, filterParams) {
         (data.lat != null && getLatValFormat(data).includes(query)) ||
         (data.lon != null && getLonValFormat(data).includes(query)) ||
         (data.speed != null && getSpeedVal(data.speed).toString().includes(query)) ||
-        (data.validated != null && (data.validated == 1 ? "yes" : data.validated == -1 ? "no" : "pending").includes(query)) ||
+        (data.validated != null && valid(data, "yes", "no", "pending").includes(query)) ||
         (data.channels != null && getStringfromChannels(data.channels).includes(query)) ||
         (data.group_mask != null && getStringfromGroup(data.group_mask).includes(query)) ||
         stationNames(data.stations).toLowerCase().includes(query);
@@ -74,289 +58,163 @@ function dimSortValue(ship) {
     return ship.to_bow != null && ship.to_stern != null ? ship.to_bow + ship.to_stern : -1;
 }
 
-function buildColumns() {
-    return [
-        {
-            title: "Shipname", field: "shipname", sorter: "string",
-            formatter: (cell) => {
-                const ship = cell.getRow().getData();
-                return flagHTML(ship.country, 'flag-inline', getCountryName(ship.country)) + sanitizeString(String(getShipName(ship) || ship.mmsi));
-            },
-        },
-        { title: "MMSI", field: "mmsi", sorter: "number" },
-        { title: "IMO", field: "imo", sorter: "number", formatter: (cell) => { const v = cell.getValue(); return v != null ? v : ""; } },
-        { title: "ENI", field: "eni", sorter: (a, b) => padEni(a).localeCompare(padEni(b)), formatter: (cell) => sanitizeString(padEni(cell.getValue())) },
-        { title: "Dest", field: "destination", sorter: "string", formatter: (cell) => sanitizeString(cell.getValue() || "") },
-        {
-            title: "ETA", field: "eta",
-            sorter: (a, b, aRow, bRow) => etaSortValue(aRow.getData()) - etaSortValue(bRow.getData()),
-            formatter: (cell) => {
-                const ship = cell.getRow().getData();
-                return ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
-            },
-        },
-        {
-            title: "Callsign", field: "callsign", sorter: "string",
-            formatter: (cell) => {
-                const ship = cell.getRow().getData();
-                return ship != null ? sanitizeString(getCallSign(ship) || "") : "";
-            },
-        },
-        {
-            title: "Flag", field: "country", sorter: "string",
-            formatter: (cell) => {
-                const ship = cell.getRow().getData();
-                return ship != null ? getCountryName(ship.country) : "";
-            },
-        },
-        {
-            title: "Status", field: "status", sorter: "string",
-            formatter: (cell) => {
-                const ship = cell.getRow().getData();
-                return ship != null ? getStatusVal(ship) : "";
-            },
-        },
-        {
-            title: "Type", field: "shipclass", sorter: "number", hozAlign: "center",
-            formatter: (cell) => getTableShiptype(cell.getRow().getData()),
-        },
-        {
-            title: "Class", field: "class",
-            sorter: (a, b, aRow, bRow) => getMmsiTypeVal(aRow.getData()).localeCompare(getMmsiTypeVal(bRow.getData())),
-            formatter: (cell) => getMmsiTypeVal(cell.getRow().getData()),
-        },
-        {
-            title: "Dim", field: "dimension",
-            sorter: (a, b, aRow, bRow) => dimSortValue(aRow.getData()) - dimSortValue(bRow.getData()),
-            formatter: (cell) => {
-                const ship = cell.getRow().getData();
-                return ship ? getShipDimension(ship) || "" : "";
-            },
-        },
-        {
-            title: "Draught (" + getDimUnit() + ")", field: "draught", sorter: "number",
-            formatter: (cell) => {
-                const ship = cell.getRow().getData();
-                return ship.draught ? getDraughtVal(ship.draught) : null;
-            },
-        },
-        {
-            title: "Last", field: "last_signal", sorter: "number",
-            formatter: (cell) => {
-                const value = cell.getValue();
-                return value != null ? getDeltaTimeVal(clock - value) : "";
-            },
-        },
-        { title: "Count", field: "count", sorter: "number" },
-        {
-            title: "PPM", field: "ppm", sorter: "number",
-            formatter: (cell) => {
-                const value = cell.getValue();
-                return value != null ? Number(value).toFixed(1) : "";
-            },
-        },
-        {
-            title: "RSSI (dB)", field: "level", sorter: "number",
-            formatter: (cell) => {
-                const value = cell.getValue();
-                return value != null ? Number(value).toFixed(1) : "";
-            },
-        },
-        {
-            title: "Dist (" + getDistanceUnit() + ")", field: "distance", sorter: "number",
-            formatter: (cell) => {
-                const ship = cell.getRow().getData();
-                return (ship != null && ship.distance != null)
-                    ? getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "")
-                    : "";
-            },
-        },
-        {
-            title: "Brg", field: "bearing", sorter: "number",
-            formatter: (cell) => {
-                const value = cell.getValue();
-                return value != null ? Number(value).toFixed(0) + "&deg;" : "";
-            },
-        },
-        {
-            title: "Station", field: "stations",
-            sorter: (a, b) => stationNames(a).localeCompare(stationNames(b)),
-            formatter: (cell) => sanitizeString(stationNames(cell.getValue())),
-        },
-        {
-            title: "Lat", field: "lat", sorter: "number",
-            formatter: (cell) => {
-                const ship = cell.getRow().getData();
-                return "<div class='" + validatedClass(ship) + "'>" + (ship.lat != null ? getLatValFormat(ship) : "") + "</div>";
-            },
-        },
-        {
-            title: "Lon", field: "lon", sorter: "number",
-            formatter: (cell) => {
-                const ship = cell.getRow().getData();
-                return "<div class='" + validatedClass(ship) + "'>" + (ship.lon != null ? getLonValFormat(ship) : "") + "</div>";
-            },
-        },
-        {
-            title: "Spd (" + getSpeedUnit() + ")", field: "speed", sorter: "number",
-            formatter: (cell) => {
-                const value = cell.getValue();
-                return value ? getSpeedVal(value) : null;
-            },
-        },
-        {
-            title: "Valid", field: "validated", sorter: "string",
-            formatter: (cell) => {
-                const value = cell.getValue();
-                return value == 1 ? "Yes" : value == -1 ? "No" : "Pending";
-            },
-        },
-        {
-            title: "Repeated", field: "repeat", sorter: "string",
-            formatter: (cell) => cell.getValue() == 1 ? "Yes" : "No",
-        },
-        {
-            title: "Ch", field: "channels", sorter: "number",
-            formatter: (cell) => getStringfromChannels(cell.getValue()),
-        },
-        {
-            title: "Msg Type", field: "msg_type", sorter: "number",
-            formatter: (cell) => getStringfromMsgType(cell.getValue()),
-        },
-        {
-            title: "MSG6", field: "MSG6",
-            sorter: (a, b, aRow, bRow) => ((aRow.getData().msg_type >> 6) & 1) - ((bRow.getData().msg_type >> 6) & 1),
-            formatter: (cell) => cell.getRow().getData().msg_type & (1 << 6) ? "Yes" : "No",
-        },
-        {
-            title: "MSG8", field: "MSG8",
-            sorter: (a, b, aRow, bRow) => ((aRow.getData().msg_type >> 8) & 1) - ((bRow.getData().msg_type >> 8) & 1),
-            formatter: (cell) => cell.getRow().getData().msg_type & (1 << 8) ? "Yes" : "No",
-        },
-        {
-            title: "MSG27", field: "MSG27",
-            sorter: (a, b, aRow, bRow) => ((aRow.getData().msg_type >> 27) & 1) - ((bRow.getData().msg_type >> 27) & 1),
-            formatter: (cell) => cell.getRow().getData().msg_type & (1 << 27) ? "Yes" : "No",
-        },
-        {
-            title: "Src", field: "group_mask", sorter: "number",
-            formatter: (cell) => getStringfromGroup(cell.getValue()),
-        },
-    ];
+const yes = (b) => (b ? "Yes" : "No");
+const fixed = (v, n) => (v != null ? Number(v).toFixed(n) : "");
+const position = (ship, text) => `<div class="${valid(ship, "status-ok", "status-bad", "")}">${text}</div>`;
+
+const draught = (s) => (s.draught ? getDraughtVal(s.draught) : "");
+const distance = (s) => (s.distance != null ? getDistanceVal(s.distance) : "");
+const speed = (s) => (s.speed != null ? getSpeedVal(s.speed) : "");
+
+// [title, field, shown, sorted by, exported]: without the last the CSV takes the field as it is
+const columns = () => [
+    ["Shipname", "shipname", (s) => flagHTML(s.country, 'flag-inline', getCountryName(s.country)) + sanitizeString(String(getShipName(s) || s.mmsi))],
+    ["MMSI", "mmsi"],
+    ["IMO", "imo"],
+    ["ENI", "eni", (s) => sanitizeString(padEni(s.eni)), (s) => padEni(s.eni)],
+    ["Dest", "destination", (s) => sanitizeString(s.destination || "")],
+    ["ETA", "eta", (s) => (etaSortValue(s) >= 0 ? getEtaVal(s) : ""), etaSortValue],
+    ["Callsign", "callsign", (s) => sanitizeString(getCallSign(s) || "")],
+    ["Flag", "country", (s) => getCountryName(s.country)],
+    ["Status", "status", getStatusVal],
+    ["Type", "shipclass", (s) => `<div class="cell-center">${getTableShiptype(s)}</div>`],
+    ["Class", "class", getMmsiTypeVal, getMmsiTypeVal],
+    ["Dim", "dimension", (s) => getShipDimension(s) || "", dimSortValue],
+    [`Draught (${getDimUnit()})`, "draught", draught, undefined, draught],
+    ["Last", "last_signal", (s) => (s.last_signal != null ? getDeltaTimeVal(clock - s.last_signal) : "")],
+    ["Count", "count"],
+    ["PPM", "ppm", (s) => fixed(s.ppm, 1)],
+    ["RSSI (dB)", "level", (s) => fixed(s.level, 1)],
+    [`Dist (${getDistanceUnit()})`, "distance", (s) => (s.distance != null ? distance(s) + (s.repeat > 0 ? " (R)" : "") : ""), undefined, distance],
+    ["Brg", "bearing", (s) => (s.bearing != null ? Number(s.bearing).toFixed(0) + "&deg;" : "")],
+    ["Station", "stations", (s) => sanitizeString(stationNames(s.stations)), (s) => stationNames(s.stations)],
+    ["Lat", "lat", (s) => position(s, s.lat != null ? getLatValFormat(s) : "")],
+    ["Lon", "lon", (s) => position(s, s.lon != null ? getLonValFormat(s) : "")],
+    [`Spd (${getSpeedUnit()})`, "speed", (s) => (s.speed ? speed(s) : ""), undefined, speed],
+    ["Valid", "validated", (s) => valid(s, "Yes", "No", "Pending")],
+    ["Repeated", "repeat", (s) => yes(s.repeat == 1)],
+    ["Ch", "channels", (s) => getStringfromChannels(s.channels)],
+    ["Msg Type", "msg_type", (s) => getStringfromMsgType(s.msg_type)],
+    ...[6, 8, 27].map((t) => ["MSG" + t, "MSG" + t, (s) => yes(s.msg_type & (1 << t)), (s) => (s.msg_type >> t) & 1]),
+    ["Src", "group_mask", (s) => getStringfromGroup(s.group_mask)],
+];
+
+const visible = () => columns().filter(([, field]) => settings.shiptable_columns.includes(field));
+const text = ([, field, show], ship) => (show ? show(ship) : ship[field]) ?? "";
+
+function compare(a, b) {
+    const none = (v) => v == null || v === "";
+    if (none(a) || none(b)) return none(b) - none(a);
+    return typeof a === "number" && typeof b === "number" ? a - b : String(a).localeCompare(String(b));
 }
 
-function populateColumnVisibilityMenu() {
-    const menu = document.getElementById("shipTableColumnVisibilityMenu");
-    menu.innerHTML = "";
-
-    const header = document.createElement("div");
-    header.className = "col-header column-menu-header";
-    header.textContent = "Show columns";
-    menu.appendChild(header);
-
-    const list = document.createElement("div");
-    list.className = "column-menu-list";
-    table.getColumns().forEach((column) => {
-        const checkboxId = `checkbox-${column.getField()}`;
-        const item = document.createElement("label");
-        item.classList.add("ship-table-column-dropdown-item");
-        item.setAttribute("for", checkboxId);
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.id = checkboxId;
-        checkbox.value = column.getField();
-        checkbox.checked = column.isVisible();
-        checkbox.addEventListener("change", updateColumnVisibility);
-
-        const text = document.createElement("span");
-        text.textContent = column.getDefinition().title;
-
-        item.appendChild(checkbox);
-        item.appendChild(text);
-        list.appendChild(item);
-    });
-    menu.appendChild(list);
-
-    const footer = document.createElement("div");
-    footer.className = "column-menu-footer";
-    const resetBtn = document.createElement("button");
-    resetBtn.type = "button";
-    resetBtn.className = "btn-quiet column-menu-reset";
-    resetBtn.innerHTML =
-        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span>Reset to default</span>';
-    resetBtn.addEventListener("click", () => resetColumns());
-    footer.appendChild(resetBtn);
-    menu.appendChild(footer);
+function listed() {
+    const query = document.getElementById("shipSearch").value.toLowerCase(), sort = settings.shiptable_sort;
+    const list = query ? rows.filter((s) => matches(s, query)) : rows.slice();
+    const [, field, , by] = (sort && columns().find((c) => c[1] === sort.field)) || [];
+    if (field) list.sort((a, b) => sort.dir * compare(by ? by(a) : a[field], by ? by(b) : b[field]));
+    return list;
 }
 
-function updateColumnVisibility() {
-    const checkboxes = document.querySelectorAll("#shipTableColumnVisibilityMenu input[type='checkbox']");
-    settings.shiptable_columns = Array.from(checkboxes)
-        .filter((c) => c.checked)
-        .map((c) => c.value);
-    setColumns();
+const drawn = new WeakMap();
+const fill = (el, html) => {
+    if (drawn.get(el) === html) return;
+    drawn.set(el, html);
+    el.innerHTML = html;
+};
+
+function render() {
+    if (!host) return;
+    const cols = visible(), list = listed(), sort = settings.shiptable_sort || {};
+    const pages = Math.max(1, Math.ceil(list.length / size));
+    page = Math.min(page, pages - 1);
+    shown = list.slice(page * size, (page + 1) * size);
+
+    fill(head, "<tr>" + cols.map(([title, field]) =>
+        `<th class="col-header${sort.field === field ? (sort.dir > 0 ? " sort-up" : " sort-down") : ""}" data-field="${field}">${title}</th>`).join("") + "</tr>");
+    body.innerHTML = shown.map((ship, i) =>
+        `<tr data-row="${i}" class="${valid(ship, "row-ok", "row-bad", "")}">` + cols.map((c) => `<td>${text(c, ship)}</td>`).join("") + "</tr>").join("");
+
+    const from = Math.max(0, Math.min(page - 2, pages - 5)), last = pages - 1;
+    const button = (to, label, attr) => `<button type="button" data-page="${to}"${attr}>${label}</button>`;
+    const off = (there) => (page === there ? " disabled" : "");
+    fill(foot, `<label>Page Size <select>${SIZES.map((n) => `<option${n === size ? " selected" : ""}>${n}</option>`).join("")}</select></label>` +
+        button(0, "First", off(0)) + button(page - 1, "Prev", off(0)) +
+        Array.from({ length: Math.min(5, pages) }, (x, i) => button(from + i, from + i + 1, from + i === page ? ' class="active"' : "")).join("") +
+        button(page + 1, "Next", off(last)) + button(last, "Last", off(last)));
 }
 
-function resetColumns() {
-    settings.shiptable_columns = ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"];
-    setColumns();
+function drawMenu() {
+    menu.innerHTML = '<div class="col-header column-menu-header">Show columns</div><div class="column-menu-list">' +
+        columns().map(([title, field]) =>
+            `<label class="ship-table-column-dropdown-item"><input type="checkbox" value="${field}"${settings.shiptable_columns.includes(field) ? " checked" : ""}><span>${title}</span></label>`).join("") +
+        `</div><div class="column-menu-footer"><button type="button" class="btn-quiet column-menu-reset">${RESET_ICON}<span>Reset to default</span></button></div>`;
 }
 
-function setColumns() {
+function setColumns(fields) {
+    settings.shiptable_columns = fields;
     saveSettings();
+    render();
+}
 
-    const updatedColumns = table.getColumns().map((column) => {
-        const field = column.getField();
-        return {
-            ...column.getDefinition(),
-            visible: settings.shiptable_columns.includes(field),
-        };
+function build() {
+    host = document.getElementById("shipTable");
+    host.innerHTML = '<div class="ship-table-scroll"><table class="ship-table"><thead></thead><tbody></tbody></table></div><div class="ship-table-foot"></div>';
+    [head, body, foot] = ["thead", "tbody", ".ship-table-foot"].map((q) => host.querySelector(q));
+    const ship = (e) => shown[e.target.closest("tr[data-row]")?.dataset.row];
+
+    head.addEventListener("click", (e) => {
+        const field = e.target.closest("th")?.dataset.field, sort = settings.shiptable_sort;
+        if (!field) return;
+        settings.shiptable_sort = { field, dir: sort && sort.field === field ? -sort.dir : 1 };
+        saveSettings();
+        render();
     });
-    table.setColumns(updatedColumns);
-    populateColumnVisibilityMenu();
-}
+    body.addEventListener("click", (e) => {
+        const s = ship(e);
+        if (s && s.lat != null && s.lon != null) selectMapTab(s.mmsi);
+    });
+    body.addEventListener("contextmenu", (e) => {
+        const s = ship(e);
+        if (s) showContextMenu(e, s.mmsi, "ship", ["settings", "ship", "table-menu"]);
+    });
+    foot.addEventListener("click", (e) => {
+        const to = e.target.closest("button")?.dataset.page;
+        if (to === undefined) return;
+        page = Number(to);
+        render();
+    });
+    foot.addEventListener("change", (e) => {
+        size = Number(e.target.value);
+        page = 0;
+        render();
+    });
+    document.getElementById("shipSearch").addEventListener("input", () => {
+        page = 0;
+        render();
+    });
 
-function search(query) {
-    if (table) table.setFilter(customShipFilter, { query });
-}
-
-function wireUIEvents() {
-    if (uiWired) return;
-    uiWired = true;
-
-    const searchInput = document.getElementById("shipSearch");
-    if (searchInput) {
-        searchInput.addEventListener("input", (e) => search(e.target.value));
-    }
-
-    const dropdownToggle = document.getElementById('shipTableColumnDropdownToggle');
-    const dropdownMenu = document.getElementById('shipTableColumnVisibilityMenu');
-    if (dropdownToggle && dropdownMenu) {
-        // Reparent the menu so the table container doesn't clip it.
-        document.body.appendChild(dropdownMenu);
-
-        dropdownToggle.addEventListener('click', (event) => {
-            event.stopPropagation();
-            const isOpen = dropdownMenu.style.display === 'block';
-            if (isOpen) {
-                dropdownMenu.style.display = 'none';
-                return;
-            }
-            if (table) populateColumnVisibilityMenu();
-            const rect = dropdownToggle.getBoundingClientRect();
-            dropdownMenu.style.top = (rect.bottom + window.scrollY) + 'px';
-            dropdownMenu.style.right = (window.innerWidth - rect.right) + 'px';
-            dropdownMenu.style.display = 'block';
-        });
-
-        document.addEventListener('click', (event) => {
-            if (!dropdownMenu.contains(event.target) && event.target !== dropdownToggle) {
-                dropdownMenu.style.display = 'none';
-            }
-        });
-    }
-
+    const toggle = document.getElementById("shipTableColumnDropdownToggle");
+    menu = document.getElementById("shipTableColumnVisibilityMenu");
+    // Reparent the menu so the table container doesn't clip it.
+    document.body.appendChild(menu);
+    toggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const open = menu.style.display !== "block", at = toggle.getBoundingClientRect();
+        if (open) drawMenu();
+        menu.style.top = at.bottom + window.scrollY + "px";
+        menu.style.right = window.innerWidth - at.right + "px";
+        menu.style.display = open ? "block" : "none";
+    });
+    document.addEventListener("click", (e) => {
+        if (!menu.contains(e.target)) menu.style.display = "none";
+    });
+    menu.addEventListener("change", () => setColumns([...menu.querySelectorAll("input:checked")].map((c) => c.value)));
+    menu.addEventListener("click", (e) => {
+        if (!e.target.closest(".column-menu-reset")) return;
+        setColumns(DEFAULT_COLUMNS);
+        drawMenu();
+    });
 }
 
 export async function update() {
@@ -364,63 +222,27 @@ export async function update() {
     if (!ok) return;
     await fetchTableRows();
 
-    const data = Object.values(ships).filter(filter.visible).map((e) => e.raw);
-
-    if (table == null) {
-        table = new Tabulator("#shipTable", {
-            index: "mmsi",
-            rowFormatter: (row) => {
-                const ship = row.getData();
-                row.getElement().style.borderLeft = `4px solid ${validatedColor(ship, "var(--color-success)", "var(--color-danger)", "var(--color-off)")}`;
-            },
-            data,
-            layout: "fitDataTable",
-            persistence: { sort: true },
-            pagination: "local",
-            paginationSize: 50,
-            rowHeight: 37,
-            paginationSizeSelector: [20, 50, 100],
-            columns: buildColumns(),
-        });
-        table.on("rowContext", (e, row) => {
-            showContextMenu(e, row.getData().mmsi, "ship", ["settings", "ship", "table-menu"]);
-        });
-        table.on("rowClick", (e, row) => {
-            tableRowClick(row.getData().mmsi);
-        });
-        table.on("tableBuilt", () => {
-            setColumns();
-            search(document.getElementById("shipSearch").value);
-        });
-        wireUIEvents();
-    } else {
-        const sorters = table.getSorters();
-        table.replaceData(data);
-        table.setSort(sorters);
-    }
-}
-
-// a vessel with a position opens on the map
-function tableRowClick(m) {
-    let ship = ships[m].raw;
-    if (ship.lat == null || ship.lon == null) return;
-
-    selectMapTab(m);
+    rows = Object.values(ships).filter(filter.visible).map((e) => e.raw);
+    if (!host) build();
+    render();
 }
 
 function downloadCSV() {
-    if (table) table.download("csv", "data.csv");
+    const cols = visible(), plain = document.createElement("div");
+    const cell = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+    const shownAs = (c, ship) => {
+        plain.innerHTML = text(c, ship);
+        return plain.textContent;
+    };
+    const value = (c, ship) => (c[4] ? c[4](ship) : ship[c[1]] !== undefined ? ship[c[1]] : shownAs(c, ship));
+    const lines = [cols.map((c) => cell(c[0])), ...listed().map((ship) => cols.map((c) => cell(value(c, ship))))];
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([lines.map((l) => l.join(",")).join("\n")], { type: "text/csv" }));
+    link.download = "data.csv";
+    link.click();
+    URL.revokeObjectURL(link.href);
 }
 
-// Drop the Tabulator instance; next update() rebuilds it. Called when a
-// setting that affects column rendering changes (units, coord format, ...).
-export function reset() {
-    if (table != null) {
-        table.destroy();
-        table = null;
-    }
-}
+export const reset = render;
 
-register({
-    downloadCSV: () => downloadCSV(),
-});
+register({ downloadCSV });

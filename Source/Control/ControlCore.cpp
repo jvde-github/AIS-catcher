@@ -26,6 +26,7 @@
 #include <vector>
 #ifndef _WIN32
 #include <climits>
+#include <sys/stat.h>
 #include <unistd.h>
 #endif
 
@@ -165,7 +166,10 @@ std::string ControlCore::getPanelConfig()
 static bool isSameFile(const std::string &a, const std::string &b)
 {
 #ifdef _WIN32
-	return a == b;
+	char ra[_MAX_PATH], rb[_MAX_PATH];
+	if (!_fullpath(ra, a.c_str(), sizeof(ra)) || !_fullpath(rb, b.c_str(), sizeof(rb)))
+		return a == b;
+	return _stricmp(ra, rb) == 0;
 #else
 	char ra[PATH_MAX], rb[PATH_MAX];
 	if (!realpath(a.c_str(), ra) || !realpath(b.c_str(), rb))
@@ -181,7 +185,7 @@ static std::string configFolder(const std::string &config_file)
 }
 
 // Whether a path, as its reader would open it, is the folder or in it: links
-// and ".." resolved, and for a file not there yet, by the folder it would be in.
+// and ".." resolved, and for one not there yet, by the nearest folder above it that is.
 static bool inFolder(const std::string &path, const std::string &folder)
 {
 #ifdef _WIN32
@@ -189,19 +193,24 @@ static bool inFolder(const std::string &path, const std::string &folder)
 	if (!_fullpath(full, path.c_str(), sizeof(full)) || !_fullpath(base, folder.c_str(), sizeof(base)))
 		return false;
 	const size_t n = strlen(base);
-	return _strnicmp(full, base, n) == 0 && (full[n] == 0 || full[n] == '\\' || full[n] == '/');
+	return _strnicmp(full, base, n) == 0 && (full[n] == 0 || full[n] == '\\' || full[n] == '/' || base[n - 1] == '\\');
 #else
 	char full[PATH_MAX], base[PATH_MAX];
 	if (!realpath(folder.c_str(), base))
 		return false;
-	if (!realpath(path.c_str(), full))
+	std::string at = path;
+	while (!realpath(at.c_str(), full))
 	{
-		const auto slash = path.find_last_of('/');
-		if (!realpath(slash == std::string::npos ? "." : (slash == 0 ? "/" : path.substr(0, slash).c_str()), full))
+		struct stat link;
+		if (lstat(at.c_str(), &link) == 0)
 			return false;
+		const auto slash = at.find_last_of('/');
+		if (at == "." || at == "/" || at.substr(slash == std::string::npos ? 0 : slash + 1) == "..")
+			return false;
+		at = slash == std::string::npos ? "." : slash == 0 ? "/" : at.substr(0, slash);
 	}
 	const size_t n = strlen(base);
-	return strncmp(full, base, n) == 0 && (full[n] == 0 || full[n] == '/');
+	return strncmp(full, base, n) == 0 && (full[n] == 0 || full[n] == '/' || base[n - 1] == '/');
 #endif
 }
 
@@ -255,16 +264,16 @@ static void pathValues(const JSON::Value &v, PathValues &out)
 
 // what a receiver writes: a serial port's dump_file and a decoding model's dump,
 // a path before "_A.wav" and "_B.wav"; a serial port's own "dump" is a switch
-static void dumpValues(const JSON::JSON &section, bool serial, PathValues &out)
+static void dumpValues(const JSON::JSON &section, bool serial, PathValues &out, bool engine = false)
 {
 	for (const auto &m : section.getMembers())
-		if (m.Key() == AIS::KEY_SETTING_DUMP_FILE || (m.Key() == AIS::KEY_SETTING_DUMP && !serial))
+		if (m.Key() == AIS::KEY_SETTING_DUMP_FILE || (m.Key() == AIS::KEY_SETTING_DUMP && !serial) || (m.Key() == AIS::KEY_SETTING_FILE && engine && !m.Get().isObject()))
 		{
 			if (!JSON::text(m.Get()).empty())
-				out.emplace_back(m.Key(), JSON::text(m.Get()));
+				out.emplace_back(m.Key() == AIS::KEY_SETTING_FILE ? AIS::KEY_SETTING_ENGINES : m.Key(), JSON::text(m.Get()));
 		}
 		else if (m.Get().isObject())
-			dumpValues(m.Get().getObject(), serial || m.Key() == AIS::KEY_SETTING_SERIALPORT, out);
+			dumpValues(m.Get().getObject(), serial || m.Key() == AIS::KEY_SETTING_SERIALPORT, out, m.Key() == AIS::KEY_SETTING_SETTINGS);
 		else if (m.Get().isArray())
 			for (const auto &entry : m.Get().getArray())
 				if (entry.isObject())
@@ -382,11 +391,16 @@ bool ControlCore::allowedPaths(const JSON::JSON &saved, std::string &error)
 	for (const auto &v : known)
 		if (v.first == AIS::KEY_SETTING_KEY)
 			tls_keys.push_back(Util::Helper::resolvePath(v.second, folder));
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		if (!cli_tls_key.empty())
+			tls_keys.push_back(cli_tls_key);
+	}
 	for (const auto &v : values)
 	{
 		if (known.count(v))
 			continue;
-		const std::string quoted = "\"" + AIS::settingName(v.first) + "\": \"" + v.second + "\"";
+		const std::string quoted = "\"" + AIS::settingName(v.first == AIS::KEY_SETTING_ENGINES ? AIS::KEY_SETTING_FILE : v.first) + "\": \"" + v.second + "\"";
 		if (v.first == AIS::KEY_SETTING_STYLE && !hasExtension(v.second, ".css") && !hasExtension(v.second, ".pss"))
 		{
 			error = quoted + " is not a .css or .pss file.";
@@ -405,15 +419,19 @@ bool ControlCore::allowedPaths(const JSON::JSON &saved, std::string &error)
 		// the site's own are read from the configuration's folder, the others from the working folder
 		const bool site_path = v.first == AIS::KEY_SETTING_FILE || v.first == AIS::KEY_SETTING_PLACES ||
 							   v.first == AIS::KEY_SETTING_CERT || v.first == AIS::KEY_SETTING_KEY;
-		const std::string path = site_path ? Util::Helper::resolvePath(v.second, folder) : v.second;
+		// the tracking file as its reader finds it, which may be the working folder's
+		const std::string named = v.first == AIS::KEY_SETTING_FILE ? SiteReader::backupFile(v.second, folder)
+								  : site_path ? Util::Helper::resolvePath(v.second, folder) : v.second;
+		// a model's dump is a prefix: its files are <dump>_A.wav and <dump>_B.wav
+		const std::string path = v.first == AIS::KEY_SETTING_DUMP ? named + "_A.wav" : named;
 		if (!inFolder(path, folder))
 		{
 			error = quoted + " is outside the configuration's folder (" + folder + "): a path elsewhere can only be written in the file by hand.";
 			return false;
 		}
-		if (isSameFile(path, config_file))
+		if (isSameFile(path, config_file) || isSameFile(path, config_file + ".bak") || isSameFile(path, config_file + ".tmp"))
 		{
-			error = quoted + " is the configuration itself.";
+			error = quoted + " is the configuration itself or its copy.";
 			return false;
 		}
 		if (v.first != AIS::KEY_SETTING_KEY)
@@ -429,9 +447,6 @@ bool ControlCore::allowedPaths(const JSON::JSON &saved, std::string &error)
 
 bool ControlCore::setConfig(const std::string &json, std::string &error)
 {
-	if (!validate(json, error))
-		return false;
-
 	std::lock_guard<std::mutex> lock(file_mtx);
 
 	JSON::Document doc;
@@ -440,10 +455,15 @@ bool ControlCore::setConfig(const std::string &json, std::string &error)
 	{
 		JSON::Parser parser(JSON_DICT_SETTING);
 		doc = parser.parse(json);
-		if (!allowedPaths(doc.root, error))
+		// the paths first: validate() opens the TLS files the document names
+		if (!allowedPaths(doc.root, error) || !validate(json, error))
 			return false;
 		// the password is changed by /api/password alone, whatever the document says
 		putAuth(doc);
+		// and the engine's switch by Start and Stop: a save keeps what the file has
+		const JSON::Document current = load();
+		if (const JSON::Value *engine = current.root[AIS::KEY_SETTING_ENGINE])
+			doc.root.Set(AIS::KEY_SETTING_ENGINE, engine->to_string(), doc.pool);
 		JSON::Serializer serializer(JSON_DICT_SETTING);
 		serializer.stringify(doc.root, out);
 	}
@@ -658,24 +678,9 @@ bool ControlCore::checkSetupCode(std::string code)
 	return diff == 0;
 }
 
-std::string ControlCore::randomHex(size_t length)
-{
-	static const char *digits = "0123456789abcdef";
-
-	std::random_device rd;
-	std::string s;
-	while (s.size() < length)
-	{
-		uint32_t r = rd();
-		for (int j = 28; j >= 0 && s.size() < length; j -= 4)
-			s += digits[(r >> j) & 0xF];
-	}
-	return s;
-}
-
 void ControlCore::setPassword(const std::string &password)
 {
-	std::string salt = randomHex(32);
+	std::string salt = Util::Helper::randomHex(32);
 	std::string hash = hashPassword(password, salt, PASSWORD_ITERATIONS);
 
 	{
@@ -1003,7 +1008,7 @@ void ControlCore::refreshPlaces(const JSON::JSON &root)
 		path = viewer->getObject()[AIS::KEY_SETTING_PLACES];
 	if (path && path->isString() && !path->getString().empty())
 	{
-		directory = path->getString();
+		directory = Util::Helper::resolvePath(path->getString(), configFolder(config_file));
 		enabled = true;
 	}
 	std::lock_guard<std::mutex> lock(place_mtx);

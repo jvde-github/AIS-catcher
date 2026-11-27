@@ -24,29 +24,29 @@
 export function create(opts) {
     if (!opts || !opts.key) throw new Error("settings.create needs a key");
 
-    var key = opts.key;
+    let key = opts.key;
     /* a host with an existing state object hands it over as `target`: the
        store fills and persists that object, so bindings elsewhere hold */
-    var values = opts.target || {};
-    var listeners = [];
-    var defaults = opts.defaults || {};
-    var version = opts.version || 0;
-    var upgraded = false;
+    let values = opts.target || {};
+    let listeners = [];
+    let defaults = opts.defaults || {};
+    let version = opts.version || 0;
+    let upgraded = false;
 
-    for (var d in defaults) if (Object.prototype.hasOwnProperty.call(defaults, d)) values[d] = JSON.parse(JSON.stringify(defaults[d]));
+    for (let d in defaults) if (Object.prototype.hasOwnProperty.call(defaults, d)) values[d] = JSON.parse(JSON.stringify(defaults[d]));
 
     /* A corrupt or foreign entry must not take the page down with it: the
        defaults are a working configuration, so fall back to them and say so. */
     function load(skip) {
         if (!skip) try {
-            var raw = localStorage.getItem(key);
+            let raw = localStorage.getItem(key);
             if (raw !== null) {
-                var parsed = JSON.parse(raw);
+                let parsed = JSON.parse(raw);
                 if (parsed && typeof parsed === "object") {
                     /* an entry without a version is from before versions existed: 1 */
                     upgraded = version > 0 && (parsed.settings_version || 1) < version;
                     if (!upgraded)
-                        for (var k in parsed) if (Object.prototype.hasOwnProperty.call(parsed, k)) values[k] = parsed[k];
+                        for (let k in parsed) if (Object.prototype.hasOwnProperty.call(parsed, k)) values[k] = parsed[k];
                 }
             }
         } catch (e) {
@@ -58,8 +58,8 @@ export function create(opts) {
     }
 
     function applyDefaults() {
-        for (var k in values) if (Object.prototype.hasOwnProperty.call(values, k)) delete values[k];
-        for (var d in defaults) if (Object.prototype.hasOwnProperty.call(defaults, d)) values[d] = JSON.parse(JSON.stringify(defaults[d]));
+        for (let k in values) if (Object.prototype.hasOwnProperty.call(values, k)) delete values[k];
+        for (let d in defaults) if (Object.prototype.hasOwnProperty.call(defaults, d)) values[d] = JSON.parse(JSON.stringify(defaults[d]));
         if (version) values.settings_version = version;
     }
 
@@ -71,7 +71,7 @@ export function create(opts) {
                triggered the write; the value stays live for this session */
             console.warn("settings: could not persist " + key, e);
         }
-        for (var i = 0; i < listeners.length; i++) listeners[i](values);
+        for (let i = 0; i < listeners.length; i++) listeners[i](values);
     }
 
     return {
@@ -80,7 +80,7 @@ export function create(opts) {
         set: function (k, v) { values[k] = v; save(); },
         stage: function (k, v) { values[k] = v; },   // live, unsaved: a slider mid-drag
         assign: function (patch) {
-            for (var k in patch) if (Object.prototype.hasOwnProperty.call(patch, k)) values[k] = patch[k];
+            for (let k in patch) if (Object.prototype.hasOwnProperty.call(patch, k)) values[k] = patch[k];
             save();
         },
         save: save,

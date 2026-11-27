@@ -32,20 +32,20 @@ namespace Util
 
 		inline int get(int position, int size) const
 		{
-			return (value >> position) & ((1 << size) - 1);
+			return (int)((value >> position) & ((1u << size) - 1));
 		}
 
 		inline void set(int position, int size, int fieldValue)
 		{
-			value = (value & ~(((1 << size) - 1) << position)) | ((fieldValue & ((1 << size) - 1)) << position);
+			value = (value & ~(((1u << size) - 1) << position)) | (((uint32_t)fieldValue & ((1u << size) - 1)) << position);
 		}
 
 		inline void orOp(int position, int size, int fieldValue)
 		{
-			value |= ((fieldValue & ((1 << size) - 1)) << position);
+			value |= ((uint32_t)fieldValue & ((1u << size) - 1)) << position;
 		}
 
-		inline int getPackedValue() const
+		inline uint32_t getPackedValue() const
 		{
 			return value;
 		}

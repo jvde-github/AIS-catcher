@@ -24,6 +24,59 @@
 
 namespace AIS
 {
+	template <typename T>
+	static long long atFullScale(const T *data, int n, T low, T high)
+	{
+		long long count = 0;
+		for (int i = 0; i < n; i++)
+			count += data[i] == low || data[i] == high;
+		return count;
+	}
+
+	void InputMonitor::Receive(const RAW *raw, int len, TAG &tag)
+	{
+		const bool scan = buffers++ % 8 == 0;
+		int values = 0;
+		switch (raw->format)
+		{
+		case Format::CU8:
+			values = raw->size;
+			if (scan)
+				clipped += atFullScale((const uint8_t *)raw->data, values, (uint8_t)0, (uint8_t)255);
+			break;
+		case Format::CS8:
+			values = raw->size;
+			if (scan)
+				clipped += atFullScale((const int8_t *)raw->data, values, (int8_t)-128, (int8_t)127);
+			break;
+		case Format::CS16:
+			values = raw->size / 2;
+			if (scan)
+				clipped += atFullScale((const int16_t *)raw->data, values, (int16_t)-32768, (int16_t)32767);
+			break;
+		default:
+			return;
+		}
+		if (scan)
+			scanned += values;
+		seen += values / 2;
+		if (seen < window)
+			return;
+
+		std::vector<Metric> told;
+		if (scanned)
+		{
+			Metric m;
+			m.key = AIS::KEY_CLIPPING;
+			m.value = 100.0 * clipped / scanned;
+			m.window = 10;
+			told.push_back(m);
+		}
+		device->report(told);
+		outMetric.Send(told.data(), (int)told.size(), tag);
+		seen = scanned = clipped = 0;
+	}
+
 	void ModelFrontend::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
 		device = dev;
@@ -31,6 +84,10 @@ namespace AIS
 		ROT.setRotation((float)(PI * 25000.0 / 48000.0));
 
 		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
+
+		monitor.setup(device, sample_rate);
+		physical >> monitor;
+		monitor.outMetric >> output_metric;
 
 		if (mode == AIS::Mode::X)
 		{
@@ -314,6 +371,10 @@ namespace AIS
 		case AIS::KEY_SETTING_STATION_ID:
 			station = Util::Parse::Integer(arg);
 			break;
+		case AIS::KEY_SETTING_SENSITIVITY_HIGH:
+			if (Util::Parse::Switch(arg))
+				Warning() << getName() << ": setting \"sensitivity_high\" has no effect; choose engine type v1_high or v2_high";
+			break;
 		case AIS::KEY_SETTING_DUMP:
 			wavA.setOptionKey(AIS::KEY_SETTING_FILE, arg + "_A.wav");
 			wavB.setOptionKey(AIS::KEY_SETTING_FILE, arg + "_B.wav");
@@ -376,8 +437,13 @@ namespace AIS
 		V2_a.setWeights(dd_train, dd_weight);
 		V2_b.setWeights(dd_train, dd_weight);
 
+		V2_a.setHighSensitivity(high);
+		V2_b.setHighSensitivity(high);
+
 		*C_a >> V2_a;
 		*C_b >> V2_b;
+		V2_a.outMetric >> output_metric;
+		V2_b.outMetric >> output_metric;
 
 		for (int i = 0; i < V2::Engine::N_DECODERS; i++)
 		{
@@ -692,8 +758,9 @@ namespace AIS
 		physical >> nmea >> output;
 		nmea.outGPS >> output_gps;
 		nmea.outControl >> output_control;
+		nmea.outMetric >> output_metric;
 
-		nmea.setStation(station);
+		nmea.setStation(station, station_fixed);
 		nmea.setOwnMMSI(own_mmsi);
 	}
 

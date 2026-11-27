@@ -1,0 +1,759 @@
+/* The GPS view of the dashboard. */
+
+/* the constellations, the grid and amber of the GPS charts: brighter on the dark background */
+:root {
+    --wf-track: #eef1f5;
+    --wf-lo: #c9d6e4;
+    --wf-hi: #1e3a5f;
+    --wf-gap: #b8c0ca;
+    --gnss-gps: var(--color-chart-1);
+    --gnss-glonass: var(--color-chart-6);
+    --gnss-galileo: var(--color-chart-2);
+    --gnss-beidou: var(--color-chart-5);
+    --gnss-grid: var(--color-border);
+    --gnss-amber: #a66b11;
+    --gnss-red: #c62828;
+    --gnss-grey: #6b7686;
+    --hc-ok-strong: #218451;
+}
+
+.dark {
+    --wf-track: #22272e;
+    --wf-lo: #3a4656;
+    --wf-hi: #d7ecf8;
+    --wf-gap: #4a525d;
+    --gnss-gps: #69aaf0;
+    --gnss-glonass: #d6ab50;
+    --gnss-galileo: #70c990;
+    --gnss-beidou: #c18cdb;
+    --gnss-grid: #2b3037;
+    --gnss-amber: #e8b65c;
+    --gnss-red: #f87171;
+    --gnss-grey: #8793a3;
+    --hc-ok-strong: #40c990;
+}
+
+/* the GPS view: the AIS view's panels, on its grid */
+.gps {
+    margin: 12px 25px 24px;
+}
+
+.gps-body {
+    display: grid;
+    gap: 15px;
+}
+
+.gps .plots-head {
+    margin: 0;
+}
+
+.gps-grid[hidden] {
+    display: none;
+}
+
+.gps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 15px;
+}
+
+.gps-wide {
+    grid-column: span 2;
+}
+
+.gps-full {
+    grid-column: 1 / -1;
+}
+
+.gps svg text {
+    font: 12px var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+}
+
+.gps-none {
+    margin: 8px 0;
+    color: var(--color-text-muted);
+}
+
+/* the receiver now */
+.gps-hist-plot {
+    position: relative;
+}
+
+.gps-hist-plot canvas {
+    display: block;
+}
+
+.gps-crossline {
+    position: absolute;
+    top: 6px;
+    bottom: 0;
+    width: 1px;
+    background: var(--color-text-strong);
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.gps-tip {
+    position: absolute;
+    z-index: 2;
+    min-width: 210px;
+    padding: 7px 10px;
+    border: 1px solid var(--color-tooltip-border);
+    border-radius: var(--radius-md);
+    background: var(--color-tooltip);
+    color: var(--color-text);
+    font-size: var(--fs-sm);
+    line-height: 1.6;
+    pointer-events: none;
+}
+
+.gps-tip b {
+    color: var(--color-text-strong);
+}
+
+.gps-tr {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gps-tr em {
+    margin-left: auto;
+    color: var(--color-text-strong);
+    font-style: normal;
+    font-variant-numeric: tabular-nums;
+}
+
+.gps-tsep {
+    margin-top: 3px;
+    padding-top: 3px;
+    border-top: 1px solid var(--color-border);
+}
+
+.gps-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 16px;
+    margin-top: 6px;
+    color: var(--color-text-muted);
+    font-size: var(--fs-sm);
+}
+
+.gps-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.gps-legend i {
+    display: inline-block;
+    width: 14px;
+    height: 10px;
+}
+
+i.gps-line {
+    width: 14px;
+    height: 0;
+    border-top: 2px solid;
+}
+
+/* now: sky and signals; then position and events */
+.gps-link {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--color-accent, var(--color-chart-1));
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.gps .polar-panel {
+    grid-row: auto;
+}
+
+.gps-sky .polar-plot {
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.gps-body[hidden] {
+    display: none;
+}
+
+@media only screen and (max-width: 1100px) {
+    .gps-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .gps-wide,
+    .gps-full {
+        grid-column: auto;
+    }
+}
+
+@media only screen and (max-width: 640px) {
+    .gps {
+        margin-left: 8px;
+        margin-right: 8px;
+    }
+}
+
+/* reception history: a toolbar, the events, four tracks on one time axis, the legend */
+.gps-history > .gh-toolbar {
+    margin: -14px 4px 0;
+}
+
+.gh-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.gh-sub {
+    margin-top: 3px;
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
+.gh-events {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0 4px;
+}
+
+.gh-events:empty {
+    display: none;
+}
+
+.gh-event {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 9px;
+    border: 1px solid var(--color-border);
+    border-radius: 5px;
+    background: transparent;
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.gh-event i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--gnss-amber);
+}
+
+.gh-event i.gap {
+    background: var(--color-text-muted);
+}
+
+.gh-event[aria-pressed="true"] {
+    border-color: var(--gnss-amber);
+    background: color-mix(in srgb, var(--gnss-amber) 8%, transparent);
+    color: var(--gnss-amber);
+}
+
+.gps-history .gps-hist-plot svg text {
+    font-size: 11px;
+}
+
+.gh-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border);
+}
+
+.gh-legend button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    border: none;
+    border-radius: 5px;
+    background: none;
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.gh-legend button[aria-pressed="false"] {
+    opacity: 0.45;
+    text-decoration: line-through;
+}
+
+.gh-legend button:focus-visible,
+.gh-event:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+.gh-swatch {
+    display: inline-block;
+    width: 14px;
+    height: 3px;
+    background: var(--c);
+}
+
+.gh-swatch.dash {
+    background: repeating-linear-gradient(90deg, var(--c) 0 4px, transparent 4px 7px);
+}
+
+.gh-key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+}
+
+.gh-key span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.gh-key i {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    background: var(--c);
+}
+
+@media only screen and (max-width: 600px) {
+    .gh-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .gh-event,
+    .gh-legend button {
+        min-height: 40px;
+    }
+}
+
+/* the waterfall: a heading per constellation, one row a satellite, the scale under it */
+.wf-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 12px 0 6px;
+}
+
+.wf-bar .gps-link {
+    color: var(--color-text);
+    font-size: 13px;
+}
+
+.wf-count {
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
+.wf-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 6px;
+    padding: 8px 0;
+    border: none;
+    border-top: 1px solid var(--color-border);
+    background: none;
+    color: var(--color-text-strong);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+
+.wf-head:first-child {
+    margin-top: 0;
+    border-top: none;
+}
+
+.wf-head i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+
+.wf-head span {
+    margin-left: auto;
+    color: var(--color-text-muted);
+    font-weight: 400;
+}
+
+.wf-head span::after {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    margin: 0 4px 2px 8px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(45deg);
+}
+
+.wf-head[aria-expanded="false"] span::after {
+    transform: rotate(-45deg);
+}
+
+.wf-head:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+#gps-wf-host canvas {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.wf-axis {
+    position: relative;
+    height: 22px;
+    margin-top: 4px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+}
+
+.wf-axis span {
+    position: absolute;
+    top: 4px;
+    transform: translateX(-50%);
+}
+
+.wf-axis span.now {
+    right: 4px;
+    transform: none;
+}
+
+.wf-legend {
+    padding-top: 10px;
+    border-top: 1px solid var(--color-border);
+}
+
+.wf-scale {
+    gap: 2px !important;
+}
+
+.wf-scale i {
+    width: 14px !important;
+    height: 6px !important;
+    border-radius: 1px;
+}
+
+/* position stability: three figures, the plot, the legend, the largest deviation called out */
+.pos-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 12px 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.pos-metrics .hc-value {
+    font-size: 24px;
+}
+
+.hc-value.event {
+    color: var(--gnss-amber);
+}
+
+/* the plot is square and no wider than it needs: in the middle of a wide card, the key under it */
+#gps-position-plot svg {
+    display: block;
+    margin: 0 auto;
+}
+
+#gps-position-plot svg text {
+    font-size: 11px;
+}
+
+.pos-legend {
+    justify-content: center;
+    margin-top: 6px;
+}
+
+.pos-legend b {
+    color: var(--color-text-strong);
+}
+
+.pos-event {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--gnss-amber) 9%, transparent);
+    color: var(--color-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    --tone: var(--gnss-amber);
+}
+
+.pos-event span {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    font-size: 13px;
+}
+
+.pos-event b {
+    color: var(--gnss-amber);
+    font-weight: 500;
+}
+
+.pos-event small {
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
+.pos-event::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid var(--color-text-muted);
+    border-bottom: 1.5px solid var(--color-text-muted);
+    transform: rotate(-45deg);
+}
+
+.pos-event:focus-visible {
+    outline: 2px solid var(--color-accent);
+}
+
+.pos-note {
+    margin: 10px 0 0;
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
+/* events: one row an event, the chosen one open on its figures */
+.gps-events:not(.gps-events-none) {
+    padding: 10px 14px 14px;
+}
+
+.ev-count {
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
+/* one line under the band: what kinds, and over how long */
+.ev-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 16px;
+    margin: -14px 4px 4px;
+}
+
+.ev-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
+.ev-summary span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ev-summary i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+
+.ev-item {
+    margin-top: 8px;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-variant-numeric: tabular-nums;
+}
+
+.ev-item.selected {
+    border-color: color-mix(in srgb, var(--gnss-amber) 35%, transparent);
+    background: color-mix(in srgb, var(--gnss-amber) 6%, transparent);
+}
+
+.ev-toggle {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) 14px;
+    align-items: start;
+    gap: 9px;
+    width: 100%;
+    padding: 12px;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.ev-toggle:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+}
+
+.ev-toggle > span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ev-icon {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: var(--color-text-muted);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.ev-jam .ev-toggle .ev-icon {
+    stroke: var(--gnss-amber);
+}
+
+.ev-gap .ev-toggle .ev-icon {
+    stroke: var(--gnss-grey);
+}
+
+.ev-jump .ev-toggle .ev-icon {
+    stroke: var(--gnss-red);
+}
+
+.ev-jump.selected {
+    border-color: color-mix(in srgb, var(--gnss-red) 35%, transparent);
+    background: color-mix(in srgb, var(--gnss-red) 6%, transparent);
+}
+
+.ev-title {
+    color: var(--color-text-strong);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.ev-time {
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
+.ev-chev {
+    width: 7px;
+    height: 7px;
+    margin-top: 5px;
+    border-right: 1.5px solid var(--color-text-muted);
+    border-bottom: 1.5px solid var(--color-text-muted);
+    transform: rotate(-45deg);
+}
+
+.ev-toggle[aria-expanded="true"] .ev-chev {
+    transform: rotate(45deg);
+}
+
+.ev-body {
+    margin: 0 12px;
+    padding-bottom: 12px;
+    border-top: 1px solid var(--color-border);
+}
+
+.ev-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    padding: 12px 0 8px;
+}
+
+.ev-metrics span {
+    display: block;
+    color: var(--color-text-muted);
+    font-size: 11px;
+}
+
+.ev-metrics b {
+    color: var(--color-text-strong);
+    font-size: 20px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.ev-metrics b.ev-warn {
+    color: var(--gnss-amber);
+}
+
+.ev-evidence {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.ev-charts,
+.ev-end {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0 0;
+    font-size: 12px;
+}
+
+.ev-charts {
+    color: var(--color-accent);
+}
+
+.ev-charts .ev-icon {
+    width: 16px;
+    height: 16px;
+    stroke: var(--color-accent);
+}
+
+.ev-end {
+    margin-top: 14px;
+    color: var(--color-text);
+    font-size: 13px;
+}
+
+.ev-end .ev-icon {
+    stroke: var(--hc-ok-strong);
+}
+
+.ev-end .ev-icon.ev-wait {
+    stroke: var(--color-text-muted);
+}
+
+.gps-events.gps-events-none {
+    display: block;
+    padding: 10px 14px 14px;
+}
+
+.gps-events-none .ev-end {
+    margin-top: 8px;
+    color: var(--color-text-muted);
+}

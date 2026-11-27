@@ -84,8 +84,12 @@ namespace Services
 			.kv_unless("model", ship.unit_model, -1)
 			.kv_unless("serial", ship.unit_serial, -1)
 			.kv("repeat", ship.getRepeat())
-			.kv("last_signal", delta_time)
-			.kv("last_group", ship.last_group)
+			.kv("last_signal", delta_time);
+		if (isValidCoord(ship.lat, ship.lon) && ship.last_position_signal > 0)
+			w.kv("last_position", (long)(delta_time + (ship.last_signal > ship.last_position_signal ? ship.last_signal - ship.last_position_signal : 0)));
+		else
+			w.kv_null("last_position");
+		w.kv("last_group", ship.last_group)
 			.kv_unless("altitude", ship.altitude, ALT_UNDEFINED)
 			.kv_unless("received_stations", ship.received_stations,
 					   RECEIVED_STATIONS_UNDEFINED);
@@ -1146,31 +1150,31 @@ namespace Services
 	}
 
 	// `hidden` leaves out the range
-	static void stat(JSON::Writer &w, const MessageStatistics::Values &v, bool empty, bool hidden)
+	// slim: without what only the statistics page reads, for the plots' histories
+	static void stat(JSON::Writer &w, const MessageStatistics::Values &v, bool empty, bool hidden, bool slim = false)
 	{
-		int c = v.count - v.exclude;
-		bool has_level = c > 0 && v.level_min <= v.level_max;
+		float ppm = 0;
+		const bool has_level = !empty && v.hasLevel(), has_ppm = !empty && v.meanPpm(ppm);
 
 		w.beginObject();
 		w.kv("count", empty ? 0 : v.count);
 		w.kv("vessels", empty ? 0 : v.vessels);
-		w.key("errors").beginObject();
-		const char *names[] = {"flagged", "undersized", "oversized", "checksum"};
-		for (int i = 0; i < 4; i++)
-			w.kv(names[i], empty ? 0 : v.errors[i]);
-		w.endObject();
-		if (empty || !has_level)
+		if (!slim)
 		{
-			w.kv_null("level_min");
-			w.kv_null("level_max");
-			w.kv_null("ppm");
+			w.key("errors").beginObject();
+			const char *names[] = {"flagged", "undersized", "oversized", "checksum"};
+			for (int i = 0; i < 4; i++)
+				w.kv(names[i], empty ? 0 : v.errors[i]);
+			w.endObject();
 		}
+		if (has_level)
+			w.kv("level_min", v.level_min).kv("level_max", v.level_max);
 		else
-		{
-			w.kv("level_min", v.level_min);
-			w.kv("level_max", v.level_max);
-			w.kv("ppm", v.ppm / c);
-		}
+			w.kv_null("level_min").kv_null("level_max");
+		if (has_ppm)
+			w.kv("ppm", ppm);
+		else
+			w.kv_null("ppm");
 		if (hidden)
 		{
 		}
@@ -1179,10 +1183,13 @@ namespace Services
 		else
 			w.kv("dist", v.distance);
 
-		w.key("channel").beginArray();
-		for (int i = 0; i < 4; i++)
-			w.val(empty ? 0 : v.channel[i]);
-		w.endArray();
+		if (!slim)
+		{
+			w.key("channel").beginArray();
+			for (int i = 0; i < 4; i++)
+				w.val(empty ? 0 : v.channel[i]);
+			w.endArray();
+		}
 
 		if (!hidden)
 		{
@@ -1190,7 +1197,9 @@ namespace Services
 			for (int i = 0; i < MessageStatistics::RADAR_BUCKETS; i++)
 				w.val(empty ? 0.0f : v.radarA[i]);
 			w.endArray();
-
+		}
+		if (!hidden && !slim)
+		{
 			w.key("radar_b").beginArray();
 			for (int i = 0; i < MessageStatistics::RADAR_BUCKETS; i++)
 				w.val(empty ? 0.0f : v.radarB[i]);
@@ -1208,8 +1217,11 @@ namespace Services
 	// a history as the plots read it: when its slot under way began, its
 	// interval, and newest first each slot's offset from it and its figures
 	template <typename H>
-	static void historyJSON(JSON::Writer &w, H &history, long int interval, bool hidden)
+	static void historyJSON(JSON::Writer &w, const char *key, H &history, int count, long int interval, bool hidden, const MetricHistory *reception = nullptr, int span = 0, bool slim = false)
 	{
+		if (count < 1)
+			return;
+
 		struct Slot
 		{
 			long int start;
@@ -1219,9 +1231,9 @@ namespace Services
 		std::vector<Slot> slots;
 		history.forEachSlot([&](long int start, MessageStatistics &s, bool empty) {
 			slots.push_back(Slot{start, s.values(), empty});
-		});
+		}, count);
 
-		w.beginObject();
+		w.key(key).beginObject();
 		w.key("now").val(slots.back().start);
 		w.key("interval").val(interval);
 		w.key("time").beginArray();
@@ -1230,8 +1242,27 @@ namespace Services
 		w.endArray();
 		w.key("stat").beginArray();
 		for (auto it = slots.rbegin(); it != slots.rend(); ++it)
-			stat(w, it->values, it->empty, hidden);
+			stat(w, it->values, it->empty, hidden, slim);
 		w.endArray();
+		if (reception)
+		{
+			w.key("reception").beginArray();
+			for (const auto &s : reception->series)
+			{
+				w.beginObject().kv("name", AIS::KeyMap[s.key][JSON_DICT_FULL].p).kv("channel", s.channel ? std::string(1, s.channel) : std::string());
+				w.kv("unit", s.unit[0] ? s.unit : AIS::KeyInfoMap[s.key].unit).key("values").beginArray();
+				for (auto it = slots.rbegin(); it != slots.rend(); ++it)
+				{
+					float value;
+					if (MetricHistory::at(s, span, it->start, value))
+						w.val(std::round(value * 10) / 10.0);
+					else
+						w.val_null();
+				}
+				w.endArray().endObject();
+			}
+			w.endArray();
+		}
 		w.endObject();
 	}
 
@@ -1253,19 +1284,75 @@ namespace Services
 		w.kv("msg_rate", f.second.getAverage());
 	}
 
-	void UiFormat::history(JSON::Writer &w, Figures &f, bool hidden)
+	static void coverageJSON(JSON::Writer &w, Figures &f)
 	{
+		w.beginObject().kv("directions", Coverage::DIRECTIONS).kv("rings", Coverage::RINGS).kv("ring0_nm", 0.5).kv("rings_per_doubling", 2);
+		if (f.coverage)
+		{
+			const long int now = (long int)std::time(nullptr);
+			const std::pair<const char *, const Coverage::Span *> spans[] = {{"hour", &f.coverage->hour}, {"day", &f.coverage->day}, {"week", &f.coverage->week}};
+			for (const auto &s : spans)
+			{
+				const std::vector<Coverage::Cell> cells = s.second->sum(now);
+				w.key(s.first).beginObject().key("n").beginArray();
+				for (const auto &c : cells)
+					w.val(c.n);
+				w.endArray().key("level").beginArray();
+				for (const auto &c : cells)
+					if (c.leveled)
+						w.val(std::round((double)c.level / c.leveled * 10) / 10);
+					else
+						w.val_null();
+				w.endArray().endObject();
+			}
+		}
+		w.endObject();
+	}
+
+	static void receptionJSON(JSON::Writer &w, const std::vector<MetricTable::Row> &rows)
+	{
+		const std::time_t now = std::time(nullptr);
+		w.beginArray();
+		for (const auto &r : rows)
+		{
+			const AIS::KeyStr &name = AIS::KeyMap[r.key][JSON_DICT_FULL];
+			if (name.empty())
+				continue;
+			w.beginObject().kv("station", r.station).kv("channel", r.channel ? std::string(1, r.channel) : std::string()).kv("name", name.p);
+			w.kv("value", std::round(r.value * 10) / 10.0).kv("unit", r.unit.empty() ? std::string(AIS::KeyInfoMap[r.key].unit) : r.unit);
+			w.kv("window", r.window).kv("age", (long long)(now - r.at)).endObject();
+		}
+		w.endArray();
+	}
+
+	void UiFormat::history(JSON::Writer &w, Figures &f, bool hidden, const Told &told)
+	{
+		const AIS::Sky *sky = told.sky;
+		const MetricHistory *kept = told.reception_history.get();
 		w.beginObject();
 		if (hidden)
 			w.kv("range_hidden", true);
-		w.key("second");
-		historyJSON(w, f.second, 1, hidden);
-		w.key("minute");
-		historyJSON(w, f.minute, 60, hidden);
-		w.key("hour");
-		historyJSON(w, f.hour, 3600, hidden);
-		w.key("day");
-		historyJSON(w, f.day, 86400, hidden);
+		historyJSON(w, "second", f.second, told.seconds, 1, hidden, nullptr, 0, told.slim);
+		historyJSON(w, "minute", f.minute, told.minutes, 60, hidden, kept, 0, told.slim);
+		historyJSON(w, "hour", f.hour, told.hours, 3600, hidden, kept, 1, told.slim);
+		historyJSON(w, "day", f.day, told.days, 86400, hidden, kept, 2, told.slim);
+		if (!told.reception.empty())
+		{
+			w.key("reception");
+			receptionJSON(w, told.reception);
+		}
+		if (!hidden)
+		{
+			w.key("coverage");
+			coverageJSON(w, f);
+			if (sky)
+			{
+				w.key("gnss").beginObject().kv("age", told.sky_age).kv("fix", sky->fix).kv("hdop", std::round(sky->hdop * 10) / 10.0).key("satellites").beginArray();
+				for (const auto &s : sky->satellites)
+					w.beginArray().val(s.system).val(s.id).val(s.elevation).val(s.azimuth).val(s.signal[AIS::Sky::L1]).val(s.used ? 1 : 0).val(s.signal[AIS::Sky::L2]).val(s.signal[AIS::Sky::L5]).endArray();
+				w.endArray().endObject();
+			}
+		}
 		w.endObject();
 	}
 

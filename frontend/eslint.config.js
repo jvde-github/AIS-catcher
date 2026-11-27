@@ -36,7 +36,7 @@ export default [
     rules,
   },
   // node scripts: the build tools and the tests
-  { files: ['test/**/*.js', 'test/**/*.mjs', 'src/tools/*.mjs'], languageOptions: { globals: { ...globals.node } } },
+  { files: ['test/**/*.js', 'test/**/*.mjs', 'src/tools/*.mjs', 'src/vite.config.js'], languageOptions: { globals: { ...globals.node } } },
   {
     files: ['packages/core/**/*.js'],
     rules: {

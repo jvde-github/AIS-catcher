@@ -8,12 +8,12 @@ import { api } from './api.js';
 import { App, ConfigStore, registerEditor } from './config-store.js';
 import { zoneCss } from './zones.js';
 import { LIST_OUTPUTS, OUTPUT_TYPES, channelTitle } from './schema.js';
-import { describeInput, isRadio } from './inputs.js';
+import { describeInput, isRadio, namesStations } from './inputs.js';
 import { stationName } from './stations.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const CONTAINER = 'flow-zones';
-export const OUTPUT_STATS = '/viewer/api/output_stats.json';
+export const VIEWER_STAT = '/viewer/api/stat.json';
 const STATS_MS = 5000;
 const STAT_TYPES = {};
 OUTPUT_TYPES.forEach(o => (o.stats || []).forEach(t => { STAT_TYPES[t] = o.value; }));
@@ -330,7 +330,7 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
             outputs.forEach(o => { putStats(o.stats, []); paintOutput(o); });
             return;
         }
-        api(OUTPUT_STATS)
+        api(VIEWER_STAT)
             .then(stat => {
                 const byKey = statsByKey(stat, outputs);
                 outputs.forEach(o => {
@@ -369,9 +369,10 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
                 armed = { from: null, pending: null };
                 const stations = Array.isArray(cfg.stations) ? cfg.stations : [];
                 const stationOf = r => {
-                    if (r.station === undefined || r.station === null || r.station === '') return '';
+                    const up = namesStations(r) && on(r.station_upstream) ? 'from upstream' : '';
+                    if (r.station === undefined || r.station === null || r.station === '') return up;
                     const s = stations.find(st => Number(st.id) === Number(r.station));
-                    return s ? stationName(s) : 'station ' + r.station;
+                    return (s ? stationName(s) : 'station ' + r.station) + (up && ' · ' + up);
                 };
                 const routable = flow.inputs.length >= 2;
                 nodes.inputs = flow.inputs.map((r, i) => {

@@ -8,20 +8,21 @@ import { stationStateText } from '@aiscatcher/ui/stations.js';
 import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
 import { stepChartSVG } from '@aiscatcher/core/spark.js';
 import { getCountryName, getDeltaTimeVal } from '@aiscatcher/core/text.js';
-import { focus, switchFocus, refresh } from '../../data.js';
+import { focus, switchFocus } from '../../data.js';
+import { refresh } from '../../poll.js';
 import { ships, clock } from '../../core/store.js';
 import { getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat } from '../../core/units.js';
 import { closeDialog } from '../../dialog.js';
 import { replaycardVisible, applyMenuLabels } from '../../panels.js';
 import { ui, cardLayout } from '../../ui.js';
-import { showTab } from '../../tabs/index.js';
+import { showDashboard } from '../../tabs/index.js';
 import { closeSearch } from '../search/search-panel.js';
-import { updateFilterUI } from '../filter/filter.js';
 import { closeTargetcard, openOnTab } from '../targetcard/card.js';
 import * as replaybar from '../replay/replaybar.js';
 import * as mapObjects from '../mapobjects/mapobjects.js';
 import * as range from '../range/range.js';
 import { register } from '../../actions.js';
+import { fetchHealth } from '../status/health-data.js';
 
 function focusName() {
     return stationLabel(focus);
@@ -61,10 +62,15 @@ export function resetFocus() {
     if (focus >= 0) onStationChange(-1);
 }
 
+const focusShown = [];
+export function onFocusShown(fn) {
+    focusShown.push(fn);
+}
+
 function showFocus() {
     updateFocusChip();
     updateFilterPicker();
-    updateFilterUI();
+    focusShown.forEach((fn) => fn());
 }
 
 // ─── the header chip ─────────────────────────────────────────────────────────
@@ -149,7 +155,7 @@ export function stationcardVisible() {
 const FIELDS = [
     [{ key: "ships", label: "Ships" }, { key: "rate", label: "Rate" }, { key: "messages", label: "Messages" }],
     [{ key: "station_id", label: "ID" }, { key: "status", label: "Status" }, { key: "ago", label: "Last message" }],
-    [{ key: "where", label: "Position" }, { key: "furthest", label: "Furthest" }],
+    [{ key: "where", label: "Position" }, { key: "furthest", label: "Furthest" }, { key: "receivers", label: "Receivers" }],
 ];
 
 export function build() {
@@ -201,7 +207,6 @@ function fillRows(s) {
     card.header.state(HEADER_CLASS[s.status] || "card-dubious");
     set("stationcard_station_id", s.id);
     set("stationcard_status", stationStateText(s) || STATUS_TEXT[s.status] || "No data yet");
-    set("stationcard_ago", s.heard > 0 ? getDeltaTimeVal(clock - s.heard) + " ago" : "-");
     const aboard = s.mmsi ? ships[s.mmsi]?.raw?.shipname || "MMSI " + s.mmsi : null;
     tabs.cells.where.previousElementSibling.textContent = aboard ? "On board" : "Position";
     set("stationcard_where", aboard || (onMap(s) ? getLatValFormat(s) + "  " + getLonValFormat(s) : "-"));
@@ -211,12 +216,17 @@ const json = (url) => fetch(url).then((r) => (r.ok ? r.json() : null)).catch(() 
 
 async function fillFigures(id) {
     figuresAt = Date.now();
-    const [stat, history] = await Promise.all([json("api/stat.json?stations=" + id), json("api/history_full.json?stations=" + id)]);
+    const [stat, history, health] = await Promise.all([json("api/stat.json?stations=" + id), json("api/history_full.json?second=0&hour=48&day=0&stations=" + id), fetchHealth()]);
     if (cardStation !== id) return;
+    // the station's row tells when it was last heard only when the row changes: its health knows it now
+    const age = health?.stations?.[id]?.ais.last_msg_age_s;
+    set("stationcard_ago", age == null ? "-" : getDeltaTimeVal(age) + " ago");
     set("stationcard_ships", stat ? count(stat.vessel_count) : "-");
     set("stationcard_messages", stat ? count(stat.session?.count) : "-");
     set("stationcard_rate", stat ? (Number(stat.msg_rate) || 0).toFixed(1) + " msg/s" : "-");
     set("stationcard_furthest", stat?.session?.dist > 0 ? getDistanceVal(stat.session.dist) + " " + getDistanceUnit() : "-");
+    const receivers = (stat?.device_station || []).filter((s) => s === id).length;
+    set("stationcard_receivers", receivers ? count(receivers) : "-");
     activity(history?.hour, stationRow(id)?.status);
     chart("msgrate", "stationcard_msgrate", history?.minute, 30, "msg/min", "30 min of messages", "Messages per minute over the last 30 minutes");
     card.fit();
@@ -283,7 +293,7 @@ register({
     closeStationcard: () => closeStationcard(),
     stationcardStatistics: () => {
         if (cardStation !== null && focus !== cardStation && offered(cardStation)) onStationChange(cardStation);
-        showTab('stat');
+        showDashboard('stat');
     },
     stationcardNearby: () => {
         const s = cardStation !== null ? stationRow(cardStation) : null;

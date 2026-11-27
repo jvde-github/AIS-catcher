@@ -2,16 +2,16 @@
 if(ZLIB)
     if(MSVC)
         find_path(ZLIB_INCLUDE_DIR zlib.h HINTS ${WINDOWS_INCLUDE_DIR})
-        # zlib 1.3.2 upstream renamed shared OUTPUT_NAME to "z" (was zlib1.dll/zlib.lib in 1.3.1).
-        # vcpkg installs accordingly: bin/z.dll + lib/z.lib. Try new name first, fall back to legacy.
-        find_library(ZLIB_LIBRARY NAMES z zlib zlibstatic HINTS ${WINDOWS_LIBRARY_DIR})
+        # Upstream keeps renaming the shared library, and vcpkg installs it under upstream's name:
+        # libz.dll/libz.lib from 1.4, z.dll/z.lib in 1.3.2, zlib1.dll/zlib.lib before. Newest first.
+        find_library(ZLIB_LIBRARY NAMES libz z zlib zlibstatic HINTS ${WINDOWS_LIBRARY_DIR})
         # Pin to WINDOWS_BINARY_DIR; find_file's default search hits unrelated copies elsewhere
         # on the runner (e.g. Microsoft Service Fabric ships its own zlib1.dll) and breaks the copy.
-        if(EXISTS "${WINDOWS_BINARY_DIR}/z.dll")
-            set(ZLIB_DLL "${WINDOWS_BINARY_DIR}/z.dll")
-        elseif(EXISTS "${WINDOWS_BINARY_DIR}/zlib1.dll")
-            set(ZLIB_DLL "${WINDOWS_BINARY_DIR}/zlib1.dll")
-        endif()
+        foreach(_zlib_dll libz.dll z.dll zlib1.dll)
+            if(NOT ZLIB_DLL AND EXISTS "${WINDOWS_BINARY_DIR}/${_zlib_dll}")
+                set(ZLIB_DLL "${WINDOWS_BINARY_DIR}/${_zlib_dll}")
+            endif()
+        endforeach()
 
         if(ZLIB_INCLUDE_DIR AND ZLIB_DLL)
             Message(STATUS "ZLIB: found (Windows) - " ${ZLIB_INCLUDE_DIR}, ${ZLIB_LIBRARY}, ${ZLIB_DLL})

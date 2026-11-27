@@ -6,7 +6,7 @@
 	<title>AIS-catcher</title>
 
 	<meta name="viewport"
-		content="width=device-width,height=device-height,initial-scale=1.0" />
+		content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0" />
 	<meta name="mobile-web-app-capable" content="yes" />
 	<meta name="apple-mobile-web-app-capable" content="yes" />
 	<link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -32,21 +32,19 @@
 		<button type="button" id="header-focus" class="header-focus" hidden data-action="selectStation" data-id="-1"
 			title="Showing one station: click to show all stations"><span id="header-focus-label"></span><span id="header-focus-id" class="header-focus-id"></span><span class="header-focus-x" aria-hidden="true">&times;</span></button>
 
-		<button type="button" id="header-search-button" title="Search vessels, stations and places" aria-label="Search vessels, stations and places" data-action="toggleSearch" class="header-icon">
-			<i class="search_icon small-icon" aria-hidden="true"></i>
-		</button>
+		<div class="header-status" id="header-status">
+			<button type="button" class="nav-health" id="status-ais" data-action="openStatus" data-mode="overview" data-state="unknown">
+				<svg class="nav-health-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"/></svg>
+				<span class="nav-health-dot"></span><span class="nav-health-label">AIS</span>
+			</button>
+			<button type="button" class="nav-health" id="status-gps" data-action="openStatus" data-mode="gps" data-state="none">
+				<svg class="nav-health-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 7 9 3 5 7l4 4M17 11l4 4-4 4-4-4M8 12l4 4 6-6-4-4ZM16 8l3-3M9 21a6 6 0 0 0-6-6"/></svg>
+				<span class="nav-health-dot"></span><span class="nav-health-label">GPS</span>
+			</button>
+		</div>
 
 		<div title="Settings" data-action="openSettings" class="header-icon">
 			<i class="settings_icon small-icon"></i>
-		</div>
-
-		<div id="theme-toggle-button" title="Switch between day and night" data-action="toggleDarkMode" class="header-icon">
-			<svg id="theme-toggle-moon" xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor">
-				<path d="M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q14 0 27.5 1t26.5 3q-41 29-65.5 75.5T444-660q0 90 63 153t153 63q55 0 100-29t70-77q2 13 3 26.5t1 26.5q0 150-105 255T480-120Zm0-80q88 0 158-48.5T740-375q-20 5-40 8t-40 3q-123 0-209.5-86.5T364-660q0-20 3-40t8-40q-78 32-126.5 102T200-480q0 116 82 198t198 82Zm-10-270Z" />
-			</svg>
-			<svg id="theme-toggle-sun" xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor" style="display:none">
-				<path d="M480-360q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35Zm0 80q-83 0-141.5-58.5T280-480q0-83 58.5-141.5T480-680q83 0 141.5 58.5T680-480q0 83-58.5 141.5T480-280ZM200-440H40v-80h160v80Zm720 0H760v-80h160v80ZM440-760v-160h80v160h-80Zm0 720v-160h80v160h-80ZM256-650l-101-97 57-59 96 100-52 56Zm492 496-97-101 53-55 101 97-57 59Zm-96-550 97-101 59 57-100 96-56-52ZM154-212l101-97 55 53-97 101-59-57Zm326-268Z" />
-			</svg>
 		</div>
 	</div>
 	<div class="overlay" id="menubar-overlay" data-action="hideMenu"></div>
@@ -104,8 +102,6 @@
 			<!-- @include tabs/log/log.html -->
 
 			<!-- @include tabs/decoder/decoder.html -->
-
-			<!-- @include tabs/stat/stat.html -->
 
 			<!-- @include tabs/plots/plots.html -->
 

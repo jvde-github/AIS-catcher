@@ -57,12 +57,12 @@ namespace AIS
 		return check;
 	}
 
-	const std::string GPS::formatLatLon(float value, bool isLatitude) const
+	const std::string GPS::formatLatLon(double value, bool isLatitude) const
 	{
 		std::stringstream ss;
 
 		int degrees = static_cast<int>(std::abs(value));
-		float minutes = (std::abs(value) - degrees) * 60;
+		double minutes = (std::abs(value) - degrees) * 60;
 
 		ss << std::setfill('0') << std::setw(isLatitude ? 2 : 3) << std::abs(degrees);
 		ss << std::setfill('0') << std::setw(5) << std::fixed << std::setprecision(2) << minutes;
@@ -237,11 +237,11 @@ namespace AIS
 			*sp++ = 's';
 			char tmp[12];
 			int n = 0;
-			int v = station;
-			if (v < 0)
+			unsigned v = (unsigned)station;
+			if (station < 0)
 			{
 				*sp++ = '-';
-				v = -v;
+				v = 0u - v;
 			}
 			do
 			{

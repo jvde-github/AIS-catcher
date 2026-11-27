@@ -43,8 +43,9 @@ function start() {
         }
         stop();
         const n = await showTracksForMMSIs(selected);
-        showNotification(n === 0 ? "No vessels in selection" :
-            `Tracks enabled for ${n} vessel${n === 1 ? '' : 's'}`);
+        const vessels = (k) => `${k} vessel${k === 1 ? '' : 's'}`;
+        showNotification(n === null ? `Tracks enabled for ${vessels(selected.length)}, but they did not load yet` :
+            n === 0 ? "No vessels in selection" : `Tracks enabled for ${vessels(n)}`);
     });
 
     map.addInteraction(box);

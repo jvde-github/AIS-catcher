@@ -158,6 +158,9 @@ namespace IO
 			request.peer = request.forwarded_for;
 			request.local = false;
 		}
+		// and only such a proxy says which host the client asked for
+		if (!c.peer_local)
+			request.forwarded_host.clear();
 		return true;
 	}
 
@@ -292,6 +295,7 @@ namespace IO
 		bool first_line = true;
 		bool seen_content_length = false;
 		bool seen_host = false;
+		bool seen_forwarded_for = false;
 
 		while (line_start < header_end)
 		{
@@ -301,6 +305,13 @@ namespace IO
 
 			std::string line = msg.substr(line_start, line_end - line_start);
 			line_start = line_end + 2;
+
+			// inside a line a CR, LF or NUL would let one value carry a second header
+			if (line.find_first_of(std::string("\r\n\0", 3)) != std::string::npos)
+			{
+				error = "control character in the header section";
+				return 400;
+			}
 
 			if (first_line)
 			{
@@ -399,13 +410,14 @@ namespace IO
 				r.forwarded = true;
 				if (key == "X-FORWARDED-HOST")
 					r.forwarded_host = value;
-				else if (key == "X-FORWARDED-FOR" || (key == "X-REAL-IP" && r.forwarded_for.empty()))
+				else if (key == "X-FORWARDED-FOR" || (key == "X-REAL-IP" && !seen_forwarded_for))
 				{
-					std::string first = value.substr(0, value.find(','));
-					const std::size_t from = first.find_first_not_of(" \t"), to = first.find_last_not_of(" \t");
-					first = from == std::string::npos ? std::string() : first.substr(from, to - from + 1);
-					if (!first.empty() && first.size() <= 45 && first.find_first_not_of("0123456789abcdefABCDEF.:") == std::string::npos)
-						r.forwarded_for = first;
+					seen_forwarded_for = seen_forwarded_for || key == "X-FORWARDED-FOR";
+					std::string last = value.substr(value.rfind(',') + 1);
+					const std::size_t from = last.find_first_not_of(" \t"), to = last.find_last_not_of(" \t");
+					last = from == std::string::npos ? std::string() : last.substr(from, to - from + 1);
+					if (!last.empty() && last.size() <= 45 && last.find_first_not_of("0123456789abcdefABCDEF.:") == std::string::npos)
+						r.forwarded_for = last;
 				}
 			}
 			else if (key == "X-SETUP-CODE")

@@ -1,12 +1,14 @@
 import { initServerConfig, applyServerFeatures, updateServerConfig } from './features/server-config/viewer-config.js';
 import { config } from './core/config.js';
 import { settings, isAndroid, isKiosk } from './core/state.js';
+import { ships as shipsDB } from './core/store.js';
 import { register } from './actions.js';
 import * as filter from './core/filter.js';
 import * as components from '@aiscatcher/ui/components.js';
+import { sanitizeString } from '@aiscatcher/core/text.js';
 import * as tooltipLib from '@aiscatcher/ui/tooltip.js';
 import { debounce } from '@aiscatcher/ui/components.js';
-import { cardFullBleed } from './ui.js';
+import { cardFullBleed, wire as wireUi } from './ui.js';
 import * as community from './overlays/community.js';
 import * as measure from './features/measure/measure.js';
 import * as boxselect from './features/boxselect/boxselect.js';
@@ -18,25 +20,34 @@ import {
     map, create as createMap, markerLayer, shapeLayer, extraLayer, trackLayer, labelLayer, addOverlayLayer,
 } from './map.js';
 import './basemaps.js';
-import { restoreFocus } from './data.js';
-import { buildSettingsTabs } from './features/settings/settings.js';
+import { restoreFocus, wire as wireData } from './data.js';
+import { buildSettingsTabs, settingsPanel } from './features/settings/settings.js';
+import { searchPanel } from './features/search/search-panel.js';
 import {
     saveMapView, loadSettings, loadSettingsFromURL, restoreDefaultSettings, runAllEffects, urlParams,
 } from './settings-store.js';
 import { showDialog, showNotification } from './dialog.js';
 import * as about from './features/about/about.js';
-import { buildStatcard } from './features/counts/counts.js';
-import { relayoutTablecard } from './features/tablecard/tablecard.js';
-import { vesselLabel, openFocus } from './features/follow/follow.js';
-import { buildCards, dragTargetcardBy, fitTargetcard } from './features/targetcard/card.js';
-import { loaded as loadedTab, showTab, resolveTab } from './tabs/index.js';
-import { applyPanels, showMenu } from './panels.js';
+import { buildStatcard, updateMarkerCount, updateMarkerCountTooltip, renderCounts, bucketChips } from './features/counts/counts.js';
+import { relayoutTablecard, updateTablecard, tableHover, syncTableSelection } from './features/tablecard/tablecard.js';
+import { vesselLabel, openFocus, drawStation, applyFixedCenter } from './features/follow/follow.js';
+import { buildCards, dragTargetcardBy, fitTargetcard, refreshTargetcard, updateFocusMarker, updateTrackOption, closeTargetcard, targetcardVisible, positionAside, wire as wireCard } from './features/targetcard/card.js';
+import { loaded as loadedTab, showTab, resolveTab, wire as wireTabs } from './tabs/index.js';
+import { applyPanels, showMenu, hideMenu, setPageTitle, replaycardVisible, panels, wire as wirePanels } from './panels.js';
 import { init as initContextMenu, closeContextMenu, showContextMenu } from './features/contextmenu/contextmenu.js';
-import { redraw } from './fleet.js';
-import { stopHover, handlePointerMove, handleClick, getFeature } from './features/hover/hover.js';
-import { syncFocus } from './features/station/station.js';
+import { redraw, wire as wireFleet } from './fleet.js';
+import * as hover from './features/hover/hover.js';
+import { stopHover, handlePointerMove, handleClick, getFeature, updateHoverMarker } from './features/hover/hover.js';
+import { toggleReplaycard, updateReplaycard, setLiveLayersVisible, wire as wireReplaybar } from './features/replay/replaybar.js';
+import * as stationcard from './features/station/station.js';
+import { syncFocus, populate as populateStationcard, closeStationcard, stationcardVisible } from './features/station/station.js';
+import * as shipcard from './features/targetcard/shipcard.js';
+import * as status from './features/status/status.js';
+import * as planecard from './features/planecard/planecard.js';
 import { installPluginApi, loadPlugins } from './plugin-api.js';
 // their settings' effects and their actions register on load
+import { wire as wireTracks } from './tracks.js';
+import './features/filter/filter.js';
 import './features/kiosk/kiosk.js';
 import './features/theme/theme.js';
 import './tabs/plots/graphs.js';
@@ -75,7 +86,7 @@ function initMap() {
     tooltipLib.create({ selector: ".map-pill .map-button" }).prepare();
 
     createMap([trackLayer, rangeLayer, shapeLayer, objectLayer, markerLayer, labelLayer, extraLayer, measure.measureVector,
-        replay.hullLayer, replay.markerLayer]);
+        replay.hullLayer, replay.markerLayer], redraw);
 
     map.on('movestart', function () {
         stopHover();
@@ -126,7 +137,7 @@ function showPlugins() {
     const list = config.plugins.loaded.length
         ? config.plugins.loaded.map((p) => p.version > 0 ? `${p.name} (v${p.version})` : p.name).join('\n')
         : '(none)';
-    showDialog("Plugins", "<pre>Loaded plugins:\n" + list + "</pre>");
+    showDialog("Plugins", "<pre>Loaded plugins:\n" + sanitizeString(list) + "</pre>");
 }
 
 function showServerErrors() {
@@ -146,7 +157,7 @@ function showServerErrors() {
     }
     if (errs.length > 0) sections.push(errs.join('\n'));
 
-    showDialog("Server Errors", sections.length === 0 ? "None" : ("<pre>" + sections.join('\n\n') + "</pre>"));
+    showDialog("Server Errors", sections.length === 0 ? "None" : ("<pre>" + sanitizeString(sections.join('\n\n')) + "</pre>"));
 }
 
 function toggleScreenSize() {
@@ -209,7 +220,87 @@ else {
     });
 }
 
-ticker.init();
+wireData({
+    redraw,
+    ask: () => mapObjects.objectsAsk(),
+    configure: updateServerConfig,
+    objects: (ships) => mapObjects.applyObjects({ time: ships.time, place_version: ships.place_version, ...ships.mapobjects }),
+    fetched: (ships) => {
+        drawStation();
+        setPageTitle({ count: Object.keys(shipsDB).length });
+        community.pushVesselsToCommunityPopup(ships.dynamic);
+    },
+});
+wireUi({
+    stack: [
+        { isOpen: () => searchPanel.isOpen(), close: () => searchPanel.close(true), stage: true },
+        { isOpen: () => settingsPanel.isOpen(), close: () => settingsPanel.close(), stage: true },
+        { isOpen: () => document.getElementById("menubar").classList.contains("visible"), close: () => hideMenu(), stage: true },
+        { isOpen: () => stationcardVisible(), close: () => closeStationcard() },
+        { isOpen: () => targetcardVisible(), close: () => closeTargetcard() },
+    ],
+    replayOpen: () => panels.replay,
+});
+replay.wire({ updateReplaycard, setLiveLayersVisible, renderCounts, applyFixedCenter });
+wireReplaybar({ stopHover });
+mapObjects.wire({
+    isHovered: hover.isHovered,
+    rehover: hover.rehover,
+    isHoveringShip: hover.isHoveringShip,
+    rehoverShip: hover.rehoverShip,
+    hoverVessel: hover.hoverVessel,
+    unhoverVessel: hover.unhoverVessel,
+    closeSettings: () => settingsPanel.close(),
+    toggleReplaycard,
+    openFocus,
+});
+wireCard({
+    providers: { ship: shipcard, plane: planecard, station: stationcard },
+    stopHover,
+    syncTable: syncTableSelection,
+});
+wirePanels({
+    closeCard: closeTargetcard,
+    positionCard: positionAside,
+    fitCard: fitTargetcard,
+    closeSettings: () => settingsPanel.close(),
+    updateTable: updateTablecard,
+    clearTableHover: () => tableHover.clear(),
+    countsTooltip: updateMarkerCountTooltip,
+    measureCount: () => measure.count(),
+    setTicker: (on) => ticker.setEnabled(on),
+});
+wireTabs({
+    dismiss: () => {
+        searchPanel.close();
+        hideMenu();
+        settingsPanel.close();
+    },
+    layout: applyPanels,
+});
+wireTracks({ changed: updateTrackOption });
+wireFleet({
+    paused: () => replaycardVisible() || replay.isActive(),
+    fetch: () => [range.fetchRange()],
+    fetched: refreshTargetcard,
+    drawn: () => {
+        measure.refreshMeasures();
+        mapObjects.redrawBinaryMessages();
+    },
+    redrawn: () => {
+        range.drawRange();
+        updateFocusMarker();
+        updateHoverMarker();
+        updateMarkerCount();
+        updateTablecard();
+        drawStation();
+        applyFixedCenter();
+        range.updateDistanceCircles();
+        populateStationcard();
+    },
+});
+
+ticker.init(bucketChips());
 
 replay.init();
 
@@ -228,6 +319,7 @@ loadSettingsFromURL();
 buildCards();
 syncFocus(false);
 community.applySharingState();
+status.start();
 
 if (config.features.managed) {
     const pollSharingState = async () => {

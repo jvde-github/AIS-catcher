@@ -4,24 +4,23 @@
 
 import { settings } from '../core/state.js';
 import { config } from '../core/config.js';
-import { ships } from '../core/store.js';
 import { map } from '../map.js';
 import { updateMap } from '../fleet.js';
-import { refresh, restart as restartRefresh } from '../data.js';
+import { refresh, startPoll } from '../poll.js';
 import { saveSettings, effects } from '../settings-store.js';
-import { closeSettings } from '../features/settings/settings.js';
-import { closeSearch } from '../features/search/search-panel.js';
-import { hideMenu, applyPanels } from '../panels.js';
-import { showTargetcard } from '../features/targetcard/card.js';
-import { updateStatistics } from './stat/stat.js';
 import * as fireworks from '../overlays/fireworks.js';
 import { register } from '../actions.js';
 
-const lazyUpdate = (id) => async () => (await load(id)).update();
+// set once by script.js, so that this module imports no features
+const viewer = { dismiss: () => {}, layout: () => {} };
+export function wire(parts) {
+    Object.assign(viewer, parts);
+}
 
 /* { id, label, title, icon: the menu entry; feature: the server's say, when it
    has one; load: the lazy module; shown, hidden, refresh: when the tab has them
-   here rather than in its module; action: an entry that is a button, not a tab } */
+   here rather than in its module (a module's own refresh is its update); action:
+   an entry that is a button, not a tab } */
 const TABS = [
     {
         id: 'map', label: 'Map', title: 'Live map of received vessels', icon: 'map',
@@ -33,16 +32,15 @@ const TABS = [
         refresh: () => updateMap(),
     },
     {
-        id: 'stat', label: 'Statistics', title: 'System and receiver statistics', icon: 'business_center',
-        refresh: () => updateStatistics(),
+        id: 'plots', label: 'Dashboard', title: 'Health, graphs and statistics of the station', icon: 'leaderboard',
+        load: () => import('./plots/plots.js'),
     },
     {
-        id: 'plots', label: 'Plots', title: 'Graphs of message and vessel counts over time', icon: 'leaderboard',
-        load: () => import('./plots/plots.js'), refresh: lazyUpdate('plots'),
+        id: 'search', label: 'Search', title: 'Search vessels, stations and places', icon: 'search', action: 'toggleSearch',
     },
     {
         id: 'ships', label: 'Ships', title: 'Searchable table of received vessels', icon: 'table',
-        load: () => import('./shiptable/shiptable.js'), refresh: lazyUpdate('ships'),
+        load: () => import('./shiptable/shiptable.js'),
     },
     {
         id: 'realtime', label: 'NMEA', title: 'Live stream of received NMEA messages', icon: 'timer',
@@ -113,7 +111,8 @@ const modules = {};
 const loading = {};
 
 export function load(id) {
-    if (!loading[id]) loading[id] = tabOf(id).load().then((m) => (modules[id] = m));
+    // a failed load is tried again on the next open
+    if (!loading[id]) loading[id] = tabOf(id).load().then((m) => (modules[id] = m), (e) => { delete loading[id]; throw e; });
     return loading[id];
 }
 
@@ -131,62 +130,64 @@ function leave(tab) {
     if (tab.load) loaded(tab.id)?.hidden?.();
 }
 
-// a lazy tab may have been left, or switched off, while its module loaded
-function enterLazy(tab) {
-    load(tab.id).then((m) => {
-        if (settings.tab === tab.id && enabled(tab)) m.shown?.();
-    }).catch((err) => console.error('Failed to load ' + tab.id + ' tab module:', err));
-}
-
-export function showTab(id = resolveTab()) {
+export async function showTab(id = resolveTab()) {
     const tab = tabOf(id);
     if (!tab || !enabled(tab)) return;
 
-    closeSearch();
-    hideMenu();
-    closeSettings();
+    viewer.dismiss();
+    if (tab === current) return;
+
+    if (current) leave(current);
+    current = tab;
+    startPoll(null);
 
     for (const t of TABS)
         for (const el of buttons[t.id]) el.classList.toggle("active", t === tab);
-
-    const tabcontent = document.getElementsByClassName("tabcontent");
-    for (let i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
+    for (const el of document.getElementsByClassName("tabcontent")) el.style.display = "none";
     document.getElementById(id).style.display = "block";
-    tab.shown?.();
 
     settings.tab = id;
     saveSettings();
+    viewer.layout();
+    tab.shown?.();
 
-    applyPanels();
-
-    if (current && current !== tab) leave(current);
-    current = tab;
-    if (tab.load) enterLazy(tab);
-
-    restartRefresh();
+    let mod = tab;
+    if (tab.load) {
+        try {
+            mod = await load(id);
+        } catch (err) {
+            console.error('Failed to load ' + id + ' tab module:', err);
+            if (current === tab) current = null;
+            return;
+        }
+        // left, or switched off, while its module loaded
+        if (current !== tab || !enabled(tab)) return;
+        mod.shown?.();
+    }
+    startPoll(tab.refresh || mod.update);
 }
 
 // the tab the settings name, or the one to fall back on when that one is off
 export function resolveTab() {
+    // Statistics was a tab of its own: it is a view of the dashboard
+    if (settings.tab === "stat") {
+        settings.tab = "plots";
+        settings.dashboard = "stat";
+    }
     const tab = tabOf(settings.tab);
-    if (!tab) settings.tab = "stat";
-    else if (!enabled(tab)) settings.tab = "map";
+    if (!tab || !enabled(tab)) settings.tab = "map";
 
     return settings.tab;
 }
 
-// the map, with vessel `m`'s card open when the receiver knows it
-export function selectMapTab(m) {
-    showTab('map');
-    if (m in ships) showTargetcard('ship', m);
+// a view of the dashboard: overview (AIS), gps, compare or stat
+export async function showDashboard(view) {
+    await showTab('plots');
+    loaded('plots')?.showMode(view);
 }
 
 export async function openRealtimeForMMSI(m) {
     (await load('realtime')).openForMMSI(m);
-}
-
-export function refreshTab() {
-    return tabOf(settings.tab)?.refresh?.();
 }
 
 // values on the page are written in these: what is on screen is written again

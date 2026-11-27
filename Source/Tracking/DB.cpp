@@ -504,6 +504,8 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	if (positionUpdated)
 	{
 		ship.setApproximate(type == 27);
+		if (isValidCoord(ship.lat, ship.lon))
+			ship.last_position_signal = ship.last_signal;
 	}
 
 	if (msg_save)
@@ -1004,7 +1006,7 @@ DB::Admission DB::admit(const AIS::Message *msg, TAG &tag)
 		tag.shipclass = CLASS_UNKNOWN;
 		tag.speed = SPEED_UNDEFINED;
 		// Equal timestamps prevent History from counting a new vessel.
-		tag.previous_signal = msg->getRxTimeUnix();
+		tag.previous_signal = tag.station_previous_signal = msg->getRxTimeUnix();
 		return COUNT;
 	}
 	return STORE;
@@ -1053,6 +1055,12 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 
 	// save some data for later on
 	tag.previous_signal = ship.last_signal;
+	// a copy leaves no trace and a full list may have dropped the station: neither makes the vessel new to it
+	tag.station_previous_signal = copy || ship.heard[Ship::HEARD - 1].last ? ship.last_signal : 0;
+	ship.forEachHeard([&](int station, std::time_t t) {
+		if (station == tag.station_id)
+			tag.station_previous_signal = t;
+	});
 
 	float lat_old = ship.lat;
 	float lon_old = ship.lon;

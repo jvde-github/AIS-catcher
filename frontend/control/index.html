@@ -21,7 +21,7 @@
                     <p id="login-subtitle" class="t-small t-muted">Authentication required to continue.</p>
                 </div>
                 <div id="login-error" class="alert alert-danger hidden"></div>
-                <form id="login-form" class="stack">
+                <form id="login-form" class="stack" method="post">
                     <input id="login-password" name="password" type="password" autocomplete="current-password"
                         placeholder="Password"
                         class="input" />
@@ -143,7 +143,7 @@
                                 <span class="t-strong">Reset Password</span>
                             </div>
                             <div class="card-body">
-                                <form id="password-form" class="stack">
+                                <form id="password-form" class="stack" method="post">
                                     <input id="current-password" type="password" autocomplete="current-password" placeholder="Current password"
                                         class="st-input" />
                                     <input id="new-password" type="password" autocomplete="new-password" placeholder="New password"
@@ -151,7 +151,7 @@
                                     <input id="new-password2" type="password" autocomplete="new-password" placeholder="Confirm new password"
                                         class="st-input" />
                                 </form>
-                                <p class="t-small t-muted" data-auth="open">Needed only when the panel listens on the network.</p>
+                                <p class="t-small t-muted" data-auth="open">Always set one. It is asked for when the panel is opened from the network.</p>
                             </div>
                         </div>
                         <div class="row row-wrap row-end row-loose sys-actions">
@@ -164,7 +164,7 @@
                             </div>
                             <div class="card-body stack">
                                 <p id="panel-tls-state" class="t-small t-muted"></p>
-                                <form id="panel-tls-form" class="stack">
+                                <form id="panel-tls-form" class="stack" method="post">
                                     <input id="panel-tls-cert" type="text" spellcheck="false" placeholder="Certificate: fullchain.pem" aria-label="Certificate" class="st-input" />
                                     <input id="panel-tls-key" type="text" spellcheck="false" placeholder="Private key: privkey.pem" aria-label="Private key" class="st-input" />
                                 </form>

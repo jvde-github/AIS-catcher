@@ -1164,6 +1164,7 @@ body.ticker-open.ticker-bottom {
     background: var(--color-tooltip-bg);
     backdrop-filter: blur(8px);
     border: 1px solid var(--color-ticker-border);
+    border-radius: 8px;
     text-align: center;
     overflow: hidden;
     visibility: hidden;
@@ -1192,6 +1193,116 @@ body.ticker-open.ticker-bottom {
 /* the name on a hover row: each host styles it as its vessel row does */
 .tooltip-name {
     font-weight: inherit;
+}
+
+/* The two rows of a vessel's or an aircraft's hover card: who it is and how fast, then how fresh
+   the reception is and what or who is behind it. The card is dark in both themes, so the three
+   states of the reception wear the header's status colours. */
+.tip-top,
+.tip-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 200px;
+}
+
+.tip-top {
+    gap: 8px;
+}
+
+.tip-top .flag-tooltip {
+    flex-shrink: 0;
+    margin-right: 0;
+    font-size: 15px;
+    opacity: 1;
+}
+
+.tip-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tip-value {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.tip-value small {
+    color: var(--color-ticker-muted);
+    font-size: 11px;
+    font-weight: 400;
+}
+
+/* at the end of the first row when there is no speed: what it is */
+.tip-kind {
+    flex-shrink: 0;
+    color: var(--color-ticker-muted);
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+/* of the stations that heard it, the one that heard it last */
+.tip-last {
+    color: var(--color-ticker-ink);
+    font-weight: 600;
+}
+
+.tip-meta {
+    gap: 12px;
+    margin-top: 4px;
+    color: var(--color-ticker-muted);
+    font-size: 11px;
+}
+
+.tip-rx {
+    --rx: var(--color-ticker-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.tip-rx i {
+    flex-shrink: 0;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--rx);
+}
+
+.tip-rx[data-state="fresh"] {
+    --rx: #4ade80;
+}
+
+.tip-rx[data-state="aging"] {
+    --rx: #fbbf24;
+    color: var(--rx);
+}
+
+.tip-rx[data-state="stale"] {
+    --rx: #f87171;
+    color: var(--rx);
+}
+
+.tip-stations {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.tip-stations .station_icon {
+    flex-shrink: 0;
+    font-size: 12px;
 }
 
 /* ---- the ship card as tabs: one view at a time, the tab remembered -------
@@ -1802,26 +1913,26 @@ body.ticker-open.ticker-bottom {
    than ringed, and the vessel count with its caption.
    ========================================================================== */
 .map-button-box, .map-button-box.map-pill {
-    --size-map-button: 36px;
+    --size-map-button: 34px;
     gap: 2px;
     padding: 4px;
     border: 0;
-    border-radius: 16px;
+    border-radius: 12px;
     background-color: var(--color-surface-raised, var(--color-surface-alt));
     box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16), 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 .map-button-box .map-button {
-    height: 36px !important;
-    border-radius: 10px !important;
+    height: 34px !important;
+    border-radius: 8px !important;
     background-color: transparent !important;
-    color: var(--color-text) !important;
-    fill: var(--color-text) !important;
+    color: var(--color-menu-text) !important;
+    fill: var(--color-menu-text) !important;
     transition: background-color .12s, color .12s;
 }
 .map-button-box .map-button + .map-button { border-top: 0 !important; border-image: none !important; }
 .map-pill .map-button svg { width: 19px !important; height: 19px !important; }
 @media (hover: hover) {
-    .map-button-box .map-button:hover { background-color: color-mix(in srgb, var(--color-text) 7%, transparent) !important; color: var(--color-text) !important; fill: var(--color-text) !important; }
+    .map-button-box .map-button:hover { background-color: color-mix(in srgb, var(--color-text) 7%, transparent) !important; color: var(--color-menu-text) !important; fill: var(--color-menu-text) !important; }
     .map-button-box .map-button:hover svg { transform: none; }
 }
 .map-button-box .map-button.is-active {
@@ -1831,7 +1942,9 @@ body.ticker-open.ticker-bottom {
 .map-button-box .map-button.is-active::before { display: none; }
 /* the count: the number in weight, "in view" small under it; found by its #markerCount
    (both hosts have it, their button ids differ), the caption drawn here so no host needs markup */
-.map-button-box .map-button:has(> #markerCount) { height: auto !important; min-height: 40px; flex-direction: column !important; gap: 1px; padding: 4px 0 !important; font-size: 13px !important; font-weight: 700; line-height: 1.1; }
+.map-button-box .map-button:has(> #markerCount) { height: auto !important; min-height: 40px; flex-direction: column !important; gap: 1px; padding: 4px 0 7px !important; margin-bottom: 2px !important;
+    --rule: color-mix(in srgb, var(--color-text) 14%, transparent);
+    background: linear-gradient(var(--rule), var(--rule)) center bottom / calc(100% - 10px) 1px no-repeat; font-size: 13px !important; font-weight: 700; line-height: 1.1; }
 .map-button-box .map-button:has(> #markerCount)::after { content: "in view"; font-size: 8.5px; font-weight: 400; color: var(--color-text-muted); }
 /* a little more air between the rail and the side panel */
 .map-button-box { right: 12px; }

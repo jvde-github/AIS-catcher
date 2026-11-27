@@ -113,6 +113,8 @@ namespace Managed
 			try
 			{
 				read(next, c);
+				if (engine)
+					requireInput(next);
 				applySite(c.site);
 				if (engine)
 					site.setOutputs(std::move(next.outputs));
@@ -124,7 +126,6 @@ namespace Managed
 			}
 			if (!engine)
 				return;
-			requireInput(next);
 			if (!engine->follow(next, c.stations, c.station_defaults))
 				supervisor.restart();
 		}
@@ -238,6 +239,9 @@ namespace Managed
 				// the stop flags of the last session; a signal that came meanwhile still stops this one
 				stop_failed = false;
 				stop = stop_process.load();
+				// a Stop that came since desired() was cleared with the line above
+				if (!supervisor.desired())
+					continue;
 				session();
 			}
 

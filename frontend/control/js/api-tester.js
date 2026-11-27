@@ -18,9 +18,11 @@ let routes = null;
 async function loadRoutes() {
     if (routes) return routes;
     const spec = await api('/api/openapi');
-    routes = Object.entries(spec.paths || {}).map(([path, item]) => {
+    // the description's paths are relative to its server, which on the machine itself is /api/v1
+    routes = Object.entries(spec.paths || {}).map(([relative, item]) => {
+        const path = '/api/v1' + (relative === '/' ? '' : relative);
         const get = item.get || {};
-        const system = path.startsWith('/api/v1/system') || path === '/api/v1/health';
+        const system = path.startsWith('/api/v1/system');
         const part = path.split('/')[3] || '';
         return {
             path, service: system ? 'system' : 'api', summary: get.summary || '',
@@ -92,7 +94,7 @@ function meta(status, ms, text, type, note) {
 
 // ---- the API
 function tryApi(body, servers, highlight) {
-    const tryable = servers.filter(s => ['api', 'system', 'geojson', 'metrics'].some(k => s.serve.includes(k)));
+    const tryable = servers.filter(s => ['api', 'system', 'geojson', 'kml', 'metrics'].some(k => s.serve.includes(k)));
     if (!tryable.length)
         return body.replaceChildren(el('div', 'st-empty', {}, el('strong', '', { text: 'No server offers the API yet' }),
             el('span', '', { text: 'Switch API on for Main, or add a server with it, and save.' })));

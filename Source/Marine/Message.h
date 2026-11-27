@@ -52,19 +52,42 @@ namespace AIS
 		return (double)((ns + 500) / 1000) / 1000000.0;
 	}
 
+	struct Sky
+	{
+		enum System { OTHER = 0, GPS = 1, GLONASS = 2, GALILEO = 3, BEIDOU = 4, QZSS = 5, NAVIC = 6, SBAS = 7 };
+		// L1 is L1, E1, B1 and G1; L5 is L5, E5a and B2a; L2 the bands between: L2, G2, E5b, E6, B2b, B3
+		enum Band { L1 = 0, L2 = 1, L5 = 2, BANDS = 3 };
+		struct Satellite
+		{
+			int system, id;
+			int elevation, azimuth;
+			int signal[BANDS]; // dB-Hz, -1 where the band is not heard
+			bool used;
+		};
+		std::vector<Satellite> satellites;
+		int fix = 0;
+		float hdop = -1;
+	};
+
 	class GPS
 	{
-		float lat = 0, lon = 0;
+		double lat = 0, lon = 0;
 		const std::string &source;
 		bool isJSON;
 
-		const std::string formatLatLon(float, bool) const;
+		bool position = true;
+
+		const std::string formatLatLon(double, bool) const;
 
 	public:
-		GPS(float lt, float ln, const std::string &src, bool json) : lat(lt), lon(ln), source(src), isJSON(json) {}
+		const Sky *sky = nullptr;
 
-		float getLat() const { return lat; }
-		float getLon() const { return lon; }
+		GPS(double lt, double ln, const std::string &src, bool json) : lat(lt), lon(ln), source(src), isJSON(json) {}
+		explicit GPS(const std::string &src) : source(src), isJSON(false), position(false) {}
+
+		bool hasPosition() const { return position; }
+		double getLat() const { return lat; }
+		double getLon() const { return lon; }
 
 		const std::string getNMEA() const;
 		const std::string getJSON() const;
@@ -76,6 +99,16 @@ namespace AIS
 	public:
 		int topic = 0;
 		const JSON::JSON *payload = nullptr; // valid for the duration of the Send
+	};
+
+	struct Metric
+	{
+		int key = 0;
+		double value = 0;
+		char channel = 0;
+		int window = 0;
+		int station = -1;
+		const char *unit = nullptr;
 	};
 
 	class Message
@@ -252,7 +285,7 @@ namespace AIS
 		{
 			const unsigned ones = ~0u;
 			unsigned u = getUint(start, len);
-			if (u & (1u << (len - 1)))
+			if (len < 32 && (u & (1u << (len - 1))))
 				u |= ones << len;
 			return (int)u;
 		}
@@ -293,6 +326,8 @@ namespace AIS
 
 			return data[i >> 3] & (1 << (i & 7));
 		}
+
+		bool sameBits(const Message &other, int len) const { return memcmp(data, other.data, (len + 7) / 8) == 0; }
 
 		char getLetter(int pos) const;
 		void setLetter(int pos, char c);

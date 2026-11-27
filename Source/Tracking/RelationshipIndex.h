@@ -94,7 +94,7 @@ public:
 			auto &bucket = reverse[unique[i]];
 			auto &e = f.edges[f.count];
 			e.key = unique[i];
-			e.offset = bucket.size();
+			e.offset = (uint32_t)bucket.size();
 			bucket.push_back({slot, f.count++});
 		}
 	}

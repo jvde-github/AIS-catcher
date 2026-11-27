@@ -6,11 +6,6 @@ import { settings, isKiosk } from './core/state.js';
 import { config } from './core/config.js';
 import { map } from './map.js';
 import { isDialogOpen } from './dialog.js';
-import { panels, hideMenu } from './panels.js';
-import { settingsPanel } from './features/settings/settings.js';
-import { searchPanel } from './features/search/search-panel.js';
-import { closeTargetcard, targetcardVisible } from './features/targetcard/card.js';
-import { closeStationcard, stationcardVisible } from './features/station/station.js';
 
 const mqShort = window.matchMedia("(max-height: 800px)");
 
@@ -54,6 +49,15 @@ export const cardLayout = {
     preferDock: () => !!settings.targetcard_top_left,
 };
 
+/* top-down: Escape closes the first open one; a card taking the stage closes the ones marked
+   stage. The dialog closes itself on Escape; script.js adds the rest below it. */
+const stack = [{ isOpen: () => isDialogOpen() }];
+let replayOpen = () => false;
+export function wire(parts) {
+    stack.push(...parts.stack);
+    replayOpen = parts.replayOpen;
+}
+
 export const ui = mapui.create({
     map: () => map,
     settings: () => settings,
@@ -74,20 +78,11 @@ export const ui = mapui.create({
             pinned: () => settings.targetcard_pinned ? { x: settings.targetcard_pinned_x, y: settings.targetcard_pinned_y } : null,
         },
     },
-    /* top-down: Escape closes the first open one; a card taking the stage
-       closes the ones marked stage. The dialog closes itself on Escape. */
-    stack: [
-        { isOpen: () => isDialogOpen() },
-        { isOpen: () => searchPanel.isOpen(), close: () => searchPanel.close(true), stage: true },
-        { isOpen: () => settingsPanel.isOpen(), close: () => settingsPanel.close(), stage: true },
-        { isOpen: () => document.getElementById("menubar").classList.contains("visible"), close: () => hideMenu(), stage: true },
-        { isOpen: () => stationcardVisible(), close: () => closeStationcard() },
-        { isOpen: () => targetcardVisible(), close: () => closeTargetcard() },
-    ],
+    stack,
     toolbar: {
         bar: document.getElementById("maptoolbar"),
         rail: document.querySelector(".map-button-box.map-pill:not(.map-bottom)"),
-        wantWide: () => settings.map_toolbar === "wide" && !isKiosk() && !panels.replay,
+        wantWide: () => settings.map_toolbar === "wide" && !isKiosk() && !replayOpen(),
         freeWidth: () => freeMapWidth(),
     },
 });

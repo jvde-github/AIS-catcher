@@ -63,42 +63,70 @@ namespace AIS
 		return CRC == checksum;
 	}
 
+	bool Decoder::checkCorrected(int len)
+	{
+		if (!CRC16(len))
+			return false;
+
+		const int bits = len - 16;
+		switch (msg.type())
+		{
+		case 1: case 2: case 3: case 4: case 9: case 11: case 18:
+			return bits == 168;
+		case 5:
+			return bits == 424;
+		case 10:
+			return bits == 72;
+		case 19:
+			return bits == 312;
+		case 24:
+			return bits == 160 || bits == 168;
+		case 27:
+			return bits == 96;
+		}
+		return false;
+	}
+
 	bool Decoder::processData(int len, TAG &tag)
 	{
 		if (len >= 16 && CRC16(len))
 		{
-			nBits = len - 16;
-			nBytes = (nBits + 7) / 8;
-
-			// calculate the power of the signal in dB, if requested and timestamp
-			if (tag.mode & 1 && tag.level != 0.0)
-				tag.level = 10.0f * log10(tag.level);
-			if (tag.mode & 2)
-				msg.Stamp();
-
-			// Populate Byte array and send msg, exclude 16 FCS bits
-			msg.setOrigin(channel, station, own_mmsi);
-			msg.setLength(nBits);
-			msg.setStartIdx(start_idx);
-			msg.setEndIdx(end_idx);
-
-			tag.quality &= ~MESSAGE_QUALITY_CHECKSUM;
-			if (msg.validate(tag))
-			{
-				msg.buildNMEA(tag);
-				Send(&msg, 1, tag);
-			}
-			else
-			{
-				msg.buildNMEA(tag);
-				Debug() << "AIS: invalid message of type " << msg.type() << " and length " << msg.getLength();
-				for (const auto &s : msg.sentences())
-					Debug() << "AIS: " << s;
-			}
-
+			deliver(len, tag);
 			return true;
 		}
 		return false;
+	}
+
+	void Decoder::deliver(int len, TAG &tag)
+	{
+		nBits = len - 16;
+		nBytes = (nBits + 7) / 8;
+
+		// calculate the power of the signal in dB, if requested and timestamp
+		if (tag.mode & 1 && tag.level != 0.0)
+			tag.level = 10.0f * log10(tag.level);
+		if (tag.mode & 2)
+			msg.Stamp();
+
+		// Populate Byte array and send msg, exclude 16 FCS bits
+		msg.setOrigin(channel, station, own_mmsi);
+		msg.setLength(nBits);
+		msg.setStartIdx(start_idx);
+		msg.setEndIdx(end_idx);
+
+		tag.quality &= ~MESSAGE_QUALITY_CHECKSUM;
+		if (msg.validate(tag))
+		{
+			msg.buildNMEA(tag);
+			Send(&msg, 1, tag);
+		}
+		else
+		{
+			msg.buildNMEA(tag);
+			Debug() << "AIS: invalid message of type " << msg.type() << " and length " << msg.getLength();
+			for (const auto &s : msg.sentences())
+				Debug() << "AIS: " << s;
+		}
 	}
 
 	void Decoder::Signal(const DecoderSignals &in)

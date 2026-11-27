@@ -46,10 +46,12 @@ namespace
 			return AIS::MODEL_V1_HIGH;
 		if (t == "V2_BASE")
 			return AIS::MODEL_V2_BASE;
+		if (t == "V2_HIGH")
+			return AIS::MODEL_V2_HIGH;
 		if (t.find_first_not_of("0123456789") == std::string::npos)
 			return Util::Parse::Integer(t, 0, AIS::MODEL_MAX);
 
-		throw std::runtime_error("engine type must be auto, v1_base, v1_high, v2_base or a model number");
+		throw std::runtime_error("engine type must be auto, v1_base, v1_high, v2_base, v2_high or a model number");
 	}
 
 	// skip: a key the caller already consumed; told: the settings in the order given
@@ -180,6 +182,7 @@ namespace
 		case AIS::KEY_SETTING_DESCRIPTION:
 		case AIS::KEY_SETTING_DESC:
 		case AIS::KEY_SETTING_STATION:
+		case AIS::KEY_SETTING_STATION_UPSTREAM:
 		case AIS::KEY_SETTING_SAMPLE_RATE:
 		case AIS::KEY_SETTING_BANDWIDTH:
 		case AIS::KEY_SETTING_FREQOFFSET:
@@ -271,6 +274,8 @@ std::string Config::modelName(int model)
 		return "v1_high";
 	case AIS::MODEL_V2_BASE:
 		return "v2_base";
+	case AIS::MODEL_V2_HIGH:
+		return "v2_high";
 	default:
 		return std::to_string(model);
 	}
@@ -541,8 +546,7 @@ bool Config::normalise(JSON::Document &doc, const std::string &folder, std::vect
 
 void Config::readSharing(const std::vector<JSON::Member> &members, bool managed, Outputs &into)
 {
-
-	bool xchange = false;
+	bool share = false;
 	std::string uuid;
 	std::vector<std::string> zones;
 
@@ -550,7 +554,7 @@ void Config::readSharing(const std::vector<JSON::Member> &members, bool managed,
 	{
 		if (m.Key() == AIS::KEY_SETTING_SHARING)
 		{
-			xchange = Util::Parse::Switch(m.Get().to_string());
+			share = Util::Parse::Switch(m.Get().to_string()) || share;
 			into.sharing_defined = true;
 		}
 		else if (m.Key() == AIS::KEY_SETTING_SHARING_KEY)
@@ -564,12 +568,7 @@ void Config::readSharing(const std::vector<JSON::Member> &members, bool managed,
 		}
 	}
 
-	if (into.sharing_defined && !xchange && !uuid.empty() && !Util::Helper::isUUID(uuid))
-	{
-		Warning() << "Config file: \"sharing_key\" is not a UUID and sharing is off: ignored.";
-		uuid.clear();
-	}
-	if ((!xchange && (uuid.empty() || (managed && into.sharing_defined))) || into.feed)
+	if (!share || into.feed)
 		return;
 
 	into.feed = new IO::HubStreamer();
@@ -577,8 +576,7 @@ void Config::readSharing(const std::vector<JSON::Member> &members, bool managed,
 	if (!uuid.empty())
 		into.feed->SetKey(AIS::KEY_SETTING_UUID, uuid);
 	into.feed->zones = zones;
-	// sharing is opt-in: a feed nobody asked for by name carries what the radios hear
-	into.radios_only = managed ? uuid.empty() : !into.sharing_defined;
+	into.radios_only = managed && uuid.empty();
 	into.told.back() += uuid + (into.radios_only ? ";radios;" : ";");
 	for (const auto &z : zones)
 		into.told.back() += z + ",";

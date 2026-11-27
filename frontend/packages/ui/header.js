@@ -22,22 +22,22 @@
    ========================================================================= */
 
 export function create(opts) {
-    var box = opts.box, title = opts.title, pill = opts.pill, chip = opts.chip;
-    var mode = opts.mode || function () { return "icons"; };
-    var minTabs = opts.minTabs || 3;
+    let box = opts.box, title = opts.title, pill = opts.pill, chip = opts.chip;
+    let mode = opts.mode || function () { return "icons"; };
+    let minTabs = opts.minTabs || 3;
 
     function apply() {
         if (!box || !title || !pill) return;
-        var want = mode();
+        let want = mode();
         pill.classList.toggle("labels", want !== "icons");
-        var all = Array.prototype.slice.call(pill.children);
+        let all = Array.prototype.slice.call(pill.children);
         [title, pill].concat(all).forEach(function (el) { el.classList.remove("fit-hidden"); });
         box.classList.remove("no-pill");
         if (chip) chip.classList.remove("fit-short", "fit-hidden");
         /* tabs the host hides do not count */
-        var tabs = all.filter(function (t) { return getComputedStyle(t).display !== "none"; });
-        var room = function () { return box.clientWidth - parseFloat(getComputedStyle(box).paddingRight); };
-        var fits = function () { return title.scrollWidth + pill.offsetWidth <= room(); };
+        let tabs = all.filter(function (t) { return getComputedStyle(t).display !== "none"; });
+        let room = function () { return box.clientWidth - parseFloat(getComputedStyle(box).paddingRight); };
+        let fits = function () { return title.scrollWidth + pill.offsetWidth <= room(); };
         /* adaptive: icons buy room before any tab is dropped */
         if (want === "adaptive" && !fits()) pill.classList.remove("labels");
         /* the chip gives way before a tab does: short, then out of the row */
@@ -46,10 +46,10 @@ export function create(opts) {
             if (!fits()) chip.classList.replace("fit-short", "fit-hidden");
         }
         if (chip) chip.dispatchEvent(new CustomEvent("fit"));
-        var spare = tabs.filter(function (t) {
+        let spare = tabs.filter(function (t) {
             return !t.classList.contains("active") && !t.querySelector(".active");
         }).reverse();
-        for (var i = 0, shown = tabs.length; i < spare.length && !fits() && shown > minTabs; i++, shown--)
+        for (let i = 0, shown = tabs.length; i < spare.length && !fits() && shown > minTabs; i++, shown--)
             spare[i].classList.add("fit-hidden");
         if (!fits()) {
             pill.classList.add("fit-hidden");
@@ -60,6 +60,8 @@ export function create(opts) {
     }
 
     window.addEventListener("resize", apply);
+    /* something beside the box came or went: an icon on the right, the chip */
+    if (window.ResizeObserver && box) new ResizeObserver(apply).observe(box);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(apply);
     apply();
     return { apply: apply };

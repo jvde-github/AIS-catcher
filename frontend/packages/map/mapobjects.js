@@ -25,7 +25,7 @@ import { hasValidCoords } from '@aiscatcher/core/geo.js';
 import * as events from './events.js';
 import * as render from '@aiscatcher/ui/binary.js';
 import { KIND_CAT, CAT_COLORS, AGE_FADE, LAYER_ALPHA, decodeBadge, decorate, tooltipSections, getBinaryMessageList, getBinaryMessageTabs,
-    cardOpen, badgeCanvas, discCanvas, pillCanvas, hatchCanvas, areaRings, ageBucket, isDangerArea, isGroupArea, markerHead, markerCaption,
+    cardOpen, badgeCanvas, discCanvas, pillCanvas, hatchCanvas, areaRings, ageBucket, isDangerArea, isGroupArea, markerAbout, markerCaption,
     messageDialog, kindsOf, glyphsHTML, KIND_LABEL, showsShipBadge } from '@aiscatcher/ui/binary.js';
 import { stationCanvas, stationBadgeCanvas, stationBand, stationStatus } from '@aiscatcher/ui/stations.js';
 
@@ -512,7 +512,8 @@ export function create(host) {
         const members = feature.object_stack || [feature.binary_object];
         for (const o of members) if (o.kind === 10 && o.has_geometry) revealPlace(feature, o);
         const stations = members.filter((o) => catOf(o) === 'station'), ports = members.filter((o) => catOf(o) === 'port'), markers = members.filter((o) => !['station', 'port'].includes(catOf(o)));
-        const more = markers.reduce((n, o) => n + (o.count || 1), 0) - 1 + Math.max(0, ports.length - HOVER_BANDS);
+        // the card's foot counts the reports of the object it shows: the dots are for other objects behind it
+        const more = markers.length - 1 + Math.max(0, ports.length - HOVER_BANDS);
         return stations.map(bandOf).join('') + ports.slice(0, HOVER_BANDS).map(portBand).join('') + (markers.length ? markerTip(markers[0], feature) : '') + (more > 0 ? MORE_ROW : '');
     }
 
@@ -554,11 +555,11 @@ export function create(host) {
     function markerTip(o, feature) {
         if (o.kind === 10) return `<div class="tip-band"><div class="tooltip-card"><span class="tooltip-name">${sanitizeString(o.label || "Place")}</span></div></div>`;
         if (isGroupArea(o)) revealArea(feature, o);
-        const head = markerHead(o, host.shipLabel, colorOf(catOf(o)));
+        // one card: headed by what the message is once it is fetched, by what the object is until then
         const have = hydrated.get(o.id);
-        if (have && have.seq === o.seq) return head + tooltipSections(have.payload);
+        if (have && have.seq === o.seq) return tooltipSections(have.payload, false, markerAbout(o, host.shipLabel));
         setTimeout(() => { if (host.isHovered(feature)) hydrate(o).then(() => host.rehover(feature)); }, HOVER_DWELL_MS);
-        return head + markerCaption(o, serverTime);
+        return markerCaption(o, serverTime, host.shipLabel);
     }
 
     // a ship row carries the number of the station riding it; its record comes by one fetch and stays
@@ -603,7 +604,7 @@ export function create(host) {
         if (have && have.badge === ship.binary && have.messages) {
             const list = have.messages.filter(shown).sort((x, y) => y.timestamp - x.timestamp);
             if (!list.length) return have.messages.length ? '' : line(' <span class="tooltip-dim">(no longer retained)</span>');
-            return (tooltipSections([list[0]], true, { mmsi: Number(ship.mmsi) }) || line('')) + (list.length > 1 ? MORE_ROW : '');
+            return tooltipSections([list[0]], true, { mmsi: Number(ship.mmsi), brief: true, more: list.length - 1 }) || line('');
         }
         setTimeout(() => { if (host.isHoveringShip(ship.mmsi)) hydrateShip(ship.mmsi, ship.binary).then(() => host.rehoverShip(ship.mmsi)); }, HOVER_DWELL_MS);
         return line('');

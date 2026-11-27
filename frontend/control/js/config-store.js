@@ -37,8 +37,15 @@ export const ConfigStore = {
         return this.promise.then(cfg => JSON.parse(JSON.stringify(cfg)));
     },
     invalidate() { this.promise = null; },
+    // one at a time, so each starts from what the one before wrote
+    queue: Promise.resolve(),
+    save(change) {
+        const run = this.queue.then(() => this.write(change));
+        this.queue = run.catch(() => {});
+        return run;
+    },
     // a fresh copy, changed by `change` and posted; nothing is written when `change` returns false
-    async save(change) {
+    async write(change) {
         flushDebounces();
         const cfg = await this.fetch(true);
         if (change(cfg) === false) return cfg;
@@ -81,12 +88,15 @@ export const App = {
 };
 
 // The page marks its edits with `touched`, writes them with `write` (or `clean` when they went some
-// other way) and leaves with `destroy`.
+// other way) and leaves with `destroy`. A page rebuilds its working data from what it saved only
+// while `dirty` is false: an edit made during the save is not in it.
 export function registerEditor(id, save) {
     const editor = {
         dirty: false,
+        edits: 0,
         save,
         touched() {
+            editor.edits++;
             editor.dirty = true;
             App.setUnsaved(true);
         },
@@ -96,13 +106,14 @@ export function registerEditor(id, save) {
         },
         // false, with the reason shown, when the save failed
         async write(change, what) {
+            const edits = editor.edits;
             try {
                 await ConfigStore.save(change);
             } catch (e) {
                 App.notify('error', `Could not save ${what}: ${e.message}`);
                 return false;
             }
-            editor.clean();
+            if (editor.edits === edits) editor.clean();
             return true;
         },
         destroy() { if (editors.get(id) === editor) editors.delete(id); }

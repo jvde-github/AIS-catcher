@@ -18,6 +18,7 @@
 #pragma once
 
 #include <chrono>
+#include <ctime>
 #include <mutex>
 
 #include "Common.h"
@@ -33,6 +34,9 @@ namespace IO
 		std::mutex mtx;
 		uint64_t count = 0;
 		uint64_t lastcount = 0;
+		// errors: checksum, undersized, oversized
+		std::time_t last = 0;
+		uint64_t errors[3] = {0, 0, 0};
 		float rate = 0.0f;
 
 		std::chrono::high_resolution_clock::time_point time_lastupdate;
@@ -53,12 +57,20 @@ namespace IO
 		{
 			std::lock_guard<std::mutex> lock(mtx);
 			count += len;
+			last = data[len - 1].getRxTimeUnix();
+			if (tag.quality & MESSAGE_QUALITY_CHECKSUM)
+				errors[0] += len;
+			if (tag.quality & MESSAGE_QUALITY_UNDERSIZED)
+				errors[1] += len;
+			if (tag.quality & MESSAGE_QUALITY_OVERSIZED)
+				errors[2] += len;
 		}
 
 		void Receive(const Plane::ADSB *data, int len, TAG &tag) override
 		{
 			std::lock_guard<std::mutex> lock(mtx);
 			count += len;
+			last = data[len - 1].getRxTimeUnix();
 		}
 
 		uint64_t getCount()
@@ -67,13 +79,26 @@ namespace IO
 			return count;
 		}
 
+		std::time_t getLast()
+		{
+			std::lock_guard<std::mutex> lock(mtx);
+			return last;
+		}
+
+		void addErrors(uint64_t out[3])
+		{
+			std::lock_guard<std::mutex> lock(mtx);
+			for (int i = 0; i < 3; i++)
+				out[i] += errors[i];
+		}
+
 		void Stamp()
 		{
 			std::lock_guard<std::mutex> lock(mtx);
 			auto timeNow = std::chrono::high_resolution_clock::now();
 			float seconds = 1e-6f * std::chrono::duration_cast<std::chrono::microseconds>(timeNow - time_lastupdate).count();
 
-			msg_count = count - lastcount;
+			msg_count = (int)(count - lastcount);
 			rate += 1.0f * (msg_count / seconds - rate);
 
 			time_lastupdate = timeNow;
@@ -87,6 +112,7 @@ namespace IO
 		{
 			std::lock_guard<std::mutex> lock(mtx);
 			count = 0;
+			errors[0] = errors[1] = errors[2] = 0;
 			time_lastupdate = std::chrono::high_resolution_clock::now();
 		}
 	};

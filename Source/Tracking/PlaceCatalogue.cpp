@@ -790,8 +790,8 @@ void PlaceCatalogue::account(const Place &p, bool add)
 	const auto &c = p.compiled;
 	size_t v = 0, b = 0;
 	footprint(c, v, b);
-	vertices += add ? v : -v;
-	bytes += add ? b : -b;
+	vertices = add ? vertices + v : vertices - v;
+	bytes = add ? bytes + b : bytes - b;
 	if (c.number)
 	{
 		if (add)

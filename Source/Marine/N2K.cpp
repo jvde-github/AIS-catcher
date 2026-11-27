@@ -35,6 +35,15 @@
 
 namespace AIS
 {
+	// gmtime without its one shared result: NMEA 2000 inputs decode on threads of their own
+	static bool utc(std::time_t t, std::tm &out)
+	{
+#ifdef _WIN32
+		return gmtime_s(&out, &t) == 0;
+#else
+		return gmtime_r(&t, &out) != nullptr;
+#endif
+	}
 
 	inline int ROUND(double x)
 	{
@@ -165,7 +174,8 @@ namespace AIS
 
 		uint32_t days = N2kMsg.Get2ByteUInt(idx);
 		time_t e = 24 * 3600 * (long int)days;
-		struct tm *timeInfo = gmtime(&e);
+		std::tm parts;
+		struct tm *timeInfo = utc(e, parts) ? &parts : nullptr;
 		if (timeInfo)
 		{
 			year = timeInfo->tm_year + 1900;
@@ -223,7 +233,8 @@ namespace AIS
 		int minute = nSeconds < 0 ? 60 : ((int)nSeconds % 3600) / 60;
 
 		time_t e = 24 * 3600 * (long int)nDays;
-		struct tm *timeInfo = nDays == 0xffff ? nullptr : gmtime(&e);
+		std::tm parts;
+		struct tm *timeInfo = nDays != 0xffff && utc(e, parts) ? &parts : nullptr;
 		if (timeInfo)
 		{
 			day = timeInfo->tm_mday;
@@ -898,7 +909,8 @@ namespace AIS
 		N2KMsg N2kMsg;
 
 		std::time_t now = std::time(nullptr);
-		std::tm *utc_tm = std::gmtime(&now);
+		std::tm parts;
+		std::tm *utc_tm = utc(now, parts) ? &parts : nullptr;
 
 		if (utc_tm)
 		{
@@ -1013,7 +1025,8 @@ namespace AIS
 		if (month && day)
 		{
 			std::time_t now = std::time(nullptr);
-			std::tm *utc_tm = std::gmtime(&now);
+			std::tm parts;
+			std::tm *utc_tm = utc(now, parts) ? &parts : nullptr;
 
 			if (utc_tm)
 			{

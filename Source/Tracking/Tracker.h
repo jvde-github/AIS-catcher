@@ -15,7 +15,6 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 #pragma once
 
 #include <algorithm>
@@ -29,7 +28,10 @@
 
 #include "DB.h"
 #include "Figures.h"
+#include "Gnss.h"
+#include "Health.h"
 #include "Journal.h"
+#include "Metrics.h"
 #include "PlaceCatalogue.h"
 #include "PlaneDB.h"
 #include "StationRegistry.h"
@@ -71,7 +73,13 @@ public:
 	StreamIn<JSON::JSON> &json() { return intake; }
 	StreamIn<AIS::GPS> &gps() { return gps_intake; }
 	StreamIn<AIS::Control> &control() { return db; }
+	bool skyOf(const std::vector<int> &ids, AIS::Sky &out, int &age);
+	// the GPS history of the station of `ids` heard last, false when none has one
+	bool gnssOf(const std::vector<int> &ids, JSON::Writer &w, bool week, int last = 0);
 	StreamIn<Plane::ADSB> &adsb() { return adsb_intake; }
+	StreamIn<AIS::Metric> &metric() { return metric_intake; }
+	std::vector<MetricTable::Row> metricsOf(const std::vector<int> &ids) { return metric_table.of(ids); }
+	std::unique_ptr<MetricHistory> receptionOf(const std::vector<int> &ids);
 
 	// The installation's one table of station positions, given when the tracker is made.
 	void useStations(std::shared_ptr<StationTable> shared) { table = std::move(shared); }
@@ -143,8 +151,8 @@ public:
 	}
 
 	// The figures of everything heard, of one station, or of several as one;
-	// f runs under the figures' lock. False when none of the stations has any
-	// yet.
+	// f runs under the figures' lock, except over several stations, whose sum
+	// is a copy of its own. False when none of the stations has any yet.
 	template <typename F>
 	void withAll(F f)
 	{
@@ -159,28 +167,36 @@ public:
 	template <typename F>
 	bool withStations(const std::vector<int> &ids, F f)
 	{
-		std::lock_guard<std::mutex> lock(figures_mtx);
-		std::vector<Figures *> parts;
-		for (int id : ids)
+		std::unique_ptr<Figures> sum;
 		{
-			auto it = station_figures.find(id);
-			if (it != station_figures.end() && std::find(parts.begin(), parts.end(), it->second.get()) == parts.end())
-				parts.push_back(it->second.get());
+			std::lock_guard<std::mutex> lock(figures_mtx);
+			std::vector<Figures *> parts;
+			for (int id : ids)
+			{
+				auto it = station_figures.find(id);
+				if (it != station_figures.end() && std::find(parts.begin(), parts.end(), it->second.get()) == parts.end())
+					parts.push_back(it->second.get());
+			}
+			if (parts.empty())
+				return false;
+			if (parts.size() == 1)
+			{
+				f(*parts[0]);
+				return true;
+			}
+			sum.reset(new Figures());
+			sum->combine(parts);
 		}
-		if (parts.empty())
-			return false;
-		if (parts.size() == 1)
-		{
-			f(*parts[0]);
-			return true;
-		}
-		std::unique_ptr<Figures> sum(new Figures());
-		sum->combine(parts);
 		f(*sum);
 		return true;
 	}
 
+	// once a minute: the ships' upkeep
 	void tick(std::time_t now) { db.tick(now); }
+	// every half minute: the health worked out anew; what began and ended is returned for the journal
+	std::vector<Health::Change> judge(std::time_t now, const SystemFacts &f, const StationRegistry &registry);
+	// the last verdict, with when each station and its GPS were last heard as of now
+	Health healthNow();
 
 	bool save(const std::string &file);
 	// what a backup file turned out to be: read, not there, another program's, or damaged
@@ -220,11 +236,29 @@ private:
 		void Receive(const AIS::GPS *data, int len, TAG &tag) override;
 	} gps_intake;
 
+	std::mutex sky_mtx;
+	std::map<int, std::pair<std::time_t, AIS::Sky>> skies;
+	std::map<int, GnssHistory> gnss; // a station's GPS over the day and week, under sky_mtx
+	// under sky_mtx: a station's sky when it is no older than two minutes
+	const AIS::Sky *freshSky(int id, std::time_t now) const;
+
+	std::mutex health_mtx;
+	Health health;
+
+	struct MetricIntake : public StreamIn<AIS::Metric>
+	{
+		Tracker *tracker = nullptr;
+		void Receive(const AIS::Metric *data, int len, TAG &tag) override;
+	} metric_intake;
+	MetricTable metric_table;
+
 	struct AdsbIntake : public StreamIn<Plane::ADSB>
 	{
 		Tracker *tracker = nullptr;
 		void Receive(const Plane::ADSB *data, int len, TAG &tag) override;
 	} adsb_intake;
+
+	Figures *stationFigures(int id);
 
 	// the station the message is counted at: the one it names when listed, else the input's; and where it was heard
 	void place(const AIS::Message *msg, TAG &tag);

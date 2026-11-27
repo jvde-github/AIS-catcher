@@ -224,6 +224,7 @@ SystemFacts Site::systemFacts()
 	f.received = bytes.received();
 	f.devices = engine;
 	f.receivers = receiver_states;
+	f.services = service_states;
 	f.sharing = outputs_->feed != nullptr;
 	f.sharing_uuid = f.sharing && outputs_->feed->hasUUID();
 	std::map<std::string, int> nth;
@@ -235,6 +236,7 @@ SystemFacts Site::systemFacts()
 		of.label = o->getDescription().empty() ? numbered : o->getDescription();
 		of.link = o->getLink();
 		of.connection = o->hasConnection();
+		of.feed = o.get() == outputs_->feed;
 		const IO::OutputStats &s = o->getStats();
 		of.messages = s.messages.get();
 		of.bytes_out = s.bytes_out.get();
@@ -473,6 +475,7 @@ void Site::configureServers(const SiteConfig &cfg)
 	};
 
 	// A server on the same port, address and tracker takes the new settings in place; the others close first.
+	closed.clear();
 	std::vector<std::unique_ptr<Services::Server>> kept(cfg.servers.size());
 	for (std::size_t i = 0; i < cfg.servers.size(); i++)
 	{
@@ -532,7 +535,37 @@ void Site::configureServers(const SiteConfig &cfg)
 																 [this] { return systemFacts(); }));
 		if (s->open())
 			servers.push_back(std::move(s));
+		else
+			closed.push_back(cfg.servers[i]);
 	}
+	publishServices();
+}
+
+// under site_mtx
+void Site::publishServices()
+{
+	std::vector<ServiceFacts> next;
+	for (const auto &s : servers)
+	{
+		ServiceFacts f;
+		f.port = s->spec().port;
+		f.offers = s->spec().served();
+		f.listening = true;
+		const IO::OutputStats &t = s->traffic();
+		f.clients = t.connected.get();
+		f.bytes_out = t.bytes_out.get();
+		f.dropped = t.dropped.get();
+		next.push_back(f);
+	}
+	for (const auto &spec : closed)
+	{
+		ServiceFacts f;
+		f.port = spec.port;
+		f.offers = spec.served();
+		next.push_back(f);
+	}
+	std::lock_guard<std::mutex> lock(engine_mtx);
+	service_states.swap(next);
 }
 #endif
 
@@ -658,12 +691,8 @@ std::string Site::stationsLive()
 	for (const auto &r : facts.receivers)
 	{
 		w.beginObject().kv("index", r.index).kv("station", r.station).kv("input", r.input).kv("label", r.label).kv("state", r.status()).kv("messages", (unsigned long long)r.messages).kv("per_minute", (unsigned long long)r.per_minute);
-		if (t)
-		{
-			const std::time_t heard = t->lastHeard(r.station);
-			if (heard)
-				w.kv("heard_age_s", (long long)(now - heard));
-		}
+		if (r.last_message)
+			w.kv("heard_age_s", (long long)(now - r.last_message));
 		w.endObject();
 	}
 	w.endArray();
@@ -716,6 +745,35 @@ void Site::refreshPlaces()
 #endif
 }
 
+// under site_mtx: every tracker judges the stations it hears; the first tells the journal
+void Site::judgeHealth(std::time_t now)
+{
+#ifdef HASAPI
+	const SystemFacts f = systemFacts();
+	const StationRegistry registry = stations();
+	std::vector<Health::Change> first;
+	bool told = false;
+	eachTracker([&](Tracker &t) {
+		std::vector<Health::Change> changes = t.judge(now, f, registry);
+		if (!told)
+			first.swap(changes);
+		told = true;
+	});
+	for (const auto &c : first)
+	{
+		if (!c.issue.words)
+			continue;
+		// an output is named as the status pages name it; its trouble stops no reception
+		const std::string of = c.issue.output >= 0 ? c.issue.of + ": " : c.issue.station < 0 ? std::string() : stationName(registry, c.issue.station) + ": ";
+		const std::string text = of + c.issue.words + (c.raised ? "" : ", over");
+		systemEventLocked(!c.raised ? Tracking::Level::ROUTINE : c.issue.level == Health::DOWN && c.issue.output < 0 ? Tracking::Level::URGENT : Tracking::Level::NOTICE,
+						  c.raised ? "health_issue" : "health_cleared", text, c.issue.station, c.issue.receiver);
+	}
+#else
+	(void)now;
+#endif
+}
+
 // under site_mtx
 void Site::backup()
 {
@@ -750,6 +808,12 @@ int Site::beat(std::time_t now)
 	}
 	if (tracker_)
 		watchStations(now, minute);
+	publishServices();
+	if (now - last_health >= 30)
+	{
+		judgeHealth(now);
+		last_health = now;
+	}
 	if (backup_minutes > 0 && now - last_backup >= backup_minutes * 60)
 	{
 		backup();

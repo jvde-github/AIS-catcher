@@ -36,7 +36,7 @@ namespace Services
 	class Ui : public Service
 	{
 	public:
-		Ui(const Context &context, std::function<int()> clients);
+		Ui(const Context &context);
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
@@ -58,7 +58,6 @@ namespace Services
 		};
 		std::vector<Tiles> maps;
 		std::function<SystemFacts()> facts;
-		std::function<int()> clients;
 		// the station the page draws: the one in focus, or the only one, when it shares where it is
 		bool drawnStation(const std::vector<int> &focus, StationRegistry::Station &at);
 		void openTiles(const std::vector<std::string> &lists, bool overlay, bool mbtiles);

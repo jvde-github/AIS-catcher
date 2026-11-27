@@ -15,7 +15,6 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 #include "Ui.h"
 #include "UiFormat.h"
 #include "Parse.h"
@@ -25,9 +24,11 @@
 #include "Logger.h"
 #include "SHA256.h"
 #include "Streams.h"
+#include "System.h"
 #include "WebDB.h"
 
 #include <climits>
+#include <cmath>
 
 #include <algorithm>
 #include <cstdlib>
@@ -77,9 +78,9 @@ namespace Services
 		}
 	}
 
-	Ui::Ui(const Context &context, std::function<int()> clients)
+	Ui::Ui(const Context &context)
 		: tracker(context.tracker), spec(context.spec), stations(context.stations), options(context.spec.viewer), view(context.spec.view),
-		  facts(context.facts), clients(std::move(clients))
+		  facts(context.facts)
 	{
 		for (const auto &p : options.plugins)
 			plugins.addPlugin(p);
@@ -213,13 +214,12 @@ namespace Services
 			return answered;
 		}
 
-		auto it = WebDB::files.find(request.path == "/" ? "index.html" : request.path.substr(1));
-		if (it == WebDB::files.end())
+		const WebDB::FileData *file = WebDB::find(request.path == "/" ? "index.html" : request.path.substr(1));
+		if (!file)
 			return false;
-		const WebDB::FileData &file = it->second;
-		response.type = file.mime_type;
-		response.raw = (const char *)file.data;
-		response.raw_size = file.size;
+		response.type = file->mime_type;
+		response.raw = (const char *)file->data;
+		response.raw_size = file->size;
 		response.gzipped = true;
 		// the page itself is read again on every visit, so a new version reaches the browser
 		response.cache = response.type != "text/html";
@@ -391,7 +391,25 @@ namespace Services
 			std::string out;
 			JSON::Writer w(out);
 			const std::vector<int> of = figuresOf(focus);
-			const auto write = [&](Figures &f) { UiFormat::history(w, f, shown.hidesRange(of, f.total.maxDistance())); };
+			AIS::Sky sky;
+			int sky_age = 0;
+			const bool has_sky = tracker.skyOf(of, sky, sky_age);
+			UiFormat::Told told;
+			told.sky = has_sky && shown.all(of) ? &sky : nullptr;
+			told.sky_age = sky_age;
+			told.reception = tracker.metricsOf(of);
+			told.reception_history = tracker.receptionOf(of);
+			const auto slots = [&](const char *ring, int &count) {
+				const std::string asked = request.param(ring);
+				if (!asked.empty())
+					count = (int)MAX(0, MIN(toInt(asked, count), 100000));
+			};
+			slots("second", told.seconds);
+			slots("minute", told.minutes);
+			slots("hour", told.hours);
+			slots("day", told.days);
+			told.slim = request.param("slim") == "1";
+			const auto write = [&](Figures &f) { UiFormat::history(w, f, shown.hidesRange(of, f.total.maxDistance()), told); };
 			if (of.empty())
 				tracker.withAll(write);
 			else if (!tracker.withStations(of, write))
@@ -399,6 +417,25 @@ namespace Services
 			w.finish();
 			response = Response::json(out);
 		}
+		else if (p == "/api/gnss.json")
+		{
+			// a station whose range is hidden shows no sky, nor its GPS over time
+			std::string out;
+			JSON::Writer w(out);
+			const std::vector<int> of = figuresOf(focus);
+			bool hidden = !shown.all(of);
+			const auto check = [&](Figures &f) { hidden = hidden || shown.hidesRange(of, f.total.maxDistance()); };
+			if (of.empty())
+				tracker.withAll(check);
+			else
+				tracker.withStations(of, check);
+			if (hidden || !tracker.gnssOf(of, w, request.param("span") == "week", (int)MAX(0, MIN(toInt(request.param("last"), 0), 100000))))
+				w.raw("{}");
+			w.finish();
+			response = Response::json(out);
+		}
+		else if (p == "/api/health")
+			response = healthResponse(tracker, spec, stations, facts, healthAsk(request));
 		else if (p == "/api/sharing_state.json")
 		{
 			// the community icon's poll: the engine's part of the stat page, with the settings version
@@ -418,17 +455,6 @@ namespace Services
 			StationRegistry::Station at;
 			const bool drawn = drawnStation(std::vector<int>(), at);
 			response = Response::json(UiFormat::ships(db, p == "/api/ships_full.json", drawn ? &at : nullptr, keep, &shown));
-		}
-		else if (p == "/api/output_stats.json")
-		{
-			std::string out;
-			JSON::Writer w(out);
-			w.beginObject().kv("tcp_clients", clients ? clients() : 0).key("outputs").beginArray();
-			if (!spec.exposed())
-				writeOutputs(w, facts());
-			w.endArray().endObject();
-			w.finish();
-			response = Response::json(out);
 		}
 		else if (p == "/api/planes.json")
 			response = Response::json(spec.stations.empty() ? UiFormat::planes(tracker.planes(), &shown) : noPlanes("planes"));
@@ -566,8 +592,8 @@ namespace Services
 			std::unique_ptr<Figures> none(new Figures());
 			UiFormat::counters(w, *none, false);
 		}
-		w.kv("tcp_clients", clients ? clients() : 0);
 		const SystemFacts f = facts();
+		const Util::Helper::SystemInfo sys = Util::Helper::getSystemInfo();
 		writeSharing(w, f);
 		w.kv("engine_running", f.running);
 		// a server with no site behind it has no engine to tell of
@@ -581,23 +607,29 @@ namespace Services
 			};
 			each("product", &DeviceFacts::product);
 			each("vendor", &DeviceFacts::vendor);
-			if (!spec.exposed())
-				each("serial", &DeviceFacts::serial);
+			each("serial", &DeviceFacts::serial);
 			each("model", &DeviceFacts::model);
 			each("sample_rate", &DeviceFacts::sample_rate);
 			each("device_label", &DeviceFacts::label);
-			w.kv("received", (unsigned long long)f.received).kv("run_time", std::to_string((long long)(std::time(nullptr) - f.born)));
-			if (!spec.exposed())
-				w.kv("os", Util::Helper::getOS()).kv("hardware", Util::Helper::getHardware()).kv("processor", Util::Helper::getProcessor());
+			w.key("device_station").beginArray();
+			for (const auto &d : f.devices)
+				w.val(d.station);
+			w.endArray().key("device_upstream").beginArray();
+			for (const auto &d : f.devices)
+				w.val(d.upstream);
+			w.endArray();
+			w.kv("received", (unsigned long long)f.received).kv("run_time", std::to_string((long long)(std::time(nullptr) - f.born)))
+				.kv("os", sys.os).kv("hardware", sys.hardware).kv("processor", sys.processor);
+			if (sys.wifi)
+				w.key("wifi").beginObject().kv("signal_dbm", sys.wifi_dbm).kv("quality", sys.wifi_quality).endObject();
 		}
 		w.key("outputs").beginArray();
-		if (!spec.exposed())
-			writeOutputs(w, f);
+		writeOutputs(w, f);
 		w.endArray();
 		w.kv("sharing_link", "https://www.aiscatcher.org/livemap").kv("station", title()).kv("station_link", options.station_link)
 			.kv("vessel_count", keep ? vessels : db.getCount()).kv("vessel_max", db.getMaxCount())
 			.kv("build_date", __DATE__).kv("build_version", VERSION).kv("build_describe", VERSION_DESCRIBE)
-			.kv("memory", spec.exposed() ? 0ULL : (unsigned long long)Util::Helper::getMemoryConsumption())
+			.kv("memory", (unsigned long long)sys.memory).kv("cpu", std::round(sys.cpu * 10) / 10.0)
 			.kv("track_time", view.track_time > 0 && (tracking.track_time <= 0 || view.track_time < tracking.track_time) ? view.track_time : tracking.track_time)
 			.kv("track_memory", tracking.track_memory > 0 ? tracking.track_memory : (tracking.server_mode ? 4096 : 1024));
 		w.endObject();

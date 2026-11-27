@@ -2,7 +2,6 @@
 // aircraft, map objects and range, and redraw builds the markers, hulls,
 // labels and track legs from the store.
 
-import { populate as populateStationcard } from './features/station/station.js';
 import { fromLonLat } from 'ol/proj';
 import OlFeature from 'ol/Feature';
 import Point from 'ol/geom/Point';
@@ -21,16 +20,12 @@ import {
 } from './map.js';
 import { fetchShips, fetchPlanes, fetchTracks, trackWindowStart } from './data.js';
 import { saveSettings } from './settings-store.js';
-import { refreshTargetcard, updateFocusMarker } from './features/targetcard/card.js';
-import { updateMarkerCount } from './features/counts/counts.js';
-import { updateTablecard } from './features/tablecard/tablecard.js';
-import { drawStation, applyFixedCenter } from './features/follow/follow.js';
-import { replaycardVisible } from './panels.js';
-import * as replay from './features/replay/replay.js';
-import * as mapObjects from './features/mapobjects/mapobjects.js';
-import * as measure from './features/measure/measure.js';
-import * as range from './features/range/range.js';
-import { updateHoverMarker } from './features/hover/hover.js';
+
+// set once by script.js, so that this module imports no features
+const features = { paused: () => false, fetch: () => [], fetched: () => {}, drawn: () => {}, redrawn: () => {} };
+export function wire(parts) {
+    Object.assign(features, parts);
+}
 
 // legs whose points never reported a speed, in speed-colored mode
 const TRACK_SPEED_UNKNOWN_COLOR = '#9aa0a6';
@@ -44,7 +39,7 @@ export async function updateMap() {
     // Opening the replay bar hands the map over: from that point the live
     // layers are on their way out and polling for ships, tracks and planes
     // fetches data the user is no longer looking at. Closing it resumes.
-    if (replaycardVisible() || replay.isActive()) return;
+    if (features.paused()) return;
 
     const ok = await fetchShips();
     if (!ok) return;
@@ -52,7 +47,7 @@ export async function updateMap() {
     await Promise.all([
         fetchTracks(),
         planeLayer.getVisible() ? fetchPlanes() : Promise.resolve(true),
-        range.fetchRange(),
+        ...features.fetch(),
     ]);
 
     if (settings.setcoord == "true" || settings.setcoord == true) {
@@ -64,9 +59,8 @@ export async function updateMap() {
         }
     }
 
-    refreshTargetcard();
+    features.fetched();
 
-    updateMarkerCount();
     redraw();
 }
 
@@ -130,9 +124,7 @@ export function redraw() {
             }
         }
     }
-    measure.refreshMeasures();
-
-    mapObjects.redrawBinaryMessages();
+    features.drawn();
 
     if (planeLayer.getVisible()) {
 
@@ -238,15 +230,5 @@ export function redraw() {
         }
     }
 
-    range.drawRange();
-    updateFocusMarker();
-    updateHoverMarker();
-
-    updateMarkerCount();
-    updateTablecard();
-
-    drawStation();
-    applyFixedCenter();
-    range.updateDistanceCircles();
-    populateStationcard();
+    features.redrawn();
 }

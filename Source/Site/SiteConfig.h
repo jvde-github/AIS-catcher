@@ -127,8 +127,6 @@ struct ServerSpec
 	std::vector<ApiKey> keys;
 	bool open = false;
 	bool local() const { return bind == "localhost" || bind == "::1" || bind.compare(0, 4, "127.") == 0; }
-	// anyone on the network reads it: it tells nothing of the machine behind it
-	bool exposed() const { return open && !local(); }
 	bool limited = false;
 	// of the API only the vessels within a bounding box and one vessel: a server with many ships
 	bool area_only = false;

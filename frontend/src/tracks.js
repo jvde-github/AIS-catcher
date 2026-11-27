@@ -15,8 +15,13 @@ import { fetchTracks, trackCutoff, setTrackCutoff, resetTrackCursor, trackWindow
 import { redraw } from './fleet.js';
 import { saveSettings, effects, defaultTrackColors } from './settings-store.js';
 import { showNotification } from './dialog.js';
-import { updateTrackOption } from './features/targetcard/card.js';
 import { register } from './actions.js';
+
+// set once by script.js, so that this module imports no features
+let changed = () => {};
+export function wire(parts) {
+    changed = parts.changed;
+}
 
 // the hovered vessel's track is on the map because of the hover, the
 // selected vessel's because of the selection: each goes when that ends
@@ -42,18 +47,18 @@ export async function toggleTrack(m) {
     else {
         ToggleTrackOnMap(m);
     }
-    updateTrackOption();
+    changed();
 
 }
 
 function showTrack(m) {
     if (!marker_tracks.has(Number(m))) ToggleTrackOnMap(m);
-    updateTrackOption();
+    changed();
 }
 
 function hideTrack(m) {
     if (marker_tracks.has(Number(m))) ToggleTrackOnMap(m);
-    updateTrackOption();
+    changed();
 }
 
 export function trackIsShown(m) {
@@ -114,7 +119,7 @@ function setTrackVisibility(mode) {
     settings.show_all_tracks = false;
     saveSettings();
     redraw();
-    updateTrackOption();
+    changed();
 }
 
 async function showAllTracks() {
@@ -123,12 +128,13 @@ async function showAllTracks() {
     resetTrackCursor();
     await fetchTracks();
     redraw();
-    updateTrackOption();
+    changed();
     saveSettings();
 }
 
+// the vessels whose track is on, null when the tracks did not load
 export async function showTracksForMMSIs(mmsis) {
-    let added = 0;
+    let added = 0, loaded = true;
     for (const m of mmsis) {
         if (!marker_tracks.has(Number(m))) {
             marker_tracks.add(Number(m));
@@ -137,11 +143,11 @@ export async function showTracksForMMSIs(mmsis) {
     }
     if (added > 0) {
         resetTrackCursor();
-        await fetchTracks();
+        loaded = await fetchTracks();
         redraw();
-        updateTrackOption();
+        changed();
     }
-    return mmsis.length;
+    return loaded ? mmsis.length : null;
 }
 
 function deleteAllTracks() {
@@ -162,7 +168,8 @@ function deleteAllTracks() {
 
     setPaths(p);
 
-    redraw(); updateTrackOption();
+    redraw();
+    changed();
     saveSettings();
 }
 
@@ -180,7 +187,7 @@ async function toggleTrackCutoff() {
     dropTracks();
     await fetchTracks();
     redraw();
-    updateTrackOption();
+    changed();
     showNotification(trackCutoff ? "Tracks now start from " + trackCutoffLabel()
         : "Tracks restored to the full history", "success");
 }

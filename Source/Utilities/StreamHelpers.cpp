@@ -133,12 +133,6 @@ namespace Util
 
 		try
 		{
-			file.open(filename, std::ios::binary);
-			if (!file.is_open())
-			{
-				throw std::runtime_error("Cannot open WAV file for writing: \"" + filename + "\"");
-			}
-
 			header.sample_rate_val = sample_rate;
 
 			switch (format)
@@ -156,6 +150,12 @@ namespace Util
 				break;
 			default:
 				throw std::runtime_error("Unsupported format for WAV file writing");
+			}
+
+			file.open(filename, std::ios::binary);
+			if (!file.is_open())
+			{
+				throw std::runtime_error("Cannot open WAV file for writing: \"" + filename + "\"");
 			}
 
 			header.byte_rate = sample_rate * 2 * (header.bit_depth / 8);
@@ -176,7 +176,7 @@ namespace Util
 
 	WriteWAV::~WriteWAV()
 	{
-		if (file.is_open())
+		if (file.is_open() && file.tellp() >= (std::streampos)sizeof(WAVHeader))
 		{
 			// Get current position
 			std::streampos pos = file.tellp();
@@ -212,7 +212,15 @@ namespace Util
 			return;
 
 		// ofstream only throws if exceptions() is enabled; check the state.
-		file.write(reinterpret_cast<const char *>(raw->data), raw->size);
+		if (format == Format::CS8)
+		{
+			biased.assign((const char *)raw->data, raw->size);
+			for (char &c : biased)
+				c ^= (char)0x80;
+			file.write(biased.data(), biased.size());
+		}
+		else
+			file.write(reinterpret_cast<const char *>(raw->data), raw->size);
 		if (!file.good())
 		{
 			Error() << "WAV out: write failed (disk full?) on \"" << filename << "\"";

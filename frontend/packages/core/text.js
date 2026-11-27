@@ -10,7 +10,8 @@ export function compactCount(n) {
     if (v < 1000) return String(v);
     const short = (x, unit) => String(x < 99.95 ? Math.round(x * 10) / 10 : Math.round(x)) + unit;
     if (v < 999500) return short(v / 1000, "K");
-    return short(v / 1000000, "M");
+    if (v < 999500000) return short(v / 1000000, "M");
+    return short(v / 1000000000, "B");
 }
 
 // Field ids shared with StaticHistory on the server.

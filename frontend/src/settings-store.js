@@ -94,6 +94,7 @@ const DEFAULT_SETTINGS = {
         metric: "DEFAULT",
         setcoord: true,
         tab: "map",
+        dashboard: "overview",
         show_labels: "dynamic",
         labels_declutter: true,
         labels_prioritize_active: true,
@@ -122,11 +123,12 @@ const DEFAULT_SETTINGS = {
         plot_absolute_time: true,
         kiosk_rotation_speed: 5,
         kiosk_pan_map: true,
+        shiptable_sort: null,
         shiptable_columns: ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"],
         realtime_background_streaming: false,
         realtime_filters: [],
         ship_filter: {},
-        binary_messages: "highlight",
+        binary_messages: "badge",
         binary_color_class: true,
         binary_id_labels: true,
         binary_group_areas: false,
@@ -159,6 +161,13 @@ function updateForLegacySettings() {
         settings.track_class_colors = saved;
     }
 
+    // the white ring around a vessel with a message was the default: it is a choice now, and off
+    // until it is made. Once, for settings saved before that.
+    if (!settings.badge_ring_asked) {
+        settings.badge_ring_asked = true;
+        if (settings.binary_messages === "highlight") settings.binary_messages = "badge";
+    }
+
     if (!("showPlanesAtFirst" in settings)) {
         settings.showPlanesAtFirst = true;
         settings.map_overlay.push("Aircraft");
@@ -189,7 +198,7 @@ export function loadSettingsFromURL() {
             if (key === 'map_overlay') {
                 if (!Array.isArray(settings[key])) settings[key] = [];
                 settings[key].push(value);
-            } else {
+            } else if (typeof DEFAULT_SETTINGS[key] !== 'object' || DEFAULT_SETTINGS[key] === null) {
                 settings[key] = value;
             }
         }

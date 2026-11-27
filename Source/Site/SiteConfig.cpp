@@ -157,7 +157,11 @@ namespace
 		case AIS::KEY_SETTING_STATION: o.station = arg; break;
 		case AIS::KEY_SETTING_STATION_LINK: o.station_link = arg; break;
 		case AIS::KEY_SETTING_WEBCONTROL_HTTP: o.webcontrol_http = arg; break;
-		case AIS::KEY_SETTING_FRAME_ANCESTORS: o.frame_ancestors = arg; break;
+		case AIS::KEY_SETTING_FRAME_ANCESTORS:
+			if (!Util::Parse::Printable(arg))
+				throw ConfigError("\"frame_ancestors\" may not hold control characters.");
+			o.frame_ancestors = arg;
+			break;
 		case AIS::KEY_SETTING_CONTEXT: o.context = arg; break;
 		case AIS::KEY_SETTING_ABOUT: o.about = arg; break;
 		case AIS::KEY_SETTING_REALTIME: o.realtime = Util::Parse::Switch(arg); break;
@@ -338,7 +342,7 @@ namespace
 			throw ConfigError(where + " is both public and keyed: choose one. \"public\" is for anyone who reaches it; \"keys\" for the readers it names.");
 		if (!spec.local() && spec.keys.empty() && !spec.open && (spec.api || spec.mcp || spec.system))
 			throw ConfigError(where + " listens beyond this machine: give it \"keys\", say \"public\": true for data anyone may read, or bind it to 127.0.0.1.");
-		if (spec.system && spec.exposed())
+		if (spec.system && spec.open && !spec.local())
 			throw ConfigError(where + " is public on the network: \"system\" is never public there; give it \"keys\" instead, or switch \"system\" off.");
 		// the viewer's log, which may name hosts and paths, is a key's on a server with keys
 		if (spec.ui && spec.viewer.log && spec.keys.empty() && !spec.local())
@@ -842,6 +846,20 @@ namespace SiteReader
 	}
 
 #ifdef HASDELIVERY
+	// a URL as its output reads it: what Parse::URL refuses, the file does too
+	void checkURL(const std::string &what, const std::string &url)
+	{
+		try
+		{
+			std::string protocol, user, password, host, port, path;
+			Util::Parse::URL(url, protocol, user, password, host, port, path);
+		}
+		catch (const std::exception &e)
+		{
+			throw ConfigError(what + ": " + e.what());
+		}
+	}
+
 	// "webhooks": [ { "url": "https://…", "events": ["safety", "place_enter"], "secret": "whsec_…" } ]
 	void webhooks(const JSON::Value &v, SiteConfig &site)
 	{
@@ -860,7 +878,14 @@ namespace SiteReader
 				case AIS::KEY_SETTING_ACTIVE: active = Util::Parse::Switch(m.Get().to_string()); break;
 				case AIS::KEY_SETTING_DESCRIPTION: break;
 				case AIS::KEY_SETTING_URL: hook.url = m.Get().to_string(); break;
-				case AIS::KEY_SETTING_SECRET: hook.secret = m.Get().to_string(); break;
+				case AIS::KEY_SETTING_SECRET:
+				{
+					std::string key;
+					hook.secret = m.Get().to_string();
+					if (hook.secret.compare(0, 6, "whsec_") == 0 && (!Util::Convert::fromBase64(hook.secret.substr(6), key) || key.empty()))
+						throw ConfigError("a webhook's \"secret\" after whsec_ must be base64.");
+					break;
+				}
 				case AIS::KEY_SETTING_BATCH: hook.batch = Util::Parse::Switch(m.Get().to_string()); break;
 				case AIS::KEY_SETTING_VIEW: viewFilterFromJSON(m.Get(), hook.view); break;
 				case AIS::KEY_SETTING_FILTER:
@@ -885,6 +910,7 @@ namespace SiteReader
 				continue;
 			if (hook.url.compare(0, 7, "http://") != 0 && hook.url.compare(0, 8, "https://") != 0)
 				throw ConfigError("a webhook needs a \"url\" starting with http:// or https://.");
+			checkURL("a webhook's \"url\"", hook.url);
 			site.webhooks.push_back(hook);
 		}
 	}
@@ -920,6 +946,8 @@ namespace SiteReader
 				throw ConfigError("field \"" + AIS::settingName(m.Key()) + "\" is not allowed in \"mqtt_state\".");
 			}
 		}
+		if (!spec.url.empty())
+			checkURL("\"mqtt_state\"'s \"url\"", spec.url);
 		if (spec.url.empty() || !active)
 			return;
 		if (site.mqtt_state.any())

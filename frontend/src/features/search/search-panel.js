@@ -7,18 +7,19 @@ import { ol, map } from '../../map.js';
 import { focus } from '../../data.js';
 import { showNotification } from '../../dialog.js';
 import { setPanels } from '../../panels.js';
-import { selectMapTab } from '../../tabs/index.js';
 import { ui } from '../../ui.js';
-import { showTargetcard, closeTargetcard } from '../targetcard/card.js';
+import { showTargetcard, closeTargetcard, selectMapTab } from '../targetcard/card.js';
 import { openFocus } from '../follow/follow.js';
 import * as mapObjects from '../mapobjects/mapobjects.js';
 import { createLocalSearch } from './search.js';
 import { register } from '../../actions.js';
+// the menus are built when the tabs load: search is one of their items
+import '../../tabs/index.js';
 
 export const searchPanel = createSearch({
     root: document.getElementById('search-panel'),
     scrim: document.getElementById('search-scrim'),
-    triggers: [document.getElementById('header-search-button')],
+    triggers: [document.getElementById('search_tab'), document.getElementById('search_tab_mini')].filter(Boolean),
     storageKey: 'viewerSearchType',
     types: [
         { id: 'all', label: 'Everything', placeholder: 'Search vessels, stations and places…' },

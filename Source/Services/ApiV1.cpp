@@ -21,6 +21,7 @@
 #include "Parse.h"
 #include "JournalJSON.h"
 #include "Routes.h"
+#include "System.h"
 
 #include <algorithm>
 #include <cctype>
@@ -424,8 +425,8 @@ namespace Services
 		// opened. `vessels` is counted only by the slots of a history.
 		void writeFigures(JSON::Writer &w, const MessageStatistics::Values &v, bool empty, bool vessels, bool hidden)
 		{
-			const int c = v.count - v.exclude;
-			const bool has_level = !empty && c > 0 && v.level_min <= v.level_max;
+			float ppm = 0;
+			const bool has_level = !empty && v.hasLevel(), has_ppm = !empty && v.meanPpm(ppm);
 
 			w.kv("messages", empty ? 0 : v.count);
 			if (vessels)
@@ -438,9 +439,13 @@ namespace Services
 				w.kv(names[i], empty ? 0 : v.errors[i]);
 			w.endObject();
 			if (has_level)
-				w.kv("level_min_db", v.level_min).kv("level_max_db", v.level_max).kv("ppm", v.ppm / c);
+				w.kv("level_min_db", v.level_min).kv("level_max_db", v.level_max);
 			else
-				w.kv_null("level_min_db").kv_null("level_max_db").kv_null("ppm");
+				w.kv_null("level_min_db").kv_null("level_max_db");
+			if (has_ppm)
+				w.kv("ppm", ppm);
+			else
+				w.kv_null("ppm");
 			if (!hidden && !empty && v.distance > 0)
 				w.kv("max_distance_nm", v.distance);
 			else
@@ -525,14 +530,14 @@ namespace Services
 
 		// one history of figures, a slot an object, oldest first
 		template <typename H>
-		void writeSlots(JSON::Writer &w, const char *key, H &history, bool hidden)
+		void writeSlots(JSON::Writer &w, const char *key, H &history, bool hidden, int count = 1 << 30)
 		{
 			w.key(key).beginArray();
 			history.forEachSlot([&](long int start, MessageStatistics &s, bool empty) {
 				w.beginObject().kv("time", isoTime((std::time_t)start));
 				writeFigures(w, s.values(), empty, true, hidden);
 				w.endObject();
-			});
+			}, count);
 			w.endArray();
 		}
 	}
@@ -569,7 +574,7 @@ namespace Services
 		if (p.compare(0, base.size(), base) != 0 || (p.size() > base.size() && p[base.size()] != '/'))
 			return NOT_MINE;
 		// the system service's, when the server offers it
-		if (p == "/api/v1/health" || p == "/api/v1/system" || p.compare(0, 15, "/api/v1/system/") == 0)
+		if (p == "/api/v1/system" || p.compare(0, 15, "/api/v1/system/") == 0)
 			return NOT_MINE;
 		return ApiKey::DATA;
 	}
@@ -621,6 +626,8 @@ namespace Services
 			at("/api/v1/stations/{id}/statistics", [&] { return statistics((int)n, request); });
 		else if (parts[0] == "statistics" && parts.size() == 1)
 			at("/api/v1/statistics", [&] { return statistics(-1, request); });
+		else if (parts[0] == "health" && parts.size() == 1)
+			at("/api/v1/health", [&] { return healthResponse(tracker, spec, stations, facts, healthAsk(request)); });
 		else if (parts[0] == "vessels" && parts.size() == 1)
 			at("/api/v1/vessels", [&] { return vessels(request); });
 		else if (parts[0] == "vessels" && parts.size() == 2 && Util::Parse::Digits(parts[1], n, 10) && n <= 999999999)
@@ -674,7 +681,7 @@ namespace Services
 
 	std::string ApiV1::href(const std::string &path) const
 	{
-		return spec.public_url.empty() ? path : spec.public_url + path.substr(7);
+		return apiBase(spec.public_url) + path.substr(7);
 	}
 
 	Response ApiV1::index()
@@ -799,8 +806,8 @@ namespace Services
 			w.key("history").beginObject();
 			writeSlots(w, "second", f.second, hidden);
 			writeSlots(w, "minute", f.minute, hidden);
-			writeSlots(w, "hour", f.hour, hidden);
-			writeSlots(w, "day", f.day, hidden);
+			writeSlots(w, "hour", f.hour, hidden, 24);
+			writeSlots(w, "day", f.day, hidden, 90);
 			w.endObject();
 			writeWeek(w, f);
 			if (hidden)
@@ -1174,9 +1181,9 @@ namespace Services
 		});
 		if (!paging)
 			start = as_of;
-		std::sort(rows.begin(), rows.end());
 		const bool more = (long long)rows.size() > limit;
 		const long long left = more ? (long long)rows.size() - limit : 0;
+		std::partial_sort(rows.begin(), more ? rows.begin() + (std::ptrdiff_t)limit : rows.end(), rows.end());
 		if (more)
 			rows.resize((std::size_t)limit);
 		std::vector<uint32_t> mmsi;
@@ -1205,7 +1212,7 @@ namespace Services
 		beginMeta(w, count, next);
 		w.kv("more", left);
 		if (brief)
-			w.kv("note", std::string("Short rows, ") + (query.nearest ? "nearest" : "newest") + " first. " + (more ? std::to_string(left) + " more: pass next as cursor, " + (spec.limited ? "raise limit (one call per 25 rows) " : "") + "or narrow the search. " : "") + (count == 0 && query.circle ? "None in this radius: widen radius_nm, up to 1000. " : "") + (spec.limited ? "One vessel in full: " + href("/api/v1/vessels/{mmsi}") + "." : std::string("Every field: view=full, or ask for the one vessel.")));
+			w.kv("note", std::string("Short rows, ") + (query.nearest ? "nearest" : "newest") + " first. " + (more ? std::to_string(left) + " more: pass next as cursor, " + (spec.limited ? "raise limit (one call per " + std::to_string(ROWS_A_CALL) + " rows) " : "") + "or narrow the search. " : "") + (count == 0 && query.circle ? "None in this radius: widen radius_nm, up to 1000. " : "") + (spec.limited ? "One vessel in full: " + href("/api/v1/vessels/{mmsi}") + "." : std::string("Every field: view=full, or ask for the one vessel.")));
 		// a second of overlap, as messages share a second
 		w.kv("poll", href("/api/v1/vessels") + "?cursor=" + cursor("v", {(long long)start - 1}) + carried)
 			.kv("full", full).kv("time", isoTime(now)).kv("expire_s", db.timeHistory()).endObject().endObject();
@@ -1346,10 +1353,20 @@ namespace Services
 		JSON::Writer w(out);
 		if (format == "geojson")
 		{
-			w.beginObject().kv("type", "Feature").key("geometry").beginObject().kv("type", "LineString").key("coordinates").beginArray();
-			for (const auto &p : points)
-				w.beginArray().val(p.lon).val(p.lat).endArray();
-			w.endArray().endObject().key("properties").beginObject().kv("mmsi", (long long)mmsi).key("times").beginArray();
+			// a GeoJSON line takes two positions: one fix is a point, none no geometry
+			w.beginObject().kv("type", "Feature").key("geometry");
+			if (points.empty())
+				w.val_null();
+			else if (points.size() == 1)
+				w.beginObject().kv("type", "Point").key("coordinates").beginArray().val(points[0].lon).val(points[0].lat).endArray().endObject();
+			else
+			{
+				w.beginObject().kv("type", "LineString").key("coordinates").beginArray();
+				for (const auto &p : points)
+					w.beginArray().val(p.lon).val(p.lat).endArray();
+				w.endArray().endObject();
+			}
+			w.key("properties").beginObject().kv("mmsi", (long long)mmsi).key("times").beginArray();
 			for (const auto &p : points)
 				w.val(isoTime(p.time));
 			w.endArray().endObject().endObject();
@@ -1528,29 +1545,42 @@ namespace Services
 		if (!e)
 			return Response::problem(404, "Not found", "No place " + uuid + ".");
 		const std::time_t now = std::time(nullptr);
-		std::vector<std::pair<uint32_t, std::string>> rows;
+		const auto inside = [&](const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &at) {
+			return DB::insideNow(s, v, at.metadata->requiresStop(), now) && view.passes(s, now);
+		};
+		// the page's vessels under one lock, their rows written under the next: a vessel
+		// gone between the two is left out
+		std::vector<uint32_t> page;
 		tracker.ships().forEachVisitAt(e->id, [&](const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &at) {
-			if ((long long)s.mmsi <= after || !DB::insideNow(s, v, at.metadata->requiresStop(), now) || !view.passes(s, now))
-				return;
-			std::string row;
-			JSON::Writer w(row);
-			w.beginObject().kv("mmsi", (long long)s.mmsi);
-			textOrNull(w, "name", s.shipname);
-			writeVisit(w, v, at);
-			w.endObject();
-			w.finish();
-			rows.push_back(std::make_pair(s.mmsi, row));
+			if ((long long)s.mmsi > after && inside(s, v, at))
+				page.push_back(s.mmsi);
 		});
-		std::sort(rows.begin(), rows.end());
-		const bool more = (long long)rows.size() > limit;
+		std::sort(page.begin(), page.end());
+		page.erase(std::unique(page.begin(), page.end()), page.end());
+		const bool more = (long long)page.size() > limit;
 		if (more)
-			rows.resize((std::size_t)limit);
+			page.resize((std::size_t)limit);
+		std::vector<std::pair<uint32_t, std::string>> rows;
+		if (!page.empty())
+			tracker.ships().forEachVisitAt(e->id, [&](const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &at) {
+				if (!std::binary_search(page.begin(), page.end(), s.mmsi) || !inside(s, v, at))
+					return;
+				std::string row;
+				JSON::Writer w(row);
+				w.beginObject().kv("mmsi", (long long)s.mmsi);
+				textOrNull(w, "name", s.shipname);
+				writeVisit(w, v, at);
+				w.endObject();
+				w.finish();
+				rows.push_back(std::make_pair(s.mmsi, row));
+			});
+		std::sort(rows.begin(), rows.end());
 		std::string out;
 		JSON::Writer w(out);
 		beginList(w);
 		for (const auto &r : rows)
 			w.raw_val(r.second);
-		const std::string next = more ? href("/api/v1/places/") + urlEncode(uuid) + "/vessels?cursor=" + cursor("in", {(long long)rows.back().first}) + "&limit=" + std::to_string(limit) : "";
+		const std::string next = more ? href("/api/v1/places/") + urlEncode(uuid) + "/vessels?cursor=" + cursor("in", {(long long)page.back()}) + "&limit=" + std::to_string(limit) : "";
 		endList(w, rows.size(), next);
 		w.finish();
 		return Response::json(out);
@@ -1716,10 +1746,13 @@ namespace Services
 	// client that got one from a webhook reads on from there.
 	Response ApiV1::events(const Request &request)
 	{
+		long long limit = 0;
+		if (!pageSize(request, limit))
+			return badLimit(pageMax());
 		// the installation's own events are the system's to tell, and a ship's
 		// only when the server shows the ship
 		return pageEvents(request, tracker.journal(), href("/api/v1/events"), [this](const Journal::Entry &e) {
 			return e.event.kind != Tracking::Kind::SYSTEM && shows(e.event.from);
-		}, pageMax());
+		}, limit);
 	}
 }

@@ -30,10 +30,10 @@ cat > "$OUTPUT_FILE" << 'EOF'
 
 #include "WebDB.h"
 
+#include <algorithm>
+
 namespace WebDB
 {
-
-  std::unordered_map<std::string, FileData> files;
 
 EOF
 
@@ -119,13 +119,14 @@ find "$BASE_DIR" -type f -not -path "*/lib/*" | LC_ALL=C sort | while read -r f;
 # Remove temporary file
 rm -f "$TEMP_FILE"
 
-# Write the initialization function
+# Write the table of files
 cat >> "$OUTPUT_FILE" << 'EOF'
 
-void initialize() {
+// in the order of their names' bytes, as find() searches it
+static const FileData files[] = {
 EOF
 
-# Add each file to the map (sorted for reproducible output)
+# Add each file to the table (LC_ALL=C: the order std::string::compare has)
 find "$BASE_DIR" -type f -not -path "*/lib/*" | LC_ALL=C sort | while read -r file; do
     relative_path="${file#$BASE_DIR/}"
     # Skip files outside BASE_DIR
@@ -134,18 +135,18 @@ find "$BASE_DIR" -type f -not -path "*/lib/*" | LC_ALL=C sort | while read -r fi
     fi
     identifier=$(make_identifier "$relative_path")
     mime_type=$(get_mime_type "$file")
-    echo "    files.emplace(\"${relative_path}\", FileData(data_${identifier}, size_${identifier}, \"${mime_type}\"));" >> "$OUTPUT_FILE"
+    echo "    {\"${relative_path}\", data_${identifier}, size_${identifier}, \"${mime_type}\"}," >> "$OUTPUT_FILE"
 done
 
-# Close the initialization function and namespace
+# Close the table and namespace
 cat >> "$OUTPUT_FILE" << 'EOF'
-}
+};
 
-struct Init {
-    Init() {
-        initialize();
-    }
-} init;
+const FileData *find(const std::string &name) {
+    const FileData *end = files + sizeof(files) / sizeof(files[0]);
+    const FileData *f = std::lower_bound(files, end, name, [](const FileData &a, const std::string &n) { return n.compare(a.name) > 0; });
+    return f != end && name == f->name ? f : nullptr;
+}
 
 } // namespace WebDB
 EOF

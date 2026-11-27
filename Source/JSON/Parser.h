@@ -76,6 +76,8 @@ namespace JSON
 		void next();
 		void next_key();
 		AISC_COLD_NOINLINE void parse_string_escaped();
+		AISC_COLD_NOINLINE void extend_key();
+		AISC_COLD_NOINLINE double slow_double(const char *from, const char *to);
 
 		// parser
 		[[noreturn]] void error_parser(const std::string &err, bool syntax = true);

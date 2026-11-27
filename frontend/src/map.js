@@ -36,7 +36,6 @@ import { getICAO } from '@aiscatcher/core/text.js';
 import { ships, planes, clock, cardMmsi, cardType, hoverMmsi, hoverType } from './core/store.js';
 import { settings, isAndroid } from './core/state.js';
 import { saveSettings, beforeWrite, afterWrite } from './settings-store.js';
-import { redraw } from './fleet.js';
 import { register } from './actions.js';
 
 // the OpenLayers classes the viewer uses, as a namespace for plugins (window.ol)
@@ -467,8 +466,11 @@ function toggleAttribution() {
 
 // ─── the map ─────────────────────────────────────────────────────────────────
 
+let redraw = () => {};
+
 // `stack`: the vector layers bottom to top, the features' among the viewer's
-export function create(stack) {
+export function create(stack, fleetRedraw) {
+    redraw = fleetRedraw;
     map = new OlMap({
 
         target: 'map',

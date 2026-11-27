@@ -19,18 +19,15 @@
 
 #include <cstddef>
 #include <string>
-#include <unordered_map>
 
 namespace WebDB {
     struct FileData {
+        const char* name;
         const unsigned char* data;
-        const size_t size;
+        size_t size;
         const char* mime_type;
-        
-        FileData(const unsigned char* d, const size_t s, const char* m) 
-            : data(d), size(s), mime_type(m) {}
     };
 
-    extern std::unordered_map<std::string, FileData> files;
-
+    // the file of that name, gzipped as it is served; null when there is none
+    const FileData* find(const std::string& name);
 }

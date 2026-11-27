@@ -28,12 +28,14 @@ namespace Util
 	{
 	public:
 		static std::string readFile(const std::string &filename);
+		static std::string randomHex(size_t length);
 		static bool writeFileAtomic(const std::string &path, const std::string &content, std::string &error, bool owner_only = false);
 		// Makes the temp file a save writes to, afresh, so a link left at its name
 		// is not followed: with the target's mode; a new target as the umask leaves
 		// it, or 0600 when owner_only. False when it cannot be made.
 		static bool createTemp(const std::string &tmp, const std::string &target, bool owner_only = false);
 		static bool syncFile(const std::string &path);
+		static bool replaceFile(const std::string &from, const std::string &to);
 		// below the other threads, so that under load the scheduler starves it before decoding
 		static void lowerThreadPriority();
 
@@ -45,10 +47,15 @@ namespace Util
 		static int lsb(uint64_t x);
 		static std::vector<std::string> getFilesWithExtension(const std::string &directory, const std::string &extension);
 		static std::vector<std::string> getFilesInDirectory(const std::string &directory);
-		static long getMemoryConsumption();
-		static std::string getOS();
-		static std::string getHardware();
-		static std::string getProcessor();
+		struct SystemInfo
+		{
+			std::string os, hardware, processor;
+			uint64_t memory = 0;
+			float cpu = 0;
+			bool wifi = false;
+			int wifi_dbm = 0, wifi_quality = 0;
+		};
+		static SystemInfo getSystemInfo();
 		static uint16_t CRC16(const uint8_t *data, size_t length);
 		static bool isUUID(const std::string &s, bool lowercase = false);
 		// a file named in a configuration: ~/ is the home directory, and a

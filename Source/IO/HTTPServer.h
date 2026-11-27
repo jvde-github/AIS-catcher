@@ -86,7 +86,7 @@ namespace IO
 			headers += "X-Accel-Buffering: no\r\n";
 			headers += "Connection: keep-alive\r\n\r\n";
 
-			c->Send(headers.c_str(), headers.length());
+			c->Send(headers.c_str(), (int)headers.length());
 		}
 
 		bool isConnected()
@@ -137,7 +137,8 @@ namespace IO
 		std::string host;
 		std::string origin;
 		std::string forwarded_host;
-		// the client a proxy on this machine forwards for: X-Forwarded-For's first address, or X-Real-IP
+		// the client a proxy on this machine forwards for: the last address of X-Forwarded-For, the
+		// one the proxy added (those before it are the client's own say), or X-Real-IP without one
 		std::string forwarded_for;
 		std::string authorization;
 		std::string setup_code;

@@ -39,7 +39,6 @@
     <ClCompile Include="..\Source\Device\FileWAV.cpp" />
     <ClCompile Include="..\Source\Device\HACKRF.cpp" />
     <ClCompile Include="..\Source\Device\HYDRASDR.cpp" />
-    <ClCompile Include="..\Source\Device\N2KsktCAN.cpp" />
     <ClCompile Include="..\Source\Device\RTLSDR.cpp" />
     <ClCompile Include="..\Source\Device\RTLTCP.cpp" />
     <ClCompile Include="..\Source\Device\SDRPLAY.cpp" />
@@ -47,6 +46,7 @@
     <ClCompile Include="..\Source\Device\SoapySDR.cpp" />
     <ClCompile Include="..\Source\Device\SpyServer.cpp" />
     <ClCompile Include="..\Source\Device\UDP.cpp" />
+    <ClCompile Include="..\Source\Device\TCPServerInput.cpp" />
     <ClCompile Include="..\Source\DSP\Decoder\V2\V2Engine.cpp" />
     <ClCompile Include="..\Source\DSP\Demod.cpp" />
     <ClCompile Include="..\Source\DSP\DSP.cpp" />
@@ -55,8 +55,6 @@
     <ClCompile Include="..\Source\IO\HTTPServer.cpp" />
     <ClCompile Include="..\Source\IO\MsgOut.cpp" />
     <ClCompile Include="..\Source\IO\Screen.cpp" />
-    <ClCompile Include="..\Source\IO\N2KInterface.cpp" />
-    <ClCompile Include="..\Source\IO\N2KStream.cpp" />
     <ClCompile Include="..\Source\IO\Network.cpp" />
     <ClCompile Include="..\Source\IO\Protocol.cpp" />
     <ClCompile Include="..\Source\JSON\JSON.cpp" />
@@ -99,6 +97,8 @@
     <ClCompile Include="..\Source\Services\UiFormat.cpp" />
     <ClCompile Include="..\Source\Site\Site.cpp" />
     <ClCompile Include="..\Source\Tracking\Journal.cpp" />
+    <ClCompile Include="..\Source\Tracking\Gnss.cpp" />
+    <ClCompile Include="..\Source\Tracking\Health.cpp" />
     <ClCompile Include="..\Source\Tracking\PlaceCatalogue.cpp" />
     <ClCompile Include="..\Source\Tracking\PlaceGeometry.cpp" />
     <ClCompile Include="..\Source\Tracking\Tracker.cpp" />
@@ -128,6 +128,7 @@
     <ClInclude Include="..\Source\Device\FileWAV.h" />
     <ClInclude Include="..\Source\Device\RTLTCP.h" />
     <ClInclude Include="..\Source\Device\UDP.h" />
+    <ClInclude Include="..\Source\Device\TCPServerInput.h" />
     <ClInclude Include="..\Source\DSP\Decoder\V2\V2Engine.h" />
     <ClInclude Include="..\Source\DSP\Demod.h" />
     <ClInclude Include="..\Source\DSP\Filters.h" />
@@ -144,7 +145,6 @@
     <ClInclude Include="..\Source\Aviation\ADSB.h" />
     <ClInclude Include="..\Source\Device\AIRSPY.h" />
     <ClInclude Include="..\Source\Library\FIFO.h" />
-    <ClInclude Include="..\Source\Device\N2KsktCAN.h" />
     <ClInclude Include="..\Source\Device\HACKRF.h" />
     <ClInclude Include="..\Source\Device\HYDRASDR.h" />
     <ClInclude Include="..\Source\Device\SDRPLAY.h" />
@@ -161,9 +161,7 @@
     <ClInclude Include="..\Source\JSON\Parser.h" />
     <ClInclude Include="..\Source\Tracking\PlaneDB.h" />
     <ClInclude Include="..\Source\Device\Serial.h" />
-    <ClInclude Include="..\Source\IO\N2KInterface.h" />
     <ClInclude Include="..\Source\Marine\N2K.h" />
-    <ClInclude Include="..\Source\IO\N2KStream.h" />
     <ClInclude Include="..\Source\Device\AIRSPYHF.h" />
     <ClInclude Include="..\Source\Device\FileRAW.h" />
     <ClInclude Include="..\Source\Device\RTLSDR.h" />
@@ -211,6 +209,8 @@
     <ClInclude Include="..\Source\Tracking\Figures.h" />
     <ClInclude Include="..\Source\Tracking\FixSampler.h" />
     <ClInclude Include="..\Source\Tracking\Journal.h" />
+    <ClInclude Include="..\Source\Tracking\Gnss.h" />
+    <ClInclude Include="..\Source\Tracking\Health.h" />
     <ClInclude Include="..\Source\Tracking\PathStore.h" />
     <ClInclude Include="..\Source\Tracking\PlaceCatalogue.h" />
     <ClInclude Include="..\Source\Tracking\PlaceGeometry.h" />

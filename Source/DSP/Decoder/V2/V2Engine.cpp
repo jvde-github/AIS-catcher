@@ -15,6 +15,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 
@@ -202,7 +203,7 @@ namespace V2
 		return r;
 	}
 
-	int PhaseTracker::Run(CFLOAT32 z, bool training)
+	int PhaseTracker::Run(CFLOAT32 z, bool training, float *quality)
 	{
 		z = Rotate90(z);
 
@@ -211,6 +212,9 @@ namespace V2
 
 		const float proj = z.real() * s.real() + z.imag() * s.imag();
 		const float d = proj >= 0.0f ? 1.0f : -1.0f;
+
+		if (quality)
+			*quality = proj * proj / (norm2(s) + 1e-30f);
 
 		s = alpha * s + (beta * d) * z;
 
@@ -335,6 +339,100 @@ namespace V2
 	{
 		for (int k = 0; k < N_DECODERS; k++)
 			dec[k].reset();
+		clearCorrected();
+	}
+
+	static inline int countBits(unsigned v)
+	{
+		int n = 0;
+		for (; v; v &= v - 1)
+			n++;
+		return n;
+	}
+
+	void Engine::flipDecisions(int j, const int *pos, unsigned set)
+	{
+		for (; set; pos++, set >>= 1)
+		{
+			if (set & 1)
+			{
+				dec[j].flipBit(*pos);
+				dec[j].flipBit(*pos + 2);
+			}
+		}
+	}
+
+	bool Engine::tryCorrection(int j, int len)
+	{
+		if (len % 8 != 0 || len < 72 + 16)
+			return false;
+
+		const float *q = quality[j];
+		int weak[MAX_AIS_FRAME_LENGTH];
+		for (int i = 0; i < len - 2; i++)
+			weak[i] = i;
+		std::partial_sort(weak, weak + fix_candidates, weak + len - 2, [q](int a, int b) { return q[a] < q[b]; });
+
+		for (int size = 1; size <= fix_flips; size++)
+		{
+			unsigned found = 0;
+			int passes = 0;
+			for (unsigned set = 1; set < (1u << fix_candidates); set++)
+			{
+				if (countBits(set) != size)
+					continue;
+				flipDecisions(j, weak, set);
+				if (dec[j].checkCorrected(len))
+				{
+					found = set;
+					passes++;
+				}
+				flipDecisions(j, weak, set);
+			}
+			if (passes == 1)
+			{
+				flipDecisions(j, weak, found);
+				fixed[j] = size;
+			}
+			if (passes)
+				return passes == 1;
+		}
+		return false;
+	}
+
+	void Engine::voteCorrected(TAG &tag)
+	{
+		int win = -1, win_n = 0;
+
+		for (int a = 0; a < 5; a++)
+		{
+			if (!fixed[a])
+				continue;
+			int n = 0;
+			for (int b = 0; b < 5; b++)
+				n += fixed[b] && fixed_len[b] == fixed_len[a] && dec[b].sameFrame(dec[a], fixed_len[a]);
+			if (n > win_n || (n == win_n && fixed[a] < fixed[win]))
+			{
+				win = a;
+				win_n = n;
+			}
+		}
+
+		if (win >= 0 && win_n >= fix_agree)
+		{
+			tag.level = fixed_level[win];
+			dec[win].deliver(fixed_len[win], tag);
+			learnSlotPhase(dec[win]);
+			resetDecoders();
+		}
+		clearCorrected();
+	}
+
+	void Engine::clearCorrected()
+	{
+		pending = 0;
+		for (int k = 0; k < 5; k++)
+			fixed[k] = 0;
 	}
 
 	void Engine::processBlock(TAG &tag)
@@ -359,6 +457,7 @@ namespace V2
 			fm_sum += fm_filtered[k];
 
 		tag.ppm = ppm_prev;
+		float block_power = 0.0f;
 
 		for (int i = 0; i < BLOCK_SIZE; i++)
 		{
@@ -368,15 +467,31 @@ namespace V2
 			tag.sample_idx = sample_idx++;
 
 			// Coherent decoder
-			const int bit = trk[di].Run(coh_filtered[i], dec[di].getState() == AIS::State::TRAINING);
+			const AIS::State before = dec[di].getState();
+			const int bit = trk[di].Run(coh_filtered[i], before == AIS::State::TRAINING,
+										before == AIS::State::DATAFCS ? &quality[di][dec[di].getPosition()] : nullptr);
 
 			tag.sample_lvl = norm2(coh_filtered[i]);
+			block_power += tag.sample_lvl;
 
 			if (dec[di].Run(bit ? 1.0f : -1.0f, tag) == AIS::State::FOUNDMESSAGE)
 			{
 				learnSlotPhase(dec[di]);
 				resetDecoders();
 			}
+			else
+			{
+				const int len = dec[di].takeFailedLength();
+				if (len > 0 && tryCorrection(di, len))
+				{
+					fixed_len[di] = len;
+					fixed_level[di] = tag.level;
+					if (!pending)
+						pending = 5;
+				}
+			}
+			if (pending > 0 && --pending == 0)
+				voteCorrected(tag);
 
 			// FM decoder
 			const bool fm_training = dec[FM_DEC].getState() == AIS::State::TRAINING;
@@ -393,6 +508,95 @@ namespace V2
 
 		memmove(raw, raw + BLOCK_SIZE, BLOCK_SIZE * sizeof *raw);
 		memmove(fm_filtered, fm_filtered + BLOCK_SIZE, FM_HIST * sizeof *fm_filtered);
+
+		if (block_power > BLOCK_SIZE * 1e-12f && noise.Add(10.0f * log10f(block_power / BLOCK_SIZE)))
+			reportNoise(tag);
+	}
+
+	void Engine::reportNoise(TAG &tag)
+	{
+		AIS::Metric m;
+		m.channel = channel;
+		m.window = NoiseFloor::SECONDS;
+		m.unit = "dBFS";
+		const auto send = [&](int key, float value)
+		{
+			m.key = key;
+			m.value = value;
+			outMetric.Send(&m, 1, tag);
+		};
+		send(AIS::KEY_NOISE_FLOOR, noise.level);
+		if (noise.load >= 0.0f)
+			send(AIS::KEY_CHANNEL_LOAD, noise.load);
+		send(AIS::KEY_PEAK, noise.peak);
+	}
+
+	bool NoiseFloor::Add(float x)
+	{
+		static const float share[5] = {0.0f, 0.05f, 0.1f, 0.55f, 1.0f};
+		static const float LOAD_DB = 6.0f;
+
+		if (have_level && x > point + LOAD_DB)
+			above++;
+
+		if (count < 5)
+		{
+			int i = count;
+			for (; i > 0 && q[i - 1] > x; i--)
+				q[i] = q[i - 1];
+			q[i] = x;
+			n[count] = count + 1;
+			count++;
+			return false;
+		}
+
+		int k;
+		if (x < q[0])
+		{
+			q[0] = x;
+			k = 0;
+		}
+		else if (x >= q[4])
+		{
+			q[4] = x;
+			k = 3;
+		}
+		else
+			for (k = 0; x >= q[k + 1]; k++)
+				;
+		for (int i = k + 1; i < 5; i++)
+			n[i]++;
+		count++;
+
+		for (int i = 1; i <= 3; i++)
+		{
+			const float off = 1.0f + (float)(count - 1) * share[i] - (float)n[i];
+			if ((off >= 1.0f && n[i + 1] - n[i] > 1) || (off <= -1.0f && n[i - 1] - n[i] < -1))
+			{
+				const int d = off > 0.0f ? 1 : -1;
+				const float up = (q[i + 1] - q[i]) / (float)(n[i + 1] - n[i]);
+				const float down = (q[i] - q[i - 1]) / (float)(n[i] - n[i - 1]);
+				float h = q[i] + (float)d / (float)(n[i + 1] - n[i - 1]) * ((float)(n[i] - n[i - 1] + d) * up + (float)(n[i + 1] - n[i] - d) * down);
+				if (!(q[i - 1] < h && h < q[i + 1]))
+					h = q[i] + (d > 0 ? up : -down);
+				q[i] = h;
+				n[i] += d;
+			}
+		}
+
+		if (count < BLOCKS)
+			return false;
+
+		load = have_level ? 100.0f * (float)above / BLOCKS : -1.0f;
+		point = q[2];
+		const float busy = load > 0.0f ? load : 0.0f;
+		const float below = 0.553f - 0.00249f * busy - 0.0000525f * busy * busy;
+		level = point + (below > 0.0f ? below : 0.0f);
+		peak = q[4];
+		have_level = true;
+		count = 0;
+		above = 0;
+		return true;
 	}
 
 	void Engine::Receive(const CFLOAT32 *data, int len, TAG &tag)

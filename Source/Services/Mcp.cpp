@@ -63,7 +63,7 @@ namespace Services
 				{"system_status", "Installation", "The installation: version, uptime, memory, and whether the engine runs.", "/api/v1/system", {}},
 				{"list_receivers", "Receivers", "Each receiver: its station, device, state, and messages in the last minute.", "/api/v1/system/receivers", {}},
 				{"list_outputs", "Outputs", "Each output: where it sends and how it fares.", "/api/v1/system/outputs", {}},
-				{"health", "Health", "pass, warn or fail, with the checks behind it.", "/api/v1/health", {}},
+				{"health", "Health", "ok, degraded or down for AIS and the GPS, station by station, with the issues behind it.", "/api/v1/health", {}},
 				{"read_log", "Log", "The installation's log, oldest line first.", "/api/v1/system/log", {"cursor", "limit"}, PAGE},
 				{"system_events", "Installation events", "Engine started or stopped, receiver lost or back, station quiet or heard again, backup failed: oldest first.", "/api/v1/system/events", {"cursor", "limit"}, PAGE},
 			};
@@ -97,12 +97,12 @@ namespace Services
 
 		// told when the installation's tools are there for the caller
 		const char *SYSTEM_INSTRUCTIONS =
-			" The installation itself is here too: its receivers (inputs), outputs, health, log and events. Ask those tools "
+			" The installation itself is here too: its receivers (inputs), outputs, log and events. Ask those tools "
 			"about the station rather than its configuration file.";
 
 		// told when they are there, but not for this caller's key
 		const char *DATA_ONLY_INSTRUCTIONS =
-			" This key reads data alone. The installation's own tools, its receivers (inputs), outputs, health, log and events, "
+			" This key reads data alone. The installation's own tools, its receivers (inputs), outputs, log and events, "
 			"are here for a key with the system scope: ask the station's owner for one if you need them.";
 
 		// the name of a member as the document has it, known key or not

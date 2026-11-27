@@ -1205,8 +1205,7 @@
    One treatment for every "label over a group of values": table column
    headers and settings section headers alike. */
 
-.col-header,
-.tabulator .tabulator-header .tabulator-col {
+.col-header {
     font-size: var(--fs-xs);
     font-weight: var(--fw-semibold);
     text-transform: uppercase;
@@ -1477,7 +1476,8 @@
     background: var(--color-scrim);
     opacity: 0;
     visibility: hidden;
-    transition: opacity var(--dur-slow), visibility var(--dur-slow);
+    /* fades in only: a scrim that fades out still takes the clicks */
+    transition: opacity var(--dur-slow);
     z-index: var(--z-overlay);
 }
 
@@ -1711,7 +1711,7 @@
    the bar's colour is the message kind, set inline by the renderer */
 .meteo-tooltip {
     margin-top: 0;
-    padding: 4px 8px 6px;
+    padding: 8px 10px;
     max-width: 280px;
     color: inherit;
     border-left: 3px solid transparent;
@@ -1719,39 +1719,125 @@
     border-top-color: var(--color-rule);
 }
 
-/* A hover card as a column of bands, each with its own left bar at the card's
-   edge: the vessel's band wears its validity, the message cards their kind, and
-   the bars read as one stripe. */
+/* A hover card as a column of bands: the vessel's, then a card for each kind of message. A band
+   has a bar at the card's edge only when it has something to say with it: a map object its kind,
+   a vessel a position that failed validation. A message card shows its kind by its disc. */
 #hover-info.tooltip-bands {
     padding: 0;
 }
 
 .tip-band {
-    border-left: 6px solid var(--band, transparent);
-    padding: 5px 8px;
+    padding: 7px 10px;
     text-align: left;
+}
+
+.tip-band.tip-barred {
+    border-left: 4px solid var(--band, transparent);
 }
 
 #hover-info.tooltip-bands .meteo-tooltip {
     margin: 0;
     max-width: none;
-    border-left-width: 6px;
+    border-left: none;
 }
 
-/* a message card's caption row: glyph at text height, time and label, the pin at the end */
+#hover-info.tooltip-bands .meteo-tooltip:first-child {
+    border-top: none;
+}
+
+
+/* a message card's head: the kind's disc and what the message is, the pin at the end */
 .msg-head {
     display: flex;
     align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    padding: 4px 0 3px;
-    margin-bottom: 2px;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 12px;
+    font-weight: 500;
 }
 
 .msg-glyph {
-    width: 1em;
-    height: 1em;
+    width: 18px;
+    height: 18px;
     flex: none;
+}
+
+.msg-title {
+    min-width: 0;
+}
+
+/* at the end of a head: what the object is on the map, in a word */
+.msg-tag {
+    margin-left: auto;
+    padding-left: 10px;
+    font-size: 11px;
+    font-weight: 400;
+    opacity: 0.65;
+    white-space: nowrap;
+}
+
+/* under the head: who sent it, then a rule before what it says */
+.msg-source {
+    margin: -2px 0 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-rule);
+    font-size: 11px;
+    opacity: 0.65;
+}
+
+/* the short form in a hover over the vessel: the mark, then the title over one line of what it says */
+.msg-brief {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.msg-lines {
+    flex: 1;
+    min-width: 0;
+}
+
+.msg-brief .msg-title {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.msg-sub {
+    max-width: 260px;
+    overflow: hidden;
+    font-size: 11px;
+    opacity: 0.65;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* its rows: what is told on the left, its value on the right */
+.msg-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 1px 0;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.msg-row span {
+    opacity: 0.65;
+}
+
+.msg-row b {
+    font-weight: 500;
+}
+
+/* its foot: how often it was seen and when last, and who sent it to whom */
+.msg-foot {
+    margin-top: 4px;
+    font-size: 11px;
+    opacity: 0.65;
+}
+
+.msg-foot + .msg-foot {
+    margin-top: 1px;
 }
 
 .msg-pin {
@@ -1899,13 +1985,18 @@
     align-items: center;
     gap: 3px;
     margin-left: 8px;
+    vertical-align: middle;
     cursor: pointer;
 }
 
+/* drawn larger than the room it takes in the line */
 .msg-count img {
+    position: relative;
+    top: -0.1em;
     display: block;
-    width: 1.5em;
-    height: 1.5em;
+    width: 1.25em;
+    height: 1.25em;
+    margin: -0.25em 0;
 }
 
 .msg-count:hover img {
@@ -2129,6 +2220,7 @@
     border: 0;
     border-radius: 12px;
     box-shadow: 0 16px 40px rgba(15, 23, 42, 0.20), 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--color-menu-text);
     font-size: 13.5px;
     line-height: 1.2;
     max-height: calc(100vh - 24px);
@@ -2142,7 +2234,7 @@
 @media (prefers-reduced-motion: reduce) { .floating-menu { animation: none; } }
 .floating-menu li {
     height: auto;
-    min-height: 36px;
+    min-height: 32px;
     gap: 10px;
     padding: 0 10px;
     border-radius: 8px;

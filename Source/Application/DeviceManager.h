@@ -46,7 +46,7 @@ class DeviceManager
 		const char *label;
 		Device::Device *(*make)();
 	};
-	static const int ROWS = 15;
+	static const int ROWS = 16;
 	static const DeviceEntry device_settings[];
 	// the row of a type, a config file key or a -g letter; nullptr for none
 	static const DeviceEntry *row(Type type);

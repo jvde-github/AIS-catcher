@@ -32,11 +32,8 @@ function showAboutDialog() {
         </p>
         <p>
         The web-interface gratefully uses the following libraries:
-        <a href="https://www.chartjs.org/docs/latest/charts/line.html" target="_blank" rel="noopener nofollow">chart.js</a>,
-        <a href="https://www.chartjs.org/chartjs-plugin-annotation/latest/" target="_blank" rel="noopener nofollow">chart.js annotation plugin</a>,
         <a href="https://openlayers.org/" target="_blank" rel="noopener nofollow">openlayers</a>,
         <a href="https://fonts.google.com/icons?selected=Material+Icons" target="_blank" rel="noopener nofollow">Material Design Icons</a>,
-        <a href="https://tabulator.info/" target="_blank" rel="noopener nofollow">tabulator</a>,
         <a href="https://github.com/markedjs/marked" target="_blank" rel="noopener">marked</a>, and
         <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noopener">flag-icons</a>. Please consult the links for the respective licenses.
         </p>`;

@@ -137,7 +137,7 @@ class PlaneDB : public StreamIn<Plane::ADSB>
 		if (!cur.cpr.Valid() || !prev.cpr.Valid() || !independent.cpr.Valid() || cur.even == prev.even)
 			return false;
 
-		double deltat = 1 + cur.cpr.timestamp - independent.cpr.timestamp;
+		double deltat = (double)(1 + cur.cpr.timestamp - independent.cpr.timestamp);
 		if (deltat >= CONFIRM_WINDOW)
 			return false;
 
@@ -286,7 +286,7 @@ public:
 		table.forEach([&](int ptr) {
 			const Plane::ADSB &plane = table[ptr];
 			std::time_t rx = plane.getRxTimeUnix();
-			long int age = now - rx;
+			long int age = (long int)(now - rx);
 
 			if (age > TIMEOUT_GROUND)
 				return false;

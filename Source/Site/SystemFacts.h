@@ -35,6 +35,8 @@ struct DeviceFacts
 {
 	// model: the device's decoders, one a line; label: what a status page calls it
 	std::string product, vendor, serial, model, sample_rate, label;
+	int station = 0;
+	bool upstream = false;
 };
 typedef std::vector<DeviceFacts> EngineFacts;
 
@@ -59,8 +61,14 @@ struct ReceiverState
 	std::string input, label;
 	bool streaming = false;
 	bool lost = false;
+	// it takes in lines of text, which a GPS sends as well as an AIS receiver; a radio only ever brings AIS
+	bool text = false;
+	bool aircraft = false;
 	uint64_t messages = 0;
 	uint64_t per_minute = 0;
+	// this input's own, not its station's
+	std::time_t last_message = 0;
+	uint64_t errors[3] = {0, 0, 0}; // checksum, undersized, oversized
 	uint64_t bytes = 0;
 	// for an input that dials a remote
 	bool connection = false;
@@ -78,7 +86,19 @@ struct OutputFacts
 	// label: its description, or "UDP #1" without one; never where it sends, as a map may show it
 	std::string type, label, link;
 	bool connection = false;
+	// the community feed
+	bool feed = false;
 	uint64_t messages = 0, bytes_out = 0, bytes_in = 0, connect_ok = 0, connect_fail = 0, reconnects = 0, connected = 0, dropped = 0;
+};
+
+// A server of the installation: the port it listens on, what it offers there, and its traffic
+struct ServiceFacts
+{
+	int port = 0;
+	std::vector<std::string> offers;
+	// false for one that is set up and could not open its port
+	bool listening = false;
+	uint64_t clients = 0, bytes_out = 0, dropped = 0;
 };
 
 // The installation at one moment: what every status page and the system service tell from
@@ -90,6 +110,7 @@ struct SystemFacts
 	std::vector<DeviceFacts> devices;
 	std::vector<ReceiverState> receivers;
 	std::vector<OutputFacts> outputs;
+	std::vector<ServiceFacts> services;
 	bool sharing = false, sharing_uuid = false;
 	// input blocks dropped because decoding fell behind
 	uint32_t overruns = 0;

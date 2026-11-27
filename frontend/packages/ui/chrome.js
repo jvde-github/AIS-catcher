@@ -25,8 +25,8 @@
    when nothing fits are policy, and stay with the host. */
 
 export function clamp(box, w, h, left, top) {
-    var maxLeft = Math.max(box.left, box.left + box.width - w);
-    var maxTop = Math.max(box.top, box.top + box.height - h);
+    let maxLeft = Math.max(box.left, box.left + box.width - w);
+    let maxTop = Math.max(box.top, box.top + box.height - h);
     return {
         left: Math.min(Math.max(left, box.left), maxLeft),
         top: Math.min(Math.max(top, box.top), maxTop),
@@ -36,19 +36,19 @@ export function clamp(box, w, h, left, top) {
 /* Leans away from `at` along `angle` so the label clears the target's own
    track, tries the far side when that lands outside, then clamps. */
 function alongCourse(box, w, h, at, distance, angle) {
-    var a = angle || 0;
+    let a = angle || 0;
 
     function candidate(deg) {
-        var rad = (deg + 45) * Math.PI / 180;
-        var s = Math.sin(rad);
-        var c = -Math.cos(rad);
+        let rad = (deg + 45) * Math.PI / 180;
+        let s = Math.sin(rad);
+        let c = -Math.cos(rad);
         return {
             left: at[0] + distance * s + (s < 0 ? -w : 0),
             top: at[1] + distance * c + (c < 0 ? -h : 0),
         };
     }
 
-    var p = candidate(a);
+    let p = candidate(a);
     if (p.left > box.left + box.width - w || p.left < box.left ||
         p.top > box.top + box.height - h || p.top < box.top) p = candidate(a + 180);
 
@@ -60,17 +60,17 @@ function alongCourse(box, w, h, at, distance, angle) {
    back to wherever it docks panels that cannot float. */
 function beside(view, w, h, at, opts) {
     opts = opts || {};
-    var margin = opts.margin || 0;
-    var rightSpace = view.width - (at[0] + w + margin + (opts.reserveRight || 0));
-    var leftSpace = at[0] - (w + margin);
+    let margin = opts.margin || 0;
+    let rightSpace = view.width - (at[0] + w + margin + (opts.reserveRight || 0));
+    let leftSpace = at[0] - (w + margin);
 
     if (!(rightSpace > 0 || leftSpace > 0)) return null;
     if (!(view.height > h + 2 * margin)) return null;
 
-    var minTop = Math.max(margin, opts.topInset || 0);
-    var maxTop = view.height - h - Math.max(margin, opts.bottomInset || 0);
-    var top = Math.max(minTop, Math.min(maxTop, at[1] - h / 2));
-    var left = rightSpace >= 0 ? at[0] + margin : at[0] - w - margin;
+    let minTop = Math.max(margin, opts.topInset || 0);
+    let maxTop = view.height - h - Math.max(margin, opts.bottomInset || 0);
+    let top = Math.max(minTop, Math.min(maxTop, at[1] - h / 2));
+    let left = rightSpace >= 0 ? at[0] + margin : at[0] - w - margin;
 
     return { left: left, top: top };
 }
@@ -80,26 +80,26 @@ function beside(view, w, h, at, opts) {
    so two maps on one page can each describe their own. */
 
 export function create(opts) {
-    var fallback = (opts && opts.fallback) || null;   // host hook for browsers without @property support
-    var obstacles = (opts && opts.obstacles) || [];   // [{ selector, edge }] floating over the free box
+    let fallback = (opts && opts.fallback) || null;   // host hook for browsers without @property support
+    let obstacles = (opts && opts.obstacles) || [];   // [{ selector, edge }] floating over the free box
 
-    var EDGES = ["top", "right", "bottom", "left"];
-    var freeCache = [];    // one entry per parent asked about, cleared together
+    let EDGES = ["top", "right", "bottom", "left"];
+    let freeCache = [];    // one entry per parent asked about, cleared together
 
     function readInset(style, edge) {
-        var px = parseFloat(style.getPropertyValue("--map-inset-" + edge));
+        let px = parseFloat(style.getPropertyValue("--map-inset-" + edge));
         if (!isNaN(px)) return px;
         return fallback ? fallback(edge) : 0;
     }
 
     // an unregistered property comes back as the unresolved calc(), so the host
     // is asked to rebuild the number from the same facts its CSS derives it from
-    var insetCache = [];   // one entry per element asked about, cleared with the free boxes
+    let insetCache = [];   // one entry per element asked about, cleared with the free boxes
 
     function insets(el) {
-        for (var i = 0; i < insetCache.length; i++) if (insetCache[i].el === el) return insetCache[i].insets;
-        var style = getComputedStyle(el || document.body);
-        var out = {};
+        for (let i = 0; i < insetCache.length; i++) if (insetCache[i].el === el) return insetCache[i].insets;
+        let style = getComputedStyle(el || document.body);
+        let out = {};
         EDGES.forEach(function (edge) { out[edge] = readInset(style, edge); });
         insetCache.push({ el: el, insets: out });
         return out;
@@ -109,11 +109,11 @@ export function create(opts) {
         return insets(el)[edge];
     }
 
-    var pxCache = {};
+    let pxCache = {};
 
     function px(name, dflt) {
         if (!(name in pxCache)) {
-            var v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
+            let v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
             pxCache[name] = isNaN(v) ? null : v;
         }
         return pxCache[name] === null ? dflt : pxCache[name];
@@ -125,9 +125,9 @@ export function create(opts) {
 
     // the box a panel may occupy inside `parent`, in parent-relative coordinates
     function availableBox(parent, el) {
-        var w = parent ? parent.clientWidth : window.innerWidth;
-        var h = parent ? parent.clientHeight : window.innerHeight;
-        var i = insets(el);
+        let w = parent ? parent.clientWidth : window.innerWidth;
+        let h = parent ? parent.clientHeight : window.innerHeight;
+        let i = insets(el);
         return {
             left: i.left,
             top: i.top,
@@ -140,21 +140,21 @@ export function create(opts) {
        the chrome moves: hover asks for this once per feature the pointer
        crosses, and the answer changes on resize and panel toggles only. */
     function freeBox(parent, el) {
-        for (var i = 0; i < freeCache.length; i++) {
+        for (let i = 0; i < freeCache.length; i++) {
             if (freeCache[i].parent === parent && freeCache[i].el === el) return freeCache[i].box;
         }
 
-        var box = availableBox(parent, el);
-        var g = gap();
-        var base = parent && parent.getBoundingClientRect
+        let box = availableBox(parent, el);
+        let g = gap();
+        let base = parent && parent.getBoundingClientRect
             ? parent.getBoundingClientRect() : { left: 0, top: 0 };
-        var right = box.left + box.width;
-        var bottom = box.top + box.height;
+        let right = box.left + box.width;
+        let bottom = box.top + box.height;
 
         obstacles.forEach(function (o) {
-            var node = document.querySelector(o.selector);
+            let node = document.querySelector(o.selector);
             if (!node || !node.offsetParent) return;
-            var r = node.getBoundingClientRect();
+            let r = node.getBoundingClientRect();
             if (!r.width || !r.height) return;
 
             if (o.edge === "right") right = Math.min(right, r.left - base.left - g);

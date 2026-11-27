@@ -1,7 +1,6 @@
 // What the viewer fetches from the server, and when: the vessels, the ships
 // table's extra columns, the aircraft and the tracks, merged into core/store.js
-// with their cursors and the server clock; the receiver they are asked for;
-// the polling loop that refreshes whichever tab is open.
+// with their cursors and the server clock; the receiver they are asked for.
 
 import { settings } from './core/state.js';
 import * as filter from './core/filter.js';
@@ -11,14 +10,13 @@ import {
 } from './core/store.js';
 import { ShippingClass } from '@aiscatcher/core/constants.js';
 import { getICAOFromHexIdent } from '@aiscatcher/core/text.js';
-import { redraw } from './fleet.js';
 import { beforeWrite } from './settings-store.js';
-import { refreshTab } from './tabs/index.js';
-import { updateServerConfig } from './features/server-config/viewer-config.js';
-import { drawStation } from './features/follow/follow.js';
-import { setPageTitle } from './panels.js';
-import * as community from './overlays/community.js';
-import * as mapObjects from './features/mapobjects/mapobjects.js';
+
+// set once by script.js, so that this module imports no features
+const viewer = { redraw: () => {}, ask: () => '', configure: async () => {}, objects: () => {}, fetched: () => {} };
+export function wire(parts) {
+    Object.assign(viewer, parts);
+}
 
 // ─── the receiver ────────────────────────────────────────────────────────────
 
@@ -62,22 +60,21 @@ export function setShipFilter(fn) {
     shipFilterOverride = fn;
 }
 
-let isFetchingShips = false;
+let shipsPending = null, shipsPendingFocus = -1;
 let shipsTimeout = 1800;
 let shipsLastCleanup = 0;
 
-export async function fetchShips(noDoubleFetch = true) {
-    if (isFetchingShips && noDoubleFetch) {
-        console.log("A fetch operation is already running.");
-        return false;
+// one request at a time for the station on view: a caller that needs the ships waits for the
+// one under way; a reply for a station no longer on view is dropped by fetchShipsBody
+export function fetchShips() {
+    if (!shipsPending || shipsPendingFocus !== focus) {
+        const pending = fetchShipsBody().finally(() => {
+            if (shipsPending === pending) shipsPending = null;
+        });
+        shipsPending = pending;
+        shipsPendingFocus = focus;
     }
-
-    isFetchingShips = true;
-    try {
-        return await fetchShipsBody();
-    } finally {
-        isFetchingShips = false;
-    }
+    return shipsPending;
 }
 
 // The ships table's columns beyond the map's row, pulled only while that tab
@@ -103,7 +100,7 @@ async function fetchShipsBody() {
     let ships;
     const at = focus;
     try {
-        const ask = [shipsSince > 0 && "since=" + shipsSince, mapObjects.objectsAsk()].filter(Boolean).join("&");
+        const ask = [shipsSince > 0 && "since=" + shipsSince, viewer.ask()].filter(Boolean).join("&");
         ships = await viewed("ships_array.json" + (ask && "?" + ask));
     } catch (error) {
         console.log("failed loading ships: " + error);
@@ -125,9 +122,9 @@ async function fetchShipsBody() {
     ];
 
     // the new configuration may have taken the station in view away
-    await updateServerConfig(ships.config_version);
+    await viewer.configure(ships.config_version);
     if (at !== focus) return false;
-    if (ships.mapobjects) mapObjects.applyObjects({ time: ships.time, place_version: ships.place_version, ...ships.mapobjects });
+    if (ships.mapobjects) viewer.objects(ships);
     planesReceived = ships.planes === true;
     const serverTime = ships.time || 0;
     const isIncremental = shipsSince > 0 && ships.full !== true;
@@ -213,9 +210,7 @@ async function fetchShipsBody() {
     capShipsDB();
 
     setStation(ships.station || {});
-    drawStation();
-    setPageTitle({ count: Object.keys(shipsDB).length });
-    community.pushVesselsToCommunityPopup(ships.dynamic);
+    viewer.fetched(ships);
 
     return true;
 }
@@ -384,16 +379,18 @@ export async function fetchTracks() {
             newPaths = await viewed("allpath.json" + sinceParam);
         } else {
             // a vessel gone from the store takes its track with it
-            for (const mmsi of markerTracks) {
-                if (!(mmsi in shipsDB)) {
-                    markerTracks.delete(Number(mmsi));
-                    redraw();
-                }
-            }
+            const gone = Array.from(markerTracks).filter((mmsi) => !(mmsi in shipsDB));
+            gone.forEach((mmsi) => markerTracks.delete(Number(mmsi)));
+            if (gone.length) viewer.redraw();
             const wanted = Array.from(markerTracks).filter((m) => !shipsDB[m] || filter.visible(shipsDB[m]));
             if (wanted.length === 0) return true;
             setPathsFrom(0);
-            newPaths = await viewed("path.json?" + wanted.join(","));
+            // the server reads up to a hundred vessels a request
+            const parts = [];
+            for (let i = 0; i < wanted.length; i += 100)
+                parts.push(viewed("path.json?" + wanted.slice(i, i + 100).join(",")));
+            const got = await Promise.all(parts);
+            newPaths = got.includes(null) ? null : Object.assign({}, ...got);
         }
         if (!newPaths) return false;
 
@@ -433,45 +430,4 @@ export async function fetchTracks() {
     }
 
     return true;
-}
-
-// ─── the loop ────────────────────────────────────────────────────────────────
-
-export let refreshIntervalMs = 2500;
-let interval;
-let updateInProgress = false;
-
-export function refresh() {
-    if (!document.hidden && !updateInProgress) {
-        updateInProgress = true;
-
-        return (async () => {
-            try {
-                await refreshTab();
-            } catch (error) {
-                console.error("Error updating data:", error);
-            } finally {
-                updateInProgress = false;
-            }
-        })();
-    }
-    return Promise.resolve();
-}
-
-// refresh now, then on the interval from when that one is done
-export function restart() {
-    clearInterval(interval);
-
-    refresh().then(() => {
-        clearInterval(interval);
-        interval = setInterval(refresh, refreshIntervalMs);
-    });
-}
-
-export function setRefreshInterval(ms) {
-    refreshIntervalMs = ms;
-    if (interval) {
-        clearInterval(interval);
-        interval = setInterval(refresh, refreshIntervalMs);
-    }
 }

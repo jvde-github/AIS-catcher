@@ -114,7 +114,6 @@ public:
 	void setPassword(const std::string &password);
 	bool wizardPending();
 
-	static std::string randomHex(size_t length);
 
 	// bracket the managed loop's engine scope: no device rescans while active
 	void beginEngineSession()

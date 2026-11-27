@@ -14,25 +14,23 @@ import { saveSettings, effects } from '../../settings-store.js';
 import { showNotification } from '../../dialog.js';
 import { ui } from '../../ui.js';
 import * as tracks from '../../tracks.js';
-import * as shipProvider from './shipcard.js';
-import * as planeProvider from '../planecard/planecard.js';
-import * as stationProvider from '../station/station.js';
-import * as mapObjects from '../mapobjects/mapobjects.js';
 import { nameAction, register } from '../../actions.js';
-import { openExt } from '../contextmenu/contextmenu.js';
-import { openRealtimeForMMSI } from '../../tabs/index.js';
+import { openRealtimeForMMSI, showTab } from '../../tabs/index.js';
 import { cardPanel } from '../../panels.js';
-import { syncTableSelection } from '../tablecard/tablecard.js';
-import { stopHover } from '../hover/hover.js';
 
-const providerOf = (type) => ({ ship: shipProvider, plane: planeProvider, station: stationProvider })[type];
+// set once by script.js, so that this module imports no features
+const viewer = { providers: {}, stopHover: () => {}, syncTable: () => {} };
+export function wire(parts) {
+    Object.assign(viewer, parts);
+}
+const stopHover = () => viewer.stopHover();
+
+const providerOf = (type) => viewer.providers[type];
 
 // once, after the settings have loaded
 export function buildCards() {
     ui.card.footer.reset();
-    shipProvider.build();
-    planeProvider.build();
-    stationProvider.build();
+    for (const kind of ['ship', 'plane', 'station']) providerOf(kind).build();
     for (const group of ['ship', 'plane'])
         ui.card.footer.add({ icon: 'more_horiz', label: 'More', title: 'More options', action: 'rotateTargetcardIcons', group, more: true });
     ui.card.footer.show('ship');
@@ -187,12 +185,19 @@ export function updateFocusMarker() {
 
 // ─── open and close ──────────────────────────────────────────────────────────
 
+// the map, with vessel `m`'s card open when the receiver knows it
+export function selectMapTab(m) {
+    showTab('map');
+    if (m in shipsDB) showTargetcard('ship', m);
+}
+
 export function showTargetcard(type, m, pixel = undefined) {
-    if (type === 'station') return stationProvider.open(m, { fresh: !stationProvider.stationcardVisible(), pixel });
+    const station = providerOf('station');
+    if (type === 'station') return station.open(m, { fresh: !station.stationcardVisible(), pixel });
 
     if (m != null) {
         ui.dismiss();   // a card takes the stage, wherever it was opened from
-        stationProvider.closeStationcard();
+        station.closeStationcard();
     }
 
     const aside = document.getElementById("targetcard");
@@ -232,7 +237,7 @@ export function showTargetcard(type, m, pixel = undefined) {
 
     setCard(m, type);
     if (m != null) providerOf(type).open(m, { fresh: !visible });
-    syncTableSelection();
+    viewer.syncTable();
 
     if (targetcardVisible()) {
         if (settings.show_track_on_select && card_type == 'ship') tracks.selectionShown(m);
@@ -268,11 +273,6 @@ register({
     toggleTargetcardPin: () => toggleTargetcardPin(),
     showTargetcardClose: () => closeTargetcard(),
     toggleTrackCard: () => tracks.toggleTrack(card_mmsi),
-    showBinaryMessageDialogCard: () => mapObjects.showBinaryMessageDialog(card_mmsi),
     openRealtimeForMMSICard: () => openRealtimeForMMSI(card_mmsi),
-    openAISCatcherSiteCard: () => openExt('aiscatcher', card_mmsi),
-    openFlightAwareCard: () => openExt('flightaware', card_mmsi),
-    openPlaneSpottersCard: () => openExt('planespotters', card_mmsi),
-    openADSBExchangeCard: () => openExt('adsbexchange', card_mmsi),
     rotateTargetcardIcons: () => ui.card.footer.rotate(card_type),
 });

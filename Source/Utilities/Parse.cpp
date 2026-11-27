@@ -15,6 +15,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <climits>
 #include <string>
 #include <stdexcept>
 #include <sstream>
@@ -44,7 +45,11 @@ namespace Util
 		}
 
 		if (str.length() > sz && (str[sz] == 'K' || str[sz] == 'k'))
+		{
+			if (number > LONG_MAX / 1000 || number < LONG_MIN / 1000)
+				throw std::runtime_error(setting.empty() ? "expected a number" : "expected a number for setting " + setting);
 			number *= 1000;
+		}
 
 		if (min != 0 || max != 0)
 			if (number < min || number > max)
@@ -136,7 +141,7 @@ namespace Util
 	{
 		size_t start = url.find("://");
 		start = start == std::string::npos ? 0 : start + 3;
-		size_t end = url.find('/', start);
+		size_t end = url.find_first_of("/?#", start);
 		size_t at = url.rfind('@', end == std::string::npos ? std::string::npos : end);
 		if (at == std::string::npos || at < start)
 			return url;
@@ -155,8 +160,20 @@ namespace Util
 		return url.substr(0, end);
 	}
 
+	bool Parse::Printable(const std::string &s)
+	{
+		for (char c : s)
+			if ((unsigned char)c < 0x20 || c == 0x7f)
+				return false;
+		return true;
+	}
+
+	// the host, port and path go into a request line and its headers: no control character, and no
+	// space outside the user name and password
 	void Parse::URL(const std::string &url, std::string &protocol, std::string &username, std::string &password, std::string &host, std::string &port, std::string &path, bool *has_password)
 	{
+		if (!Printable(url))
+			throw std::runtime_error("a URL may not hold control characters.");
 		std::string s = url;
 
 		protocol.clear();
@@ -171,10 +188,14 @@ namespace Util
 			s = s.substr(idx + 3);
 		}
 
-		idx = s.find('/');
+		idx = s.find('#');
+		if (idx != std::string::npos)
+			s.resize(idx);
+
+		idx = s.find_first_of("/?");
 		if (idx != std::string::npos)
 		{
-			path = s.substr(idx);
+			path = (s[idx] == '/' ? "" : "/") + s.substr(idx);
 			s.resize(idx);
 		}
 
@@ -202,16 +223,23 @@ namespace Util
 			}
 		}
 
-		idx = s.find(':');
-		if (idx != std::string::npos)
+		if (!s.empty() && s[0] == '[')
 		{
-			host = s.substr(0, idx);
-			port = s.substr(idx + 1);
+			const size_t close = s.find(']');
+			const bool whole = close != std::string::npos && (close + 1 == s.size() || s[close + 1] == ':');
+			host = whole ? s.substr(1, close - 1) : s;
+			if (whole && close + 1 < s.size())
+				port = s.substr(close + 2);
 		}
 		else
 		{
-			host = s;
+			idx = s.find(':');
+			host = s.substr(0, idx);
+			if (idx != std::string::npos)
+				port = s.substr(idx + 1);
 		}
+		if ((host + port + path).find(' ') != std::string::npos)
+			throw std::runtime_error("a URL's address and path may not hold spaces.");
 	}
 
 	// An enum's names: the first of a value is the one written, any of them is read as it.
@@ -231,7 +259,7 @@ namespace Util
 		{"NONE", Type::NONE}, {"RTLSDR", Type::RTLSDR}, {"AIRSPY", Type::AIRSPY}, {"AIRSPYHF", Type::AIRSPYHF}, {"SDRPLAY", Type::SDRPLAY},
 		{"WAVFILE", Type::WAVFILE}, {"RAWFILE", Type::RAWFILE}, {"FILE", Type::RAWFILE}, {"RTLTCP", Type::RTLTCP}, {"HACKRF", Type::HACKRF},
 		{"HYDRASDR", Type::HYDRASDR}, {"SOAPYSDR", Type::SOAPYSDR}, {"ZMQ", Type::ZMQ}, {"SERIALPORT", Type::SERIALPORT}, {"UDP", Type::UDP},
-		{"UDPSERVER", Type::UDP}, {"SPYSERVER", Type::SPYSERVER}, {"NMEA2000", Type::N2K}};
+		{"UDPSERVER", Type::UDP}, {"SPYSERVER", Type::SPYSERVER}, {"NMEA2000", Type::N2K}, {"TCPSERVER", Type::TCPSERVER}};
 
 	static const Name<PROTOCOL> PROTOCOLS[] = {
 		{"NONE", PROTOCOL::NONE}, {"RTLTCP", PROTOCOL::RTLTCP}, {"GPSD", PROTOCOL::GPSD}, {"TXT", PROTOCOL::TXT}, {"MQTT", PROTOCOL::MQTT},

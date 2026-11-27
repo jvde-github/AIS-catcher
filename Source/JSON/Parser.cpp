@@ -21,6 +21,7 @@
 #include <cmath>
 
 #include <cstdlib>
+#include <clocale>
 #include <cstdint>
 
 #include "Parser.h"
@@ -241,9 +242,9 @@ namespace JSON
 					else
 						floating = true;
 				}
-				else if ((*p == 'e' || *p == 'E') && !scientific)
+				else if (*p == 'e' || *p == 'E')
 				{
-					if ((unsigned char)(p[-1] - '0') >= 10 && p[-1] != '.')
+					if (scientific || ((unsigned char)(p[-1] - '0') >= 10 && p[-1] != '.'))
 						error("malformed number", (int)(p - p_start));
 
 					scientific = floating = true;
@@ -417,11 +418,48 @@ namespace JSON
 		currentType = TokenType::String;
 	}
 
+	// the quote next_key stopped at was escaped: the name runs on
+	void Parser::extend_key()
+	{
+		p = tokenEnd;
+		while (p != pend)
+		{
+			const char *b = p;
+			while (b > tokenStart && b[-1] == '\\')
+				b--;
+			if (((p - b) & 1) == 0)
+				break;
+			p++;
+			while (p != pend && *p != '\"')
+				p++;
+		}
+		tokenEnd = p;
+		if (p == pend)
+			error("line ends in string literal", (int)(p - p_start));
+		p++;
+	}
+
+	// strtod reads the locale's decimal point, which a host may have set to a comma
+	double Parser::slow_double(const char *from, const char *to)
+	{
+		std::string text(from, to);
+		char *end = nullptr;
+		double val = std::strtod(text.c_str(), &end);
+		const char *point = std::localeconv()->decimal_point;
+		const std::string::size_type dot = text.find('.');
+		if (*end && dot != std::string::npos && point && *point && *point != '.')
+		{
+			text.replace(dot, 1, point);
+			val = std::strtod(text.c_str(), nullptr);
+		}
+		return val;
+	}
+
 	// Parsing functions
 
 	[[noreturn]] void Parser::error_parser(const std::string &err, bool syntax)
 	{
-		error(err, (int)(tokenStart - p_start), syntax);
+		error(err, (int)((tokenStart ? tokenStart : p) - p_start), syntax);
 	}
 
 	std::string Parser::tokenString() const
@@ -606,7 +644,7 @@ namespace JSON
 					val *= pow10_table[exp10];
 			}
 			else
-				val = std::strtod(std::string(digits, tokenEnd).c_str(), nullptr);
+				val = slow_double(digits, tokenEnd);
 
 			v.setFloat(neg ? -val : val);
 			break;
@@ -679,6 +717,11 @@ namespace JSON
 		while (is_match(TokenType::String))
 		{
 			int idx = search();
+			if (idx < 0 && tokenEnd[-1] == '\\')
+			{
+				extend_key();
+				idx = search();
+			}
 			if (preserveUnknownKeys && (idx < 0 || tokenString() != AIS::KeyMap[idx][dict].p))
 				idx = pool->extraKey(tokenString());
 			if (idx < 0 && !skipUnknownKeys && !preserveUnknownKeys)

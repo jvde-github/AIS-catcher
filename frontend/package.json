@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspace=src",
-    "lint": "eslint",
+    "lint": "eslint && node src/tools/check-cycles.mjs src packages control",
     "test": "node --test test/*.test.js"
   },
   "devDependencies": {

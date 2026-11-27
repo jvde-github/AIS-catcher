@@ -15,12 +15,15 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <cmath>
+
 #include "System.h"
 #include <algorithm>
 #include <climits>
 #include <limits>
 #include "JournalJSON.h"
 #include "Routes.h"
+#include "SiteConfig.h"
 #include "Helper.h"
 #include "Logger.h"
 #include "Writer.h"
@@ -37,7 +40,7 @@ namespace Services
 	{
 		const std::string base = "/api/v1/system";
 		const std::string &p = request.path;
-		const bool mine = p == "/api/v1/health" || (p.compare(0, base.size(), base) == 0 && (p.size() == base.size() || p[base.size()] == '/'));
+		const bool mine = p.compare(0, base.size(), base) == 0 && (p.size() == base.size() || p[base.size()] == '/');
 		return mine ? (int)ApiKey::SYSTEM : NOT_MINE;
 	}
 
@@ -59,15 +62,13 @@ namespace Services
 					response = Response::problem(400, "Bad request", "\"" + p.first + "\" is not a parameter of " + r->path + ".");
 					return true;
 				}
-		const std::string rest = request.path == "/api/v1/health" ? "/health" : request.path.substr(base.size());
+		const std::string rest = request.path.substr(base.size());
 		if (rest.empty() || rest == "/")
 			response = overview();
 		else if (rest == "/receivers")
 			response = receivers();
 		else if (rest == "/outputs")
 			response = outputs();
-		else if (rest == "/health")
-			response = health();
 		else if (rest == "/log")
 			response = log(request);
 		else if (rest == "/events")
@@ -80,20 +81,22 @@ namespace Services
 	Response System::overview()
 	{
 		const SystemFacts f = facts();
+		const Util::Helper::SystemInfo sys = Util::Helper::getSystemInfo();
 		const std::time_t now = std::time(nullptr);
 		std::string out;
 		JSON::Writer w(out);
 		w.beginObject().kv("name", "AIS-catcher").kv("version", VERSION).kv("describe", VERSION_DESCRIBE).kv("build_date", __DATE__)
-			.kv("os", Util::Helper::getOS()).kv("hardware", Util::Helper::getHardware()).kv("processor", Util::Helper::getProcessor())
-			.kv("uptime_s", age(now, f.born)).kv("memory_bytes", (long long)Util::Helper::getMemoryConsumption())
-			.kv("received_bytes", (unsigned long long)f.received)
-			.key("engine").beginObject().kv("running", f.running);
+			.kv("os", sys.os).kv("hardware", sys.hardware).kv("processor", sys.processor)
+			.kv("uptime_s", age(now, f.born)).kv("memory_bytes", (long long)sys.memory).kv("cpu_percent", std::round(sys.cpu * 10) / 10.0)
+			.kv("received_bytes", (unsigned long long)f.received);
+		if (sys.wifi)
+			w.key("wifi").beginObject().kv("signal_dbm", sys.wifi_dbm).kv("quality", sys.wifi_quality).endObject();
+		w.key("engine").beginObject().kv("running", f.running);
 		if (f.running)
 			w.kv("uptime_s", age(now, f.session));
 		w.kv("receivers", (long long)f.receivers.size()).kv("overruns", (long long)f.overruns).endObject()
 			.key("resources").beginArray();
-		for (const char *r : {"/api/v1/system/receivers", "/api/v1/system/outputs", "/api/v1/system/log", "/api/v1/system/events",
-							  "/api/v1/health"})
+		for (const char *r : {"/api/v1/system/receivers", "/api/v1/system/outputs", "/api/v1/system/log", "/api/v1/system/events"})
 			w.val(r);
 		w.endArray().endObject();
 		w.finish();
@@ -109,7 +112,7 @@ namespace Services
 		beginList(w);
 		for (const auto &r : f.receivers)
 		{
-			const std::time_t heard = tracker.lastHeard(r.station);
+			const std::time_t heard = r.last_message;
 			w.beginObject().kv("index", r.index).kv("station", r.station).kv("input", r.input).kv("label", r.label)
 				.kv("state", r.status())
 				.kv("messages", (unsigned long long)r.messages).kv("messages_last_minute", (unsigned long long)r.per_minute);
@@ -137,37 +140,184 @@ namespace Services
 		return Response::json(out);
 	}
 
-	// pass, warn or fail, as health checks say it (draft-inadarei-api-health-check):
-	// fail, and 503, when the engine is not running or a receiver lost its
-	// device; warn when a station has been quiet for a quarter of an hour
-	Response System::health()
+	HealthAsk healthAsk(const Request &request)
 	{
-		const SystemFacts f = facts();
+		HealthAsk ask;
+		for (const auto &p : request.params())
+		{
+			if (p.first == "strict")
+				ask.strict = p.second != "0" && p.second != "false";
+			else if (p.first == "view")
+				ask.brief = p.second == "brief";
+			else if (p.first == "station" && !p.second.empty() && p.second.find_first_not_of("0123456789") == std::string::npos && p.second.size() < 10)
+				ask.station = std::atoi(p.second.c_str());
+		}
+		return ask;
+	}
+
+	Response healthResponse(Tracker &tracker, const ServerSpec &spec, const std::function<StationRegistry()> &stations, const std::function<SystemFacts()> &facts, const HealthAsk &ask)
+	{
+		const auto shown = [&](int id) { return spec.showsStation(id) && (ask.station < 0 || id == ask.station); };
+		const Health h = tracker.healthNow();
 		const std::time_t now = std::time(nullptr);
-		int worst = f.running ? 0 : 2;
+		// before the first verdict nothing is known to be wrong
+		const bool running = h.running || !h.at;
+		Health::Status ais = running ? Health::OK : Health::DOWN, gps = Health::OK;
+		bool has_gps = false, station_down = false;
+		std::size_t receivers = 0, down = 0;
+		for (const auto &s : h.stations)
+		{
+			if (!shown(s.id))
+				continue;
+			ais = std::max(ais, s.ais);
+			station_down = station_down || s.ais == Health::DOWN;
+			std::size_t out;
+			receivers += s.listening(out);
+			down += out;
+			if (s.has_gps)
+			{
+				has_gps = true;
+				gps = std::max(gps, s.gps.status);
+			}
+		}
 		std::string out;
 		JSON::Writer w(out);
-		w.beginObject().key("checks").beginObject();
-		w.key("engine").beginArray().beginObject().kv("status", f.running ? "pass" : "fail").endObject().endArray();
-		for (const auto &r : f.receivers)
+		const auto ageOf = [&](const char *key, std::time_t then) { then ? (void)w.kv(key, age(now, then)) : (void)w.kv_null(key); };
+		w.beginObject().kv("version", 1).kv("time", isoTime(now)).kv("uptime_s", age(now, h.born)).kv("ais", Health::name(ais));
+		has_gps ? (void)w.kv("gps", Health::name(gps)) : (void)w.kv_null("gps");
+		// a brief answer names no station and lists no output: it needs neither
+		const StationRegistry registry = ask.brief ? StationRegistry() : stations();
+		const SystemFacts live = ask.brief ? SystemFacts() : facts();
+		if (!ask.brief)
+			w.key("stations").beginObject();
+		for (const auto &s : h.stations)
 		{
-			const std::time_t heard = tracker.lastHeard(r.station);
-			const bool quiet = f.running && age(now, f.session) > STATION_QUIET_S && age(now, heard ? heard : f.session) > STATION_QUIET_S;
-			const int level = r.lost || !r.streaming ? 2 : quiet ? 1 : 0;
-			worst = std::max(worst, level);
-			w.key("receiver:" + std::to_string(r.index)).beginArray().beginObject()
-				.kv("status", level == 2 ? "fail" : level == 1 ? "warn" : "pass").kv("componentId", std::to_string(r.station));
-			if (level == 2)
-				w.kv("output", r.lost ? "the device stopped" : "not streaming");
-			else if (level == 1)
-				w.kv("output", "nothing heard for " + std::to_string(age(now, heard ? heard : f.session) / 60) + " minutes");
-			w.endObject().endArray();
+			if (ask.brief || !shown(s.id))
+				continue;
+			const StationRegistry::Station *known = registry.find(s.id);
+			w.key(std::to_string(s.id)).beginObject();
+			if (known && !known->name.empty())
+				w.kv("name", known->name);
+			w.key("ais").beginObject().kv("status", Health::name(s.ais));
+			ageOf("last_msg_age_s", s.heard);
+			w.kv("msgs_1m", s.msgs).kv("ch_a_1m", s.a).kv("ch_b_1m", s.b);
+			const Health::Station::Checks &c = s.checks;
+			w.key("checks").beginObject().kv("input", c.input).kv("reception", c.reception).kv("rate", c.rate).kv("channels", c.channels).kv("gain", c.gain).kv("frequency", c.frequency).endObject();
+			if (s.rf)
+			{
+				w.key("rf").beginObject();
+				if (!s.noise_unit.empty() || s.noise != 0)
+					w.kv("noise", s.noise).kv("noise_unit", s.noise_unit).kv_or_null("noise_delta_db", s.noise_delta, s.has_delta);
+				if (s.has_clip)
+					w.kv("clip_pct", s.clip);
+				if (s.has_ppm)
+					w.kv("freq_offset_ppm", s.ppm);
+				w.endObject();
+			}
+			else
+				w.kv_null("rf");
+			w.key("receivers").beginObject();
+			for (const auto &r : s.receivers)
+			{
+				w.key(std::to_string(r.index)).beginObject().kv("label", r.label).kv("status", Health::name(r.status)).kv("input", r.input);
+				std::time_t heard = r.heard;
+				unsigned long long bytes = r.bytes;
+				for (const auto &now_r : live.receivers)
+					if (now_r.index == r.index)
+					{
+						heard = now_r.last_message;
+						bytes = now_r.bytes;
+					}
+				ageOf("last_msg_age_s", heard);
+				w.kv("msgs_1m", r.per_minute).kv("bytes", bytes).kv("carries", r.carries()).endObject();
+			}
+			w.endObject().endObject();
+			if (s.has_gps)
+			{
+				const Health::GPS &p = s.gps;
+				w.key("gps").beginObject().kv("status", Health::name(p.status)).kv("fix", p.fix == 3 ? "3d" : p.fix == 2 ? "2d" : p.fix == 1 ? "none" : "unknown");
+				ageOf("last_fix_age_s", p.fixed);
+				ageOf("last_data_age_s", p.heard);
+				w.kv("sats", p.sats).kv_or_null("hdop", std::round(p.hdop * 10) / 10, p.hdop > 0).kv("jamming", p.jamming).kv("spoofing", p.spoofing);
+				w.key("checks").beginObject().kv("data", p.checks.data).kv("fix", p.checks.fix).kv("jamming", p.checks.jamming).kv("position", p.checks.position).endObject();
+				w.kv_or_null("pos_ok", p.pos_ok == 1, p.pos_ok >= 0).kv("pos_ref", p.pos_ref).endObject();
+			}
+			else
+				w.kv_null("gps");
+			w.endObject();
 		}
-		w.endObject().kv("status", worst == 2 ? "fail" : worst == 1 ? "warn" : "pass").endObject();
+		if (!ask.brief)
+			w.endObject();
+		// The outputs are the installation's, not a station's: what each is called, never where it sends.
+		// Its servers follow them; a server tells of the others, and of their trouble, only where it offers
+		// the system service.
+		const auto told = [&](const Health::Output &o) { return o.kind != Health::Output::SERVICE || o.port == spec.port || spec.system; };
+		bool servers = false, shut = false;
+		for (const auto &o : h.outputs)
+			if (o.kind == Health::Output::SERVICE && told(o))
+			{
+				servers = true;
+				shut = shut || !o.up;
+			}
+		const Health::Status outputs = shut ? std::max(h.out, Health::DEGRADED) : h.out;
+		if (std::none_of(h.outputs.begin(), h.outputs.end(), told))
+			w.kv_null("outputs");
+		else if (ask.brief)
+			w.key("outputs").beginObject().kv("status", Health::name(outputs)).endObject();
+		else
+		{
+			const Health::OutputChecks &c = h.out_checks;
+			w.key("outputs").beginObject().kv("status", Health::name(outputs));
+			w.key("checks").beginObject().kv("connected", c.connected).kv("sending", c.sending).kv("dropped", c.dropped).kv("reconnects", c.reconnects).kv("feed", c.feed);
+			w.kv("services", !servers ? "unknown" : shut ? "degraded" : "ok").endObject();
+			w.key("items").beginObject();
+			for (const auto &o : h.outputs)
+			{
+				if (!told(o))
+					continue;
+				w.key(std::to_string(o.index)).beginObject().kv("kind", o.kindName()).kv("type", o.type).kv("label", o.label).kv("status", Health::name(o.status));
+				w.kv("state", o.state()).kv("bytes_out", o.bytes_out).kv("dropped", o.dropped);
+				if (o.kind != Health::Output::SERVICE)
+					w.kv("messages", o.messages);
+				if (o.kind == Health::Output::LISTENER || o.kind == Health::Output::SERVICE)
+					w.kv("clients", o.clients);
+				if (o.kind == Health::Output::CONNECTION)
+					w.kv("reconnects", o.reconnects);
+				if (o.kind == Health::Output::SERVICE)
+				{
+					w.key("offers").beginArray();
+					for (const auto &what : o.offers)
+						w.val(what);
+					w.endArray();
+				}
+				w.endObject();
+			}
+			w.endObject().endObject();
+		}
+		w.key("issues").beginArray();
+		for (const auto &i : h.issues)
+		{
+			if (!i.active || (i.station >= 0 && !shown(i.station)))
+				continue;
+			// what is wrong with a server this one does not tell of is not told either
+			if (i.output >= 0 && std::none_of(h.outputs.begin(), h.outputs.end(), [&](const Health::Output &o) { return o.index == i.output && told(o); }))
+				continue;
+			w.beginObject().kv("level", Health::name(i.level)).kv("type", i.type());
+			if (i.station >= 0)
+				w.kv("station", std::to_string(i.station));
+			if (i.receiver >= 0)
+				w.kv("receiver", std::to_string(i.receiver));
+			if (i.output >= 0)
+				w.kv("output", std::to_string(i.output));
+			w.kv("code", i.code).kv("since", isoTime(i.since));
+			if (i.valued)
+				w.kv("value", i.value).kv("unit", i.unit).kv("method", i.method);
+			w.endObject();
+		}
+		w.endArray().endObject();
 		w.finish();
-		Response r = Response::json(out, worst == 2 ? 503 : 200);
-		r.type = "application/health+json";
-		return r;
+		const bool nothing = !running || (receivers && down == receivers);
+		return Response::json(out, nothing || (ask.strict && station_down) ? 503 : 200);
 	}
 
 	// The log as the logger keeps it, oldest first; without a cursor the newest
@@ -218,7 +368,10 @@ namespace Services
 	// reader of the journal gives them; without a cursor the newest page.
 	Response System::events(const Request &request)
 	{
+		long long limit = 0;
+		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
+			return badLimit();
 		return pageEvents(request, tracker.journal(), "/api/v1/system/events",
-						  [](const Journal::Entry &e) { return e.event.kind == Tracking::Kind::SYSTEM; });
+						  [](const Journal::Entry &e) { return e.event.kind == Tracking::Kind::SYSTEM; }, limit);
 	}
 }

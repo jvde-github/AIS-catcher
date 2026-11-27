@@ -120,7 +120,7 @@ void ControlServer::close()
 
 std::string ControlServer::createSession()
 {
-	std::string token = ControlCore::randomHex(48);
+	std::string token = Util::Helper::randomHex(48);
 
 	std::lock_guard<std::mutex> lock(auth_mtx);
 
@@ -202,6 +202,11 @@ bool ControlServer::loginBlocked(const std::string &peer, int &seconds_left)
 		seconds_left = (int)(it->second.block_until - now);
 		return true;
 	}
+	if (failures_recent >= MAX_FAILURES_A_MINUTE && now < failures_since + 60)
+	{
+		seconds_left = (int)(failures_since + 60 - now);
+		return true;
+	}
 	return false;
 }
 
@@ -218,10 +223,18 @@ void ControlServer::loginFailed(const std::string &peer)
 		login_tries.erase(first);
 	}
 
+	const std::time_t now = std::time(nullptr);
+	if (now >= failures_since + 60)
+	{
+		failures_since = now;
+		failures_recent = 0;
+	}
+	failures_recent++;
+
 	LoginTries &t = login_tries[peer];
 	t.failures++;
 	int block = 1 << MIN(t.failures, 8);
-	t.block_until = std::time(nullptr) + MIN(block, MAX_LOGIN_BLOCK);
+	t.block_until = now + MIN(block, MAX_LOGIN_BLOCK);
 }
 
 void ControlServer::loginSucceeded(const std::string &peer)
@@ -259,8 +272,7 @@ std::string ControlServer::statusJSON(const char *auth, bool authenticated)
 
 	if (authenticated)
 	{
-		static const std::string os = Util::Helper::getOS();
-		static const std::string hardware = Util::Helper::getHardware();
+		const Util::Helper::SystemInfo sys = Util::Helper::getSystemInfo();
 
 		w.key("listening").beginArray();
 		for (int p : runs.serverPorts())
@@ -275,10 +287,10 @@ std::string ControlServer::statusJSON(const char *auth, bool authenticated)
 			.kv("stats_file", core.defaultStatsFile())
 			.kv("version", VERSION_DESCRIBE)
 			.kv("build_date", __DATE__)
-			.kv("os", os)
-			.kv("hardware", hardware)
-			.kv("processor", Util::Helper::getProcessor())
-			.kv("memory", (unsigned long long)Util::Helper::getMemoryConsumption());
+			.kv("os", sys.os)
+			.kv("hardware", sys.hardware)
+			.kv("processor", sys.processor)
+			.kv("memory", (unsigned long long)sys.memory);
 	}
 
 	w.endObject().finish();
@@ -383,16 +395,15 @@ void ControlServer::serveStatic(IO::TCPServerConnection &c,
 #ifdef HASWEBVIEWER
 	std::string file = (path == "/") ? "control/index.html" : "control" + path;
 
-	auto it = WebDB::files.find(file);
-	if (it == WebDB::files.end() && path.size() > 1)
-		it = WebDB::files.find(path.substr(1));
+	const WebDB::FileData *f = WebDB::find(file);
+	if (!f && path.size() > 1)
+		f = WebDB::find(path.substr(1));
 
-	if (it != WebDB::files.end())
+	if (f)
 	{
-		const WebDB::FileData &f = it->second;
 		IO::Reply reply(200, true);
-		reply.cache = std::string(f.mime_type) != "text/html";
-		ResponseRaw(c, f.mime_type, (char *)f.data, f.size, reply);
+		reply.cache = std::string(f->mime_type) != "text/html";
+		ResponseRaw(c, f->mime_type, (char *)f->data, f->size, reply);
 		return;
 	}
 #endif
@@ -537,7 +548,7 @@ void ControlServer::Request(IO::TCPServerConnection &c,
 	{
 		destroySession(r.cookie);
 		closeAllSSE();
-		sendOK(c, "Set-Cookie: aiscontrol=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict");
+		sendOK(c, std::string("Set-Cookie: aiscontrol=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict") + (hasTLS() ? "; Secure" : ""));
 	}
 	else if (path == "/api/password" && r.method == "POST")
 	{
@@ -594,7 +605,10 @@ void ControlServer::Request(IO::TCPServerConnection &c,
 		{
 			core.panelTLS(cert_path, key_path);
 			if (!setTLS(cert_path, key_path, error))
-				Error() << "Control: " << error;
+			{
+				sendError(c, "saved, but the panel did not switch now; it does at the next start: " + error);
+				return;
+			}
 			Info() << "Control: control server now over " << (hasTLS() ? "HTTPS" : "plain HTTP");
 			// a session that crossed the other kind of connection does not carry over
 			destroyAllSessions();
@@ -703,7 +717,7 @@ void ControlServer::Request(IO::TCPServerConnection &c,
 	else if (path == "/api/key" && r.method == "POST")
 	{
 		// a key for a server's API: given once, the configuration keeps its SHA-256
-		const std::string key = ControlCore::randomHex(48);
+		const std::string key = Util::Helper::randomHex(48);
 		std::string out;
 		JSON::Writer w(out);
 		w.beginObject().kv("key", key).kv("sha256", Util::SHA256::hex(key)).endObject().finish();

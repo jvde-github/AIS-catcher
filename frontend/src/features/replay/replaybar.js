@@ -9,11 +9,16 @@ import { markerLayer, trackLayer, labelLayer, shapeLayer, planeLayer } from '../
 import { redraw } from '../../fleet.js';
 import { panels, setPanels } from '../../panels.js';
 import { closeTargetcard } from '../targetcard/card.js';
-import { stopHover } from '../hover/hover.js';
 import * as measure from '../measure/measure.js';
 import * as mapObjects from '../mapobjects/mapobjects.js';
 import * as replay from './replay.js';
 import { register } from '../../actions.js';
+
+// set once by script.js, so that this module imports no features
+let stopHover = () => {};
+export function wire(parts) {
+    stopHover = parts.stopHover;
+}
 
 // While replay owns the map the live layers step aside, so the two never draw
 // the same vessel twice. Exiting just puts them back and lets the normal

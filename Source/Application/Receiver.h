@@ -45,6 +45,7 @@ class Receiver : public Setting
 	// 0, the default station, when the configuration names none; its messages carry the
 	// number (stamp_station) once stations are configured
 	int station = 0;
+	bool upstream = false;
 	bool stamp_station = false;
 
 	AIS::Mode channel_mode = AIS::Mode::AB;
@@ -94,6 +95,8 @@ public:
 	ByteCounter &bytesIn() { return bytes; }
 
 	int getStation() const { return station; }
+	bool fromUpstream() const { return upstream; }
+	bool stampsStation() const { return stamp_station; }
 	bool hasPosition() const { return isValidCoord(station_lat, station_lon); }
 	FLOAT32 getLat() const { return station_lat; }
 	FLOAT32 getLon() const { return station_lon; }
@@ -136,6 +139,7 @@ public:
 	Connection<AIS::Message> &Output(int i) { return decoders[i].model->Output().out; }
 	Connection<AIS::GPS> &OutputGPS(int i) { return decoders[i].model->OutputGPS().out; }
 	Connection<AIS::Control> &OutputControl(int i) { return decoders[i].model->OutputControl().out; }
+	Connection<AIS::Metric> &OutputMetric(int i) { return decoders[i].model->OutputMetric().out; }
 	Connection<Plane::ADSB> &OutputADSB(int i) { return decoders[i].model->OutputADSB().out; }
 
 	Connection<JSON::JSON> &OutputJSON(int i) { return decoders[i].json->out; }
@@ -145,7 +149,7 @@ public:
 	// a model by its number (-1 for the default), with the zones of its own
 	AIS::Model &addModel(int m, const std::vector<std::string> &zones = std::vector<std::string>());
 	AIS::Model &model(int i) { return *decoders[i].model; }
-	int modelCount() const { return decoders.size(); }
+	int modelCount() const { return (int)decoders.size(); }
 	std::string modelIndex(int i) const { return "#" + std::to_string(receiver_index) + "-" + std::to_string(i); }
 	std::string modelLabel(int i) const { return decoders[i].model->getName() + " " + modelIndex(i); }
 	void addZone(const std::string &zone) { zones.push_back(zone); }
@@ -174,6 +178,10 @@ public:
 	IO::StreamCounter &counter(int i) { return *decoders[i].counter; }
 	// the messages all its models decoded
 	uint64_t messages();
+	// when one of them last decoded one, 0 if none yet
+	std::time_t lastMessage();
+	// theirs with errors, added to `out`: checksum, undersized, oversized
+	void addErrors(uint64_t out[3]);
 
 	void setupDevice();
 	// delivery: the lock its models deliver under, shared by every receiver; none for lock-free

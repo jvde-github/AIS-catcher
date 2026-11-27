@@ -16,7 +16,32 @@ import { syncFocus } from '../station/station.js';
 import { toggleReplaycard } from '../replay/replaybar.js';
 import * as community from '../../overlays/community.js';
 import { createServerMaps } from '../server-maps/server-maps.js';
-import { createViewerConfig } from './server-config.js';
+import { createConfigUpdater, changed } from '@aiscatcher/core/server-config.js';
+
+// Transport, version comparison and config publication belong here. The host
+// supplies effects on its currently open tabs, map and selection.
+function createViewerConfig({current, applyMaps, applyRuntime, pluginsChanged}) {
+    return createConfigUpdater({
+        current,
+        loadedPluginVersion:window.__LOADED_PLUGIN_VERSION__ || current.plugin_version,
+        fetchConfig:async () => {
+            const response = await fetch('api/config.json', {cache:'no-store'});
+            if (!response.ok) throw Error('Unable to fetch viewer settings');
+            return response.json();
+        },
+        apply:async (next, previous) => {
+            const changes = {
+                restartChanged:changed(previous.restart_required,next.restart_required),
+                aboutChanged:previous.about_version !== next.about_version,
+            };
+            const mapsChanged = changed(previous.maps,next.maps);
+            Object.assign(current,{...next,config_version:previous.config_version});
+            if (mapsChanged) applyMaps(next.maps);
+            await applyRuntime(next,changes);
+        },
+        pluginsChanged,
+    });
+}
 
 export function applyServerFeatures() {
     applyTabFeatures();

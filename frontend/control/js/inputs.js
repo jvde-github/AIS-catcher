@@ -11,10 +11,11 @@ export const DEVICES = {
     SDRPLAY: { name: 'SDRplay', docs: 'configuration/input/sdrplay/', radio: true },
     SOAPYSDR: { name: 'SoapySDR', docs: 'configuration/input/soapysdr/', radio: true },
     SERIALPORT: { name: 'Serial', label: 'Serial (NMEA receiver)', docs: 'configuration/input/serial/' },
-    UDPSERVER: { name: 'UDP', label: 'UDP (NMEA over the network)', docs: 'configuration/input/udp/' },
+    UDPSERVER: { name: 'UDP', label: 'UDP server', docs: 'configuration/input/udp/' },
+    TCPSERVER: { name: 'TCP server', docs: 'configuration/input/udp/#tcp-server' },
     RTLTCP: { name: 'Network', label: 'Network client (RTL-TCP, TCP, MQTT)', docs: 'configuration/input/tcp/', iq: true },
     SPYSERVER: { name: 'SpyServer', docs: 'configuration/input/spyserver/', iq: true },
-    NMEA2000: { name: 'NMEA 2000', docs: 'configuration/input/NMEA2000/' },
+    NMEA2000: { name: 'NMEA 2000', label: 'NMEA 2000 (CAN port)', docs: 'configuration/input/NMEA2000/' },
     WAVFILE: { name: 'WAV file', docs: 'configuration/input/wav/', hidden: true },
     FILE: { name: 'File', docs: 'configuration/input/file/', hidden: true },
     ZMQ: { name: 'ZMQ', hidden: true }
@@ -25,24 +26,29 @@ const kindOf = input => String(input || '').toUpperCase();
 export const deviceOf = input => DEVICES[kindOf(input)];
 export const isRadio = input => !!deviceOf(input)?.radio;
 export const decodes = input => !!(deviceOf(input)?.radio || deviceOf(input)?.iq);
+// an input whose data is text, which can name a station; a network client's by protocol, as RTLTCP.cpp sets it
+const TEXT_PROTOCOLS = ['txt', 'tls', 'none', 'ws', 'wss', 'mqtt', 'mqtts', 'wsmqtt', 'wssmqtt', 'gpsd'];
+export const namesStations = item => ['SERIALPORT', 'UDPSERVER'].includes(kindOf(item.input)) ||
+    (kindOf(item.input) === 'TCPSERVER' && String(item.tcpserver?.format || 'txt').toLowerCase() === 'txt') ||
+    (kindOf(item.input) === 'RTLTCP' && TEXT_PROTOCOLS.includes(String(item.rtltcp?.protocol || 'rtltcp').toLowerCase()));
 export const RADIOS = Object.keys(DEVICES).filter(isRadio);
 export const DEVICE_BLOCKS = Object.keys(DEVICES).map(k => k.toLowerCase());
 export const inputDocs = input => deviceOf(input)?.docs || 'configuration/input/overview/';
 
 // what an input needs to work: the device, which one, and how to reach it; the rest is Advanced
 export const INPUT_ESSENTIALS = new Set(['input', 'serial', 'serialport_port', 'serialport_baudrate', 'rtltcp_protocol', 'rtltcp_host', 'rtltcp_port', 'rtltcp_url',
-    'udpserver_server', 'udpserver_port', 'spyserver_host', 'spyserver_port', 'nmea2000_interface', 'soapysdr_device']);
+    'udpserver_server', 'udpserver_port', 'tcpserver_format', 'tcpserver_server', 'tcpserver_port', 'spyserver_host', 'spyserver_port', 'nmea2000_interface', 'soapysdr_device']);
 
 // the receiver's fields carry no section: group them by what they are about
 export function inputGroup(f) {
     const n = f.name;
-    if (n === 'station') return 'Station';
+    if (n === 'station' || n === 'station_upstream') return 'Station';
     if (n === 'engines' || n === 'fp_ds') return 'Engines';
     if (n === 'channel' || n === 'nmea_channel') return 'Channels';
     if (n === 'verbose' || n === 'screen' || n === 'verbose_time') return 'Logging';
     if (n.startsWith('timeout')) return 'Timeouts';
     if (n.startsWith('serialport_')) return 'Serial';
-    if (n.startsWith('rtltcp_') || n.startsWith('udpserver_')) return 'Connection';
+    if (n.startsWith('rtltcp_') || n.startsWith('udpserver_') || n.startsWith('tcpserver_')) return 'Connection';
     if (n.startsWith('rtlsdr_') || n === 'tuner' || n.startsWith('airspyhf_') || n.startsWith('hackrf_') || n.startsWith('spyserver_') ||
         n.startsWith('sdrplay_') || n.startsWith('soapysdr_')) return 'Tuning';
     return 'Other';

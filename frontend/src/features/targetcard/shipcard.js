@@ -15,7 +15,7 @@ import { register } from '../../actions.js';
 import { saveSettings } from '../../settings-store.js';
 import { ui } from '../../ui.js';
 import { fitTargetcard, addItem, openOnTab, setValidation, showOutOfRange, updateTrackOption } from './card.js';
-import { isFollowing } from '../follow/follow.js';
+import { updateFollowOption } from '../follow/follow.js';
 
 let cells = null, layout = null;
 
@@ -188,15 +188,6 @@ function updateMessageButton() {
 // ─── content ─────────────────────────────────────────────────────────────────
 
 
-export function updateFollowOption() {
-    const option = document.getElementById("targetcard_follow_option");
-    const following = isFollowing(cardMmsi);
-
-    option.querySelector("#targetcard_follow").innerText = following ? "Unfollow" : "Follow";
-    option.title = following ? "Stop centring the map on this vessel" : "Keep the map centred on this vessel";
-    option.classList.toggle("card-icon-active", following);
-}
-
 function updateTechDetails(ship) {
     const formatFlag = (value, trueText = "Yes", falseText = "No", unknownText = "-") => {
         if (value === 0) return unknownText;
@@ -232,11 +223,18 @@ function updateTechDetails(ship) {
 
 export function populate() { ui.card.keepScroll(populateCard); refreshVessel(); }
 
+// seconds the held position lies behind the last signal; null where the record does not say
+function positionBehind() {
+    const d = vessel.mmsi === cardMmsi ? vessel.data : null;
+    return d && d.last_position != null && d.last_signal != null ? Math.max(0, d.last_position - d.last_signal) : null;
+}
+
 const cardHelpers = {
     units: u,
     callsign: getCallSign,
     age: (s) => getDeltaTimeVal(clock - s.last_signal),
     ageSeconds: (s) => (s.last_signal != null ? clock - s.last_signal : null),
+    positionAge: (s) => { const behind = positionBehind(); return behind == null || s.last_signal == null ? null : getDeltaTimeVal(clock - s.last_signal + behind); },
     // the ship type's colour: the one its tracks are drawn in
     typeColor: (s) => (settings.track_class_colors || {})[s.shipclass] || null,
     goTo: (lat, lon) => ui.reveal([lon, lat], undefined, { minZoom: 12, center: true }),

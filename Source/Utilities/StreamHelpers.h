@@ -156,7 +156,7 @@ namespace Util
 			uint32_t data_chunk_size = 0;
 		} header;
 
-		std::vector<CFLOAT32> output;
+		std::string biased;
 		std::ofstream file;
 		std::string filename;
 		Format format;

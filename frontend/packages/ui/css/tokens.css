@@ -431,6 +431,7 @@
     --color-pill-border: var(--color-border-strong);
     --color-card-border: var(--color-border);
     --color-menu-border: var(--color-border-strong);
+    --color-menu-text: var(--color-text);
     --color-menu-divider: var(--color-border-strong);
 
     --color-tooltip: var(--color-selected);
@@ -516,6 +517,7 @@
     --color-menu: var(--color-surface-raised);
     --color-menu-hover: var(--color-hover);
     --color-menu-border: #111111;
+    --color-menu-text: #dedee2;
     --color-pill-border: color-mix(in srgb, var(--ink-500) 30%, var(--ink-400));
     --color-card-border: var(--color-pill-border);
     --color-menu-divider: #505050;

@@ -49,6 +49,8 @@ namespace Util
 		static std::string URLWithoutCredentials(const std::string &url);
 		// as a log may show it: scheme, host and port, no credentials, path or query
 		static std::string URLForLog(const std::string &url);
+		// no control character: what may go into a header or a request line
+		static bool Printable(const std::string &s);
 		static std::string PercentDecode(const std::string &s);
 		// a query or form value: '+' a space, then percent-decoded
 		static std::string FormDecode(const std::string &s);

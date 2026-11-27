@@ -70,7 +70,7 @@ namespace V2
 		float weight = 0.86f;
 		float weight_train = 0.75f;
 
-		int Run(CFLOAT32 z, bool training);
+		int Run(CFLOAT32 z, bool training, float *quality = nullptr);
 
 	private:
 		CFLOAT32 Rotate90(CFLOAT32 z);
@@ -89,6 +89,24 @@ namespace V2
 		int last_bit = 0;
 
 		bool Run(float sample, bool training);
+	};
+
+	struct NoiseFloor
+	{
+		static const int BLOCKS = 938, SECONDS = 10;
+
+		float level = 0.0f;
+		float peak = 0.0f;
+		float load = -1.0f;
+
+		bool Add(float x);
+
+	private:
+		float q[5];
+		int n[5];
+		int count = 0, above = 0;
+		float point = 0.0f;
+		bool have_level = false;
 	};
 
 	class Engine : public StreamIn<CFLOAT32>
@@ -131,6 +149,23 @@ namespace V2
 		float ppm = 0.0f, ppm_prev = 0.0f;
 		int ppm_split = 0;
 
+		static const int MAX_CANDIDATES = 8;
+		float quality[5][MAX_AIS_FRAME_LENGTH];
+		int fixed[5] = {0, 0, 0, 0, 0};
+		int fixed_len[5];
+		float fixed_level[5];
+		int pending = 0;
+		int fix_candidates = 5, fix_flips = 1, fix_agree = 2;
+
+		void flipDecisions(int j, const int *pos, unsigned set);
+		bool tryCorrection(int j, int len);
+		void voteCorrected(TAG &tag);
+		void clearCorrected();
+
+		NoiseFloor noise;
+		char channel = 0;
+		void reportNoise(TAG &tag);
+
 		bool midWins(const CFLOAT32 *input) const;
 		void CGF(const CFLOAT32 *input, CFLOAT32 *output, bool busy);
 		void learnSlotPhase(const AIS::Decoder &d);
@@ -149,11 +184,21 @@ namespace V2
 			}
 		}
 
-		void setOrigin(char channel, int station, int own_mmsi)
+		void setHighSensitivity(bool b)
 		{
-			for (int i = 0; i < N_DECODERS; i++)
-				dec[i].setOrigin(channel, station, own_mmsi);
+			fix_candidates = b ? MAX_CANDIDATES : 5;
+			fix_flips = b ? 2 : 1;
+			fix_agree = b ? 1 : 2;
 		}
+
+		void setOrigin(char ch, int station, int own_mmsi)
+		{
+			channel = ch;
+			for (int i = 0; i < N_DECODERS; i++)
+				dec[i].setOrigin(ch, station, own_mmsi);
+		}
+
+		Connection<AIS::Metric> outMetric;
 
 		AIS::Decoder &getDecoder(int i) { return dec[i]; }
 

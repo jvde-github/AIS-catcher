@@ -7,20 +7,15 @@ import { loaded as loadedTab } from '../index.js';
 import { register } from '../../actions.js';
 
 export const GRAPH_KINDS = {
-    signal: { setting: 'show_signal_graphs', header: 'Signal Level' },
-    ppm: { setting: 'show_ppm_graphs', header: 'Frequency Shift' }
+    signal: { setting: 'show_signal_graphs' },
+    ppm: { setting: 'show_ppm_graphs' }
 };
 
 function setGraphVisibility(type, show, save = true) {
     const kind = GRAPH_KINDS[type];
     if (kind) {
         settings[kind.setting] = show;
-        document.querySelectorAll('.graph-panel').forEach(panel => {
-            const header = panel.querySelector('header');
-            if (header && header.textContent.includes(kind.header)) {
-                panel.style.display = show ? '' : 'none';
-            }
-        });
+        document.getElementById('plots').classList.toggle('hide-' + type, !show);
     }
     if (save) saveSettings();
 }

@@ -17,7 +17,6 @@
 
 #include <algorithm>
 #include <iostream>
-#include <fstream>
 #include <string.h>
 #include <memory>
 #include <cctype>
@@ -25,7 +24,6 @@
 #ifdef _WIN32
 #include <direct.h>
 #else
-#include <fcntl.h>
 #include <unistd.h>
 #endif
 
@@ -43,7 +41,6 @@
 #include "Helper.h"
 #include "Logger.h"
 #include "SHA256.h"
-#include "ControlCore.h"
 
 namespace CommandLine
 {
@@ -422,11 +419,10 @@ namespace
 			throw std::runtime_error("internal error: no model for -go");
 		}
 
-		// the feed: -X or a file switches it on, by saying so or with a key; none switches it off
 		bool share(bool stated, bool on, const std::string &key)
 		{
 			JSON::Value *sharing = last(doc, AIS::KEY_SETTING_SHARING);
-			const bool feed = on || !key.empty() || (sharing && sharing->getBool()) || last(doc, AIS::KEY_SETTING_SHARING_KEY);
+			const bool feed = on || (sharing && sharing->getBool());
 			if (sharing)
 				sharing->setBool(feed);
 			else if (stated)
@@ -526,12 +522,6 @@ namespace
 				}
 			}
 
-			// as the reader has it: a key that is no UUID counts only where sharing is on
-			if ((shares || last(doc, AIS::KEY_SETTING_SHARING)) && !on && !key.empty() && !Util::Helper::isUUID(key))
-			{
-				said.push_back("Config file: \"sharing_key\" is not a UUID and sharing is off: ignored.");
-				key.clear();
-			}
 			if (share(shares, on, key) && zones)
 			{
 				doc.Remove(AIS::KEY_SETTING_SHARING_ZONE);
@@ -772,9 +762,14 @@ namespace
 				device(Type::RTLTCP, count == 1 ? Keys{AIS::KEY_SETTING_URL} : (count & 1) == 0 ? Keys{AIS::KEY_SETTING_HOST, AIS::KEY_SETTING_PORT} : Keys{AIS::KEY_SETTING_PROTOCOL, AIS::KEY_SETTING_HOST, AIS::KEY_SETTING_PORT}, args, ptr, count);
 				break;
 			case 'x':
-				Assert(count >= 2 && (count & 1) == 0, param, "requires two parameters [server] [port] (optionally followed by key value pairs).");
-				device(Type::UDP, {AIS::KEY_SETTING_SERVER, AIS::KEY_SETTING_PORT}, args, ptr, count);
+			{
+				std::string word = count ? arg1 : "";
+				Util::Convert::toLower(word);
+				const bool named = word == "udp" || word == "tcp";
+				Assert(count - named >= 2 && ((count - named) & 1) == 0, param, "requires [server] [port], optionally after udp or tcp, then key value pairs.");
+				device(word == "tcp" ? Type::TCPSERVER : Type::UDP, {AIS::KEY_SETTING_SERVER, AIS::KEY_SETTING_PORT}, args, ptr + named, count - named);
 				break;
+			}
 			case 'D':
 			{
 				// bare target = libpq string; a "sqlite:" or "csv:" prefix picks the backend
@@ -1021,7 +1016,7 @@ static bool build(const std::vector<std::string> &args, Config &c)
 	if (actions.new_key)
 	{
 		// the key is the client's; a server holds its hash
-		const std::string key = ControlCore::randomHex(48), hash = Util::SHA256::hex(key);
+		const std::string key = Util::Helper::randomHex(48), hash = Util::SHA256::hex(key);
 		std::cout << "key:     " << key << "\nsha256:  " << hash << "\n\n"
 				  << "on the command line:     -N 8100 KEYS name:data:" << hash << " API on\n"
 				  << "in a configuration file: \"keys\": [{\"name\": \"name\", \"sha256\": \"" << hash << "\", \"scopes\": [\"data\"]}]\n"
@@ -1041,15 +1036,9 @@ static bool build(const std::vector<std::string> &args, Config &c)
 		else
 		{
 			// the document can hold passwords: a new file is its owner's alone
-#ifndef _WIN32
-			const int fd = ::open(json_file.c_str(), O_WRONLY | O_CREAT, 0600);
-			if (fd >= 0)
-				::close(fd);
-#endif
-			std::ofstream out(json_file);
-			out << file;
-			if (!out)
-				throw std::runtime_error("-J: cannot write " + json_file + ".");
+			std::string error;
+			if (!Util::Helper::writeFileAtomic(json_file, file, error, true))
+				throw std::runtime_error("-J: cannot write " + json_file + ": " + error);
 			Info() << "Configuration written to " << json_file;
 		}
 		return false;

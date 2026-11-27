@@ -551,12 +551,6 @@ namespace IO
 		}
 	}
 
-	// the slots are the Run() thread's: it counts them once a second, any thread may ask
-	int TCPServer::numberOfClients()
-	{
-		return clients_now;
-	}
-
 	int TCPServer::findFreeClient()
 	{
 		for (int i = 0; i < Limits::CONNECTIONS; i++)
@@ -565,7 +559,7 @@ namespace IO
 		return -1;
 	}
 
-	void TCPServer::acceptClients()
+	bool TCPServer::acceptClients()
 	{
 		sockaddr_in peer;
 		int addrlen = sizeof(peer);
@@ -581,7 +575,7 @@ namespace IO
 			int e = Net::lastError();
 			if (!Net::wouldBlock(e) && !Net::peerGone(e))
 				Error() << "TCP Server: error accepting connection: " << Net::errorString(e);
-			return;
+			return false;
 		}
 
 		const bool local = (ntohl(peer.sin_addr.s_addr) >> 24) == 127;
@@ -595,20 +589,20 @@ namespace IO
 		if (!local && max_per_address && held >= max_per_address)
 		{
 			Net::closeSocket(conn_socket);
-			return;
+			return true;
 		}
 		// this machine always gets in; the others are turned away before any handshake
 		if (!local && connected >= Limits::CONNECTIONS - Limits::RESERVED_SLOTS)
 		{
 			refuse(conn_socket, "the slots for other machines are taken");
-			return;
+			return true;
 		}
 
 		int ptr = findFreeClient();
 		if (ptr == -1)
 		{
 			refuse(conn_socket, "all slots are taken");
-			return;
+			return true;
 		}
 
 		// Configure fully before Start() publishes the socket to broadcast threads.
@@ -630,12 +624,14 @@ namespace IO
 			if (!Net::peerGone(e))
 				Error() << "TCP Server: cannot make client socket non-blocking: " << Net::errorString(e);
 			Net::closeSocket(conn_socket);
-			return;
+			return true;
 		}
 
 		client[ptr].peer_ipv4 = peer.sin_addr.s_addr;
 		client[ptr].peer_local = local;
 		client[ptr].Start(conn_socket);
+		if (pstats)
+			pstats->connected = connected + 1;
 
 		if (tls_until)
 		{
@@ -643,6 +639,7 @@ namespace IO
 			if (tls_ctx)
 				client[ptr].startTLS(tls_ctx);
 		}
+		return true;
 	}
 
 	// closed at the door, logged a line a minute with the count
@@ -716,7 +713,8 @@ namespace IO
 					wakeup.drain();
 				drainCommands();
 				if (pfds[0].revents & POLLIN)
-					acceptClients();
+					for (int i = 0; i < Limits::CONNECTIONS && acceptClients(); i++)
+						;
 				readClients();
 				processClients();
 				writeClients();
@@ -729,13 +727,14 @@ namespace IO
 					reloadTLS(now);
 					cleanUp(now);
 
-					int n = 0;
-					for (auto &c : client)
-						if (c.isConnected())
-							n++;
-					clients_now = n;
 					if (pstats)
+					{
+						int n = 0;
+						for (auto &c : client)
+							if (c.isConnected())
+								n++;
 						pstats->connected = n;
+					}
 				}
 			}
 			catch (const std::exception &e)
@@ -823,7 +822,6 @@ namespace IO
 					if (cl.isConnected() && !Send(cl, c.data.data(), (int)c.data.size()))
 					{
 						cl.Close();
-						Error() << "TCP listener: client not reading, close connection.";
 						if (pstats)
 							pstats->dropped++;
 					}
@@ -878,14 +876,13 @@ namespace IO
 		memset(&service, 0, sizeof(service));
 		service.sin_family = AF_INET;
 
-		// Conditional binding based on IP_BIND
-		if (!IP_BIND.empty())
+		service.sin_addr.s_addr = htonl(INADDR_ANY);
+		if (!IP_BIND.empty() && inet_pton(AF_INET, IP_BIND == "localhost" ? "127.0.0.1" : IP_BIND.c_str(), &service.sin_addr) != 1)
 		{
-			service.sin_addr.s_addr = inet_addr(IP_BIND.c_str());
-		}
-		else
-		{
-			service.sin_addr.s_addr = htonl(INADDR_ANY);
+			Error() << "TCP Server: \"" << IP_BIND << "\" is not an IPv4 address to listen on";
+			Net::closeSocket(sock);
+			sock = -1;
+			return false;
 		}
 
 		service.sin_port = htons(port);

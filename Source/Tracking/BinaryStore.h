@@ -655,10 +655,10 @@ inline int BinaryStore::process(const JSON::JSON &data, FLOAT32 sender_lat,
 				item.sub = val.getInt();
 				break;
 			case AIS::KEY_LAT:
-				item.lat = val.getFloat();
+				item.lat = (FLOAT32)val.getFloat();
 				break;
 			case AIS::KEY_LON:
-				item.lon = val.getFloat();
+				item.lon = (FLOAT32)val.getFloat();
 				break;
 			case AIS::KEY_DEST_MMSI:
 				item.anchor = (uint32_t)val.getInt();
@@ -667,22 +667,22 @@ inline int BinaryStore::process(const JSON::JSON &data, FLOAT32 sender_lat,
 				linkage = (int)val.getInt();
 				break;
 			case AIS::KEY_AREA_NOTICE_LAT:
-				item.lat = val.getFloat();
+				item.lat = (FLOAT32)val.getFloat();
 				break;
 			case AIS::KEY_AREA_NOTICE_LON:
-				item.lon = val.getFloat();
+				item.lon = (FLOAT32)val.getFloat();
 				break;
 			case AIS::KEY_NE_LAT:
-				ne_lat = val.getFloat();
+				ne_lat = (FLOAT32)val.getFloat();
 				break;
 			case AIS::KEY_NE_LON:
-				ne_lon = val.getFloat();
+				ne_lon = (FLOAT32)val.getFloat();
 				break;
 			case AIS::KEY_SW_LAT:
-				sw_lat = val.getFloat();
+				sw_lat = (FLOAT32)val.getFloat();
 				break;
 			case AIS::KEY_SW_LON:
-				sw_lon = val.getFloat();
+				sw_lon = (FLOAT32)val.getFloat();
 				break;
 			case AIS::KEY_STATION_ID:
 				if (!val.isString())

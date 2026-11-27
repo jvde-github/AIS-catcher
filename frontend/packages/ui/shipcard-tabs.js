@@ -235,13 +235,21 @@ export function build(mount, prefix, o) {
             else voyStatus.textContent = 'N/A';
         }
         const age = h.age ? h.age(ship) : null;
-        summary.seen.textContent = age ? 'Last received ' + age + ' ago' : 'Last received unknown';
         // a dot that says how fresh: under 3 minutes live, under 30 stale, else lost
         // seconds from the host when it says them, else read back from the age it shows ("2d 3h", "1m 10s", "25s")
+        const fresh = (secs) => (secs == null ? 'lost' : secs < 180 ? 'live' : secs < 1800 ? 'stale' : 'lost');
         const secs = h.ageSeconds ? h.ageSeconds(ship) : ageToSeconds(age);
-        summary.seen.dataset.fresh = secs == null ? 'lost' : secs < 180 ? 'live' : secs < 1800 ? 'stale' : 'lost';
+        // the position's own age where the host knows it, else the last signal's
+        const posAge = h.positionAge ? h.positionAge(ship) : null;
+        if (posAge) {
+            summary.seen.textContent = 'Position ' + posAge + ' ago';
+            summary.seen.dataset.fresh = fresh(ageToSeconds(posAge));
+        } else {
+            summary.seen.textContent = age ? 'Last received ' + age + ' ago' : 'Last received unknown';
+            summary.seen.dataset.fresh = fresh(secs);
+        }
         // AIS tiles: how long ago, coloured the same way, and how many messages
-        tileSeen.dataset.fresh = summary.seen.dataset.fresh;
+        tileSeen.dataset.fresh = fresh(secs);
         // "25s" reads as 25 with "s ago" small; "1m 10s" stays whole with "ago" small
         const m = age && /^(\d+)s$/.exec(age);
         tileSeen.lastChild.innerHTML = '';

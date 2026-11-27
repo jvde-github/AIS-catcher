@@ -79,6 +79,9 @@ Setting &Receiver::applyKey(AIS::Keys key, const std::string &arg)
 	case AIS::KEY_SETTING_STATION:
 		station = Util::Parse::Integer(arg, 0, 2147483647);
 		break;
+	case AIS::KEY_SETTING_STATION_UPSTREAM:
+		upstream = Util::Parse::Switch(arg);
+		break;
 	default:
 		throw std::runtime_error(getName() + ": unknown setting \"" + AIS::KeyMap[key][JSON_DICT_SETTING] + "\"");
 	}
@@ -190,7 +193,7 @@ int Receiver::defaultModel()
 	case Format::RAW1090:
 		return AIS::MODEL_RAW1090;
 	default:
-		return AIS::MODEL_V2_BASE;
+		return AIS::MODEL_V2_HIGH;
 	}
 }
 
@@ -221,7 +224,9 @@ AIS::Model *Receiver::makeModel(int m)
 	case 10:
 		return new AIS::ModelRAW1090();
 	case 11:
-		return new AIS::ModelEngineV2();
+		return new AIS::ModelEngineV2(false);
+	case 12:
+		return new AIS::ModelEngineV2(true);
 	default:
 		throw std::runtime_error("Model not implemented in this version. Check in later.");
 	}
@@ -262,8 +267,7 @@ void Receiver::setupModel(std::mutex *delivery)
 	{
 		auto &m = d.model;
 		// with stations configured, the station is the station_id its messages carry, unless the decoder names one
-		if (stamp_station)
-			m->setDefaultStation(station);
+		m->setDefaultStation(stamp_station ? station : -1, !upstream);
 		m->setDesignation(channel_nmea);
 		m->setMode(channel_mode);
 		m->setOwnMMSI(own_mmsi);
@@ -303,6 +307,7 @@ void Receiver::unwire()
 		d.model->Output().out.clear();
 		d.model->OutputGPS().out.clear();
 		d.model->OutputControl().out.clear();
+		d.model->OutputMetric().out.clear();
 		d.model->OutputADSB().out.clear();
 		d.json->out.clear();
 		d.json_linked = false;
@@ -317,6 +322,20 @@ uint64_t Receiver::messages()
 	for (auto &d : decoders)
 		count += d.counter->getCount();
 	return count;
+}
+
+std::time_t Receiver::lastMessage()
+{
+	std::time_t last = 0;
+	for (auto &d : decoders)
+		last = MAX(last, d.counter->getLast());
+	return last;
+}
+
+void Receiver::addErrors(uint64_t out[3])
+{
+	for (auto &d : decoders)
+		d.counter->addErrors(out);
 }
 
 void Receiver::linkJSON()

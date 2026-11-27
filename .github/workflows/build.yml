@@ -309,7 +309,9 @@ jobs:
 
   test_install:
     runs-on: ubuntu-latest
-    needs: [build_debian, build_ubuntu, build_fedora]
+    needs: [pre_build_checks, build_debian, build_ubuntu, build_fedora]
+    env:
+      RUN_NUMBER: ${{ needs.pre_build_checks.outputs.run_number }}
     strategy:
       fail-fast: false
       matrix:
@@ -349,30 +351,50 @@ jobs:
           *)     echo "platform=linux/${{ matrix.arch }}" >> $GITHUB_OUTPUT ;;
         esac
 
+    - name: Name this run's package
+      id: pkg
+      run: |
+        case "${{ matrix.distro }}" in
+          fedora) a=x86_64; [ "${{ matrix.arch }}" = arm64 ] && a=aarch64
+                  echo "file=ais-catcher_fedora_${{ matrix.codename }}_${a}.rpm" >> $GITHUB_OUTPUT ;;
+          *)      echo "file=ais-catcher_${{ matrix.distro }}_${{ matrix.codename }}_${{ matrix.arch }}.deb" >> $GITHUB_OUTPUT ;;
+        esac
+
+    - name: Download this run's package
+      uses: actions/download-artifact@v8
+      with:
+        name: ${{ steps.pkg.outputs.file }}
+        path: pkg
+
     - name: Test package install and run
       run: |
         docker run --rm \
           --platform ${{ steps.arch.outputs.platform }} \
+          -v $(pwd):/src:ro \
           ${{ matrix.distro }}:${{ matrix.codename }} \
           bash -c "
             set -e
-            if command -v apt-get >/dev/null; then
-              apt-get update -qq
-              apt-get install -y -qq curl
-            fi
-            bash <(curl -fsSL https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install) --package --no-systemd --no-user
+            bash /src/scripts/aiscatcher-install --package-file /src/pkg/${{ steps.pkg.outputs.file }} --no-systemd --no-user
             AIS-catcher -l
+            AIS-catcher -h build | tee /dev/stderr | grep -q -- '-${RUN_NUMBER}-g'
           "
 
   Docker:
     runs-on: ubuntu-latest
-    needs: build_debian
+    needs: [pre_build_checks, build_debian]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
         with:
           ref: ${{ env.CHECKOUT_REF }}
           fetch-depth: 0
+
+      - name: Download this run's trixie packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: ais-catcher_debian_trixie_*.deb
+          path: scripts/pkg
+          merge-multiple: true
 
       - name: Calculate Container Metadata
         id: meta
@@ -406,7 +428,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            RUN_NUMBER=${{ needs.bakeHTML.outputs.run_number }}
+            RUN_NUMBER=${{ needs.pre_build_checks.outputs.run_number }}
           no-cache: true
 
   Windows:
@@ -532,7 +554,7 @@ jobs:
 
         echo "AIS-catcher"
         mkdir build; cd build
-        cmake .. -A $msplatform -G $gen -DWINDOWS_INCLUDE_DIR=${{github.workspace}}\include -DWINDOWS_LIBRARY_DIR=${{github.workspace}}\lib -DWINDOWS_BINARY_DIR=${{github.workspace}}\release -DRUN_NUMBER=$env:RUN_NUMBER
+        cmake .. -A $msplatform -G $gen -DWINDOWS_INCLUDE_DIR=${{github.workspace}}\include -DWINDOWS_LIBRARY_DIR=${{github.workspace}}\lib -DWINDOWS_BINARY_DIR=${{github.workspace}}\release -DRUN_NUMBER=${{ env.RUN_NUMBER }}
         msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform AIS-catcher.sln
         cd ..
         cp LICENSE output\Licenses\AIS-catcher

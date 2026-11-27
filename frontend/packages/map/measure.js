@@ -35,24 +35,24 @@ import { sanitizeString } from "@aiscatcher/core/text.js";
 import { token } from "@aiscatcher/ui/color.js";
 
 export function create(opts) {
-    var source = opts.source;
-    var rows = opts.rows;
-    var vessel = opts.vessel;
-    var notify = opts.notify || function () {};
-    var ensureCard = opts.ensureCard || function () {};
-    var onChange = opts.onChange || function () {};
-    var distance = opts.distance;
-    var mapEl = opts.mapEl || document.getElementById("map");
-    var getMap = typeof opts.map === "function" ? opts.map : function () { return opts.map; };
+    let source = opts.source;
+    let rows = opts.rows;
+    let vessel = opts.vessel;
+    let notify = opts.notify || function () {};
+    let ensureCard = opts.ensureCard || function () {};
+    let onChange = opts.onChange || function () {};
+    let distance = opts.distance;
+    let mapEl = opts.mapEl || document.getElementById("map");
+    let getMap = typeof opts.map === "function" ? opts.map : function () { return opts.map; };
 
-    var measures = [];
-    var measuring = false;   // a start is set, the end is not
-    var armed = false;       // the next click starts a measure
-    var previewLine = null;
+    let measures = [];
+    let measuring = false;   // a start is set, the end is not
+    let armed = false;       // the next click starts a measure
+    let previewLine = null;
 
-    var lineStyle = new Style({ stroke: new Stroke({ color: token("--color-success", "green"), lineDash: [20, 20], width: 2 }) });
-    var lineStyleWhite = new Style({ stroke: new Stroke({ color: "white", lineDash: [20, 20], lineDashOffset: 20, width: 2 }) });
-    var labelStyle = new Style({
+    let lineStyle = new Style({ stroke: new Stroke({ color: token("--color-success", "green"), lineDash: [20, 20], width: 2 }) });
+    let lineStyleWhite = new Style({ stroke: new Stroke({ color: "white", lineDash: [20, 20], lineDashOffset: 20, width: 2 }) });
+    let labelStyle = new Style({
         text: new Text({
             font: "14px Calibri,sans-serif",
             fill: new Fill({ color: "rgba(255, 255, 255, 1)" }),
@@ -64,8 +64,8 @@ export function create(opts) {
     });
 
     function style(feature) {
-        var styles = [lineStyle, lineStyleWhite];
-        var geometry = feature.getGeometry();
+        let styles = [lineStyle, lineStyleWhite];
+        let geometry = feature.getGeometry();
         if (geometry.getType() === "LineString") {
             labelStyle.setGeometry(new Point(geometry.getLastCoordinate()));
             labelStyle.getText().setText(feature.measureDistance + " " + distance.unit() + ", " + feature.measureBearing + " degrees");
@@ -77,12 +77,12 @@ export function create(opts) {
     /* map coordinate and caption of one end, or null when a vessel is gone */
     function end(type, value) {
         if (type === "point") return { coord: fromLonLat(value), label: "(" + value[1].toFixed(1) + "," + value[0].toFixed(1) + ")" };
-        var v = vessel(value);
+        let v = vessel(value);
         return v ? { coord: fromLonLat([v.lon, v.lat]), label: v.name || String(value) } : null;
     }
 
     function measured(geometry) {
-        var c = geometry.getCoordinates();
+        let c = geometry.getCoordinates();
         return {
             distance: distance.value(getLength(geometry) / 1852),
             bearing: calculateBearing(toLonLat(c[0]), toLonLat(c[c.length - 1])).toFixed(0),
@@ -90,9 +90,9 @@ export function create(opts) {
     }
 
     function lineFeature(a, b) {
-        var geometry = new LineString([a, b]);
-        var m = measured(geometry);
-        var feature = new OlFeature(geometry);
+        let geometry = new LineString([a, b]);
+        let m = measured(geometry);
+        let feature = new OlFeature(geometry);
         feature.measureDistance = m.distance;
         feature.measureBearing = m.bearing;
         return feature;
@@ -100,19 +100,19 @@ export function create(opts) {
 
     function refresh() {
         source.clear();
-        var content = "";
+        let content = "";
         measures = measures.filter(function (measure, index) {
-            var from = end(measure.start_type, measure.start_value);
-            var to = "end_type" in measure ? end(measure.end_type, measure.end_value) : { coord: null, label: "" };
+            let from = end(measure.start_type, measure.start_value);
+            let to = "end_type" in measure ? end(measure.end_type, measure.end_value) : { coord: null, label: "" };
             if (!from || !to) { notify("Ship out of range for measurement.", "warning"); return false; }
 
-            var dist = 0, bearing = 0;
+            let dist = 0, bearing = 0;
             if (to.coord) {
-                var feature = lineFeature(from.coord, to.coord);
+                let feature = lineFeature(from.coord, to.coord);
                 dist = feature.measureDistance; bearing = feature.measureBearing;
                 if (measure.visible) source.addFeature(feature);
             }
-            var icon = measure.visible ? "visibility" : "visibility_off";
+            let icon = measure.visible ? "visibility" : "visibility_off";
             content += '<tr data-index="' + index + '">' +
                 '<td style="padding: 2px;"><i style="padding-left:2px; font-size: 15px;" class="' + icon + '_icon visibility_icon"></i></td>' +
                 "<td>" + sanitizeString(String(from.label)) + "</td><td>" + sanitizeString(String(to.label)) + "</td>" +
@@ -121,18 +121,18 @@ export function create(opts) {
             return true;
         });
         if (rows) rows.innerHTML = content;
-        if (previewLine) { var p = previewLine; previewLine = null; preview(p.pixel); }
+        if (previewLine) { let p = previewLine; previewLine = null; preview(p.pixel); }
         onChange();
     }
 
     /* a line from the open measure's start to `pixel`, while the end is chosen */
     function preview(pixel) {
-        var map = getMap();
+        let map = getMap();
         if (!measuring || !measures.length || !map) return;
-        var from = end(measures[measures.length - 1].start_type, measures[measures.length - 1].start_value);
+        let from = end(measures[measures.length - 1].start_type, measures[measures.length - 1].start_value);
         if (!from) return;
         if (previewLine) source.removeFeature(previewLine.feature);
-        var feature = lineFeature(from.coord, map.getCoordinateFromPixel(pixel));
+        let feature = lineFeature(from.coord, map.getCoordinateFromPixel(pixel));
         feature.isPreview = true;
         source.addFeature(feature);
         previewLine = { feature: feature, pixel: pixel };
@@ -158,7 +158,7 @@ export function create(opts) {
     }
 
     function setEnd(type, value) {
-        var i = measures.length - 1;
+        let i = measures.length - 1;
         measures[i] = Object.assign({}, measures[i], { end_value: value, end_type: type });
     }
 
@@ -196,9 +196,9 @@ export function create(opts) {
 
     if (rows) {
         rows.addEventListener("click", function (event) {
-            var row = event.target.closest("tr");
+            let row = event.target.closest("tr");
             if (!row) return;
-            var i = Number(row.getAttribute("data-index"));
+            let i = Number(row.getAttribute("data-index"));
             if (event.target.classList.contains("visibility_icon")) { measures[i].visible = !measures[i].visible; refresh(); }
             else if (event.target.classList.contains("delete_icon")) { measures.splice(i, 1); refresh(); }
         });

@@ -12,14 +12,17 @@ import { createPanelSwitch } from '@aiscatcher/ui/side-table.js';
 import { map } from './map.js';
 import { ui } from './ui.js';
 import { saveSettings, effects } from './settings-store.js';
-import { closeSettings } from './features/settings/settings.js';
-import { closeTargetcard, positionAside, fitTargetcard } from './features/targetcard/card.js';
-import { updateTablecard, tableHover } from './features/tablecard/tablecard.js';
-import { updateMarkerCountTooltip } from './features/counts/counts.js';
 import { showTab } from './tabs/index.js';
-import * as measure from './features/measure/measure.js';
-import * as ticker from './features/ticker/ticker.js';
 import { register } from './actions.js';
+
+// set once by script.js, so that this module imports no features
+const features = {
+    closeCard: () => {}, positionCard: () => {}, fitCard: () => {}, closeSettings: () => {}, updateTable: () => {},
+    clearTableHover: () => {}, countsTooltip: () => {}, measureCount: () => 0, setTicker: () => {},
+};
+export function wire(parts) {
+    Object.assign(features, parts);
+}
 
 // ─── map panels ──────────────────────────────────────────────────────────────
 export const panels = {
@@ -32,7 +35,7 @@ export const panels = {
 
 const panelSwitch = createPanelSwitch({
     workspace: document.querySelector('.mainspace-container'),
-    card: { isOpen: () => panels.targetcard, close: () => closeTargetcard() },
+    card: { isOpen: () => panels.targetcard, close: () => features.closeCard() },
     table: { isOpen: () => panels.table, close: () => hideTablecard() },
 });
 
@@ -40,11 +43,11 @@ function normalisePanels() {
     if (panels.replay) {
         panels.table = false;
         panels.measure = false;
-        closeSettings();
+        features.closeSettings();
     }
 
     // both of these take the space, and the position, the targetcard occupies
-    if ((panels.replay || panels.measure) && panels.targetcard) closeTargetcard();
+    if ((panels.replay || panels.measure) && panels.targetcard) features.closeCard();
 }
 
 export function setPanels(patch, opts) {
@@ -108,9 +111,9 @@ export function applyPanels(opts = {}) {
     if (!panels.statcard) resetCardPosition(el.statcard);
     if (!panels.measure) resetCardPosition(el.measure);
 
-    ticker.setEnabled(tickerOn);
+    features.setTicker(tickerOn);
 
-    if (panels.targetcard && opts.reposition !== false) positionAside(undefined, el.targetcard);
+    if (panels.targetcard && opts.reposition !== false) features.positionCard(undefined, el.targetcard);
 }
 
 function resetCardPosition(el) {
@@ -120,7 +123,7 @@ function resetCardPosition(el) {
 }
 
 function toggleStatcard() {
-    if (!panels.statcard) updateMarkerCountTooltip();
+    if (!panels.statcard) features.countsTooltip();
     setPanels({ statcard: !panels.statcard });
 }
 
@@ -137,11 +140,11 @@ function toggleTablecard() {
     }
 
     setPanels({ table: !panels.table });
-    updateTablecard();
+    features.updateTable();
 }
 
 function hideTablecard() {
-    tableHover.clear();
+    features.clearTableHover();
     if (panels.table) toggleTablecard();
 }
 
@@ -149,7 +152,7 @@ export function updateMeasureIndicator() {
     const btn = document.getElementById("measure-btn");
     if (!btn) return;
 
-    const n = measure.count();
+    const n = features.measureCount();
     btn.classList.toggle("is-active", panels.measure || n > 0);
     btn.title = n ? "Measure distance (" + n + ")" : "Measure distance";
 }
@@ -233,6 +236,7 @@ export function showMenu() {
 
 function toggleMenu() {
     const menubar = document.getElementById("menubar");
+    if (!menubar.classList.contains("visible")) ui.dismiss();   // the menu takes the stage
     menubar.classList.toggle("visible");
     document.getElementById("menubar_mini").classList.toggle("showflex");
     document.getElementById("menubar_mini").classList.toggle("hidden");
@@ -281,7 +285,7 @@ register({
         }
         saveSettings();
         applyPanels();
-        fitTargetcard();
+        features.fitCard();
     },
 });
 

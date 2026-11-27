@@ -64,6 +64,26 @@ namespace Protocol
 {
 	const int ProtocolBase::SEND_STALL_MS;
 
+	// select() fails for socket numbers from FD_SETSIZE on, except on Windows
+	static int waitSocket(SOCKET s, int ms, bool write = false)
+	{
+#ifdef _WIN32
+		fd_set fdr, fdw, fde;
+		FD_ZERO(&fdr);
+		FD_ZERO(&fdw);
+		FD_ZERO(&fde);
+		FD_SET(s, &fdr);
+		FD_SET(s, &fde);
+		if (write)
+			FD_SET(s, &fdw);
+		timeval tv = {ms / 1000, ms % 1000 * 1000 + 1};
+		return select(0, &fdr, write ? &fdw : nullptr, &fde, &tv);
+#else
+		struct pollfd p = {s, (short)(write ? POLLIN | POLLOUT : POLLIN), 0};
+		return ::poll(&p, 1, ms);
+#endif
+	}
+
 	void TCP::disconnect()
 	{
 		// closed first: a goodbye a layer sends from onDisconnect() has nowhere to go
@@ -204,21 +224,7 @@ namespace Protocol
 		if (sock == -1)
 			return false;
 
-		fd_set fdr, fdw, fde;
-
-		FD_ZERO(&fdr);
-		FD_SET(sock, &fdr);
-
-		FD_ZERO(&fdw);
-		FD_SET(sock, &fdw);
-
-		// Winsock reports a failed connect in the exception set
-		FD_ZERO(&fde);
-		FD_SET(sock, &fde);
-
-		timeval to = {0, 1};
-
-		if (select(sock + 1, &fdr, &fdw, &fde, &to) <= 0)
+		if (waitSocket(sock, 0, true) <= 0)
 			return false;
 
 		int error = -1;
@@ -425,14 +431,7 @@ namespace Protocol
 					break;
 			}
 
-			fd_set readfds, exceptfds;
-			FD_ZERO(&readfds);
-			FD_ZERO(&exceptfds);
-			FD_SET(sock, &readfds);
-			FD_SET(sock, &exceptfds);
-
-			timeval tv = {remaining_time, 1};
-			int select_result = select(sock + 1, &readfds, nullptr, &exceptfds, &tv);
+			int select_result = waitSocket(sock, remaining_time * 1000);
 
 			if (select_result < 0)
 			{
@@ -444,7 +443,7 @@ namespace Protocol
 				return total_received;
 			}
 
-			if (select_result == 0 || (!FD_ISSET(sock, &readfds) && !FD_ISSET(sock, &exceptfds)))
+			if (select_result == 0)
 				break;
 
 			int received = recv(sock, buffer + total_received, remaining_length, 0);
@@ -562,20 +561,16 @@ namespace Protocol
 	}
 #endif
 
-	void TLS::onConnect()
+	bool TLS::createContext()
 	{
-		// Create SSL context
 		ctx = SSL_CTX_new(TLS_client_method());
 		if (!ctx)
-		{
-			Error() << "TLS: Failed to create SSL context for " << getHost() << ":" << getPort();
-			disconnect();
-			return;
-		}
+			return false;
 
 		// Disable weak SSL/TLS protocols (SSLv2, SSLv3, TLS 1.0, TLS 1.1)
 		SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
 
+		ctx_verifies = verify_certificates;
 		if (verify_certificates)
 		{
 			SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
@@ -597,11 +592,34 @@ namespace Protocol
 #endif
 		}
 		else
-		{
 			SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
-			if (!own_server)
-				Warning() << "TLS: Certificate verification DISABLED for " << getHost() << ":" << getPort();
+
+		return true;
+	}
+
+	// with the session: one made under another setting is not offered again
+	void TLS::forgetContext()
+	{
+		SSL_SESSION_free(session);
+		SSL_CTX_free(ctx);
+		session = nullptr;
+		ctx = nullptr;
+	}
+
+	void TLS::onConnect()
+	{
+		if (ctx && ctx_verifies != verify_certificates)
+			forgetContext();
+
+		if (!ctx && !createContext())
+		{
+			Error() << "TLS: Failed to create SSL context for " << getHost() << ":" << getPort();
+			disconnect();
+			return;
 		}
+
+		if (!verify_certificates && !own_server)
+			Warning() << "TLS: Certificate verification DISABLED for " << getHost() << ":" << getPort();
 
 		// Create SSL object
 		ssl = SSL_new(ctx);
@@ -627,6 +645,9 @@ namespace Protocol
 				X509_VERIFY_PARAM_set1_host(param, getHost().c_str(), 0);
 		}
 
+		if (session && session_server == getHost() + ":" + getPort())
+			SSL_set_session(ssl, session);
+
 		// Create custom BIO that uses our TCP connection
 		BIO *bio = BIO_new(BIO_s_socket());
 		BIO_set_fd(bio, getSocket(), BIO_NOCLOSE);
@@ -645,16 +666,18 @@ namespace Protocol
 		{
 			if (handshake_complete)
 			{
+				SSL_SESSION_free(session);
+				session = SSL_get1_session(ssl);
+				session_server = getHost() + ":" + getPort();
+
 				SSL_shutdown(ssl);
 				Debug() << "TLS (" + getHost() + ":" + getPort() + "): Disconnected";
 			}
+			else
+				// after a failed handshake the next one starts from nothing, as a first connection does
+				forgetContext();
 			SSL_free(ssl);
 			ssl = nullptr;
-		}
-		if (ctx)
-		{
-			SSL_CTX_free(ctx);
-			ctx = nullptr;
 		}
 
 		handshake_complete = false;
@@ -700,6 +723,7 @@ namespace Protocol
 	int TLS::sendSome(const char *data, int length, bool &progress)
 	{
 		uint64_t before = BIO_number_written(SSL_get_wbio(ssl));
+		ERR_clear_error();
 		int sent = SSL_write(ssl, data, length);
 		uint64_t written = BIO_number_written(SSL_get_wbio(ssl)) - before;
 		if (stats)
@@ -742,16 +766,13 @@ namespace Protocol
 				if (sock >= 0)
 #endif
 				{
-					fd_set readfds;
-					FD_ZERO(&readfds);
-					FD_SET(sock, &readfds);
-					timeval tv = {timeout > 0 ? timeout : 0, 0};
-					if (select(sock + 1, &readfds, nullptr, nullptr, &tv) > 0)
+					if (waitSocket(sock, timeout > 0 ? timeout * 1000 : 0) > 0)
 						avail = length;
 				}
 			}
 			if (avail > 0)
 			{
+				ERR_clear_error();
 				int r = SSL_read(ssl, data, MIN(avail, length));
 				if (r > 0)
 					result = r;
@@ -791,6 +812,7 @@ namespace Protocol
 				if (pending > 0)
 				{
 					int to_read = MIN(pending, length - total_received);
+					ERR_clear_error();
 					int r = SSL_read(ssl, buf_ptr + total_received, to_read);
 					if (r > 0)
 					{
@@ -801,12 +823,7 @@ namespace Protocol
 					}
 				}
 
-				fd_set readfds;
-				FD_ZERO(&readfds);
-				FD_SET(sock, &readfds);
-				struct timeval tv = {1, 0};
-
-				int rv = select(sock + 1, &readfds, nullptr, nullptr, &tv);
+				int rv = waitSocket(sock, 1000);
 				if (rv < 0)
 				{
 #ifdef _WIN32
@@ -831,6 +848,7 @@ namespace Protocol
 					continue;
 				}
 
+				ERR_clear_error();
 				int r = SSL_read(ssl, buf_ptr + total_received, length - total_received);
 				if (r > 0)
 				{
@@ -856,11 +874,23 @@ namespace Protocol
 				case SSL_ERROR_SYSCALL:
 				case SSL_ERROR_SSL:
 				default:
-					std::cerr << "TLS: Read error: " << ERR_error_string(ERR_get_error(), nullptr) << "\n";
+				{
+					const unsigned long code = ERR_get_error();
+					bool ended = err == SSL_ERROR_SYSCALL && code == 0;
+#ifdef SSL_R_UNEXPECTED_EOF_WHILE_READING
+					ended = ended || ERR_GET_REASON(code) == SSL_R_UNEXPECTED_EOF_WHILE_READING;
+#endif
+					if (!ended)
+					{
+						char text[256];
+						ERR_error_string_n(code, text, sizeof(text));
+						Error() << "TLS (" << getHost() << ":" << getPort() << "): Read error: " << text;
+					}
 					if (stats)
 						stats->bytes_in += BIO_number_read(SSL_get_rbio(ssl)) - before;
 					disconnect();
-					return -1;
+					return ended && total_received > 0 ? total_received : -1;
+				}
 				}
 			}
 			result = total_received;
@@ -885,6 +915,7 @@ namespace Protocol
 		if (!ssl)
 			return false;
 
+		ERR_clear_error();
 		int result = SSL_connect(ssl);
 
 		if (result == 1)
@@ -1385,22 +1416,15 @@ namespace Protocol
 		if (buffer.empty())
 			buffer.resize(16384);
 
-		int len = prev->read((char *)buffer.data() + buffer_ptr, buffer.size() - buffer_ptr, t, wait);
-
-		if (len <= 0)
-			return len;
-
-		buffer_ptr += len;
-
-		while (true)
+		// 1 when the buffer starts with a whole packet, with its remaining length and where that
+		// begins; 0 when it needs more bytes; -1 for a packet that cannot be
+		const auto whole = [&](int &length, int &i) -> int
 		{
 			if (buffer_ptr < 2)
 				return 0;
-
-			int length = 0;
+			length = 0;
 			int shift = 0;
-
-			int i = 1;
+			i = 1;
 			do
 			{
 				if (i >= buffer_ptr)
@@ -1429,8 +1453,28 @@ namespace Protocol
 			if ((int)buffer.size() < length + i)
 				buffer.resize(length + i);
 
-			if (buffer_ptr < length + i)
-				return 0;
+			return buffer_ptr < length + i ? 0 : 1;
+		};
+
+		// what the buffer holds goes out before the transport is asked for more, once a call
+		bool asked = false;
+		while (true)
+		{
+			int length = 0, i = 0;
+			const int got = whole(length, i);
+			if (got < 0)
+				return -1;
+			if (got == 0)
+			{
+				if (asked)
+					return 0;
+				asked = true;
+				const int len = prev->read((char *)buffer.data() + buffer_ptr, buffer.size() - buffer_ptr, t, wait);
+				if (len <= 0)
+					return len;
+				buffer_ptr += len;
+				continue;
+			}
 
 			// we have a message
 			int data_returned = 0;
@@ -1680,7 +1724,7 @@ namespace Protocol
 		request << "GET " << path << " HTTP/1.1\r\n";
 		// the port goes with the host unless it is the scheme's default (RFC 6455 4.1)
 		std::string port = getPort();
-		request << "Host: " << getHost() << (port == "80" || port == "443" ? "" : ":" + port) << "\r\n";
+		request << "Host: " << (getHost().find(':') == std::string::npos ? getHost() : "[" + getHost() + "]") << (port == "80" || port == "443" ? "" : ":" + port) << "\r\n";
 		request << "Upgrade: websocket\r\n";
 		request << "Connection: Upgrade\r\n";
 		request << "Sec-WebSocket-Key: " << upgrade_key << "\r\n";
@@ -1788,8 +1832,8 @@ namespace Protocol
 
 			if (lower.find("sec-websocket-accept:") != std::string::npos)
 			{
-				const std::size_t value = line.find(":") + 2;
-				accept_key = value < line.size() ? line.substr(value) : std::string();
+				const std::size_t value = line.find_first_not_of(' ', line.find(":") + 1);
+				accept_key = value != std::string::npos ? line.substr(value) : std::string();
 				// Remove trailing whitespace and CR/LF
 				accept_key.resize(accept_key.find_last_not_of(" \r\n") + 1);
 				break;
@@ -1893,7 +1937,7 @@ namespace Protocol
 		const Net::Clock::time_point deadline = Net::Clock::now() + std::chrono::seconds(MAX(t, 0));
 		do
 		{
-			if (getFrames(data, data_len, wait ? MIN(t, 1) : t, false) < 0)
+			if (getFrames(data, data_len, wait ? MIN(t, 1) : t, false) != 0)
 				break;
 		} while (wait && received_ptr < data_len && Net::Clock::now() < deadline && isConnected());
 
@@ -1905,8 +1949,8 @@ namespace Protocol
 		if (!isConnected())
 			return 0;
 
-		int len = prev->read(buffer.data() + buffer_ptr, buffer.size() - buffer_ptr, t, wait);
-		if (len <= 0)
+		int len = buffer_ptr < (int)buffer.size() ? prev->read(buffer.data() + buffer_ptr, buffer.size() - buffer_ptr, t, wait) : 0;
+		if (len < 0)
 			return len;
 
 		buffer_ptr += len;
@@ -1969,21 +2013,18 @@ namespace Protocol
 			case OPCODE::TEXT:
 			case OPCODE::BINARY:
 
+				// the frame waits until what was received is taken
+				if (received_ptr + length > (int64_t)received.size())
+					return 1;
+
 				for (int i = 0; i < length; ++i)
 				{
 					if (mask)
 						buffer[ptr + i] ^= masking_key[i % 4];
 				}
 
-				if (received_ptr + length <= received.size() && length <= MAX_PACKET_SIZE)
-				{
-					memmove(received.data() + received_ptr, buffer.data() + ptr, length);
-					received_ptr += length;
-				}
-				else
-				{
-					Warning() << "WebSocket: package too large, dropped";
-				}
+				memmove(received.data() + received_ptr, buffer.data() + ptr, length);
+				received_ptr += length;
 				break;
 			case OPCODE::CLOSE:
 			{
@@ -2074,10 +2115,10 @@ namespace Protocol
 		switch (key)
 		{
 		case AIS::KEY_SETTING_ORIGIN:
-			origin = value;
-			break;
 		case AIS::KEY_SETTING_PROTOCOLS:
-			protocols = value;
+			if (!Util::Parse::Printable(value))
+				throw std::runtime_error(std::string("WebSocket: ") + (key == AIS::KEY_SETTING_ORIGIN ? "origin" : "protocols") + " may not hold control characters.");
+			(key == AIS::KEY_SETTING_ORIGIN ? origin : protocols) = value;
 			break;
 		case AIS::KEY_SETTING_BINARY:
 			binary = Util::Parse::Switch(value);

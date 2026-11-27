@@ -1,29 +1,52 @@
-// The statistics tab: the system, the receiver's throughput and outputs, and
-// the message counts over five periods, from api/stat.json at every refresh.
+// The dashboard's statistics: the system, the receiver's throughput and outputs,
+// and the message counts over five periods, from api/stat.json at every refresh.
 
 import { getDistanceVal, getDistanceUnit } from '../../core/units.js';
 import { getDeltaTimeVal, sanitizeString, formatBytes, isHttpUrl } from '@aiscatcher/core/text.js';
 import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
-import { focus, refreshIntervalMs } from '../../data.js';
+import { focus } from '../../data.js';
+import { refreshIntervalMs } from '../../poll.js';
 import { showDialogPlain, objectToTableHtml } from '../../dialog.js';
 import * as community from '../../overlays/community.js';
-import { hasStationChoice, mountFocusPicker } from '../../features/station/station.js';
+import { hasStationChoice } from '../../features/station/station.js';
+import { stationLabel } from '../../core/config.js';
 import { setPageTitle } from '../../panels.js';
+import { fetchHealth } from '../../features/status/health-data.js';
 
-// fetches main statistics from the server
+// the statistics of the station looked at, asked every ten seconds at most however often the page refreshes
+let last = null;
 async function fetchStatistics() {
+    if (last && last.of === focus && Date.now() - last.at < 10000) return last.stat;
     try {
         const response = await fetch("api/stat.json?stations=" + focus);
         if (!response.ok) return;
-        return await response.json();
+        last = { of: focus, at: Date.now(), stat: await response.json() };
+        return last.stat;
     } catch (error) {
         return;
     }
 }
 
+// a column's message cells: the cell and the message types it adds up
+const MESSAGES = {
+    msg123: [1, 2, 3],
+    msg5: [5],
+    msg18: [18],
+    msg19: [19],
+    msg68: [6, 8],
+    msg1214: [12, 14],
+    msg24: [24],
+    msg4: [4],
+    msg9: [9],
+    msg21: [21, 28],
+    msg27: [27],
+    msgother: [7, 10, 11, 13, 15, 16, 17, 20, 22, 23, 25, 26],
+};
+
 function updateStat(stat, tf) {
-    const errors = stat[tf].errors || {};
-    const errorCount = document.getElementById("stat_" + tf + "_error_flagged");
+    const s = stat[tf], cell = (name) => document.getElementById("stat_" + tf + "_" + name);
+    const errors = s.errors || {};
+    const errorCount = cell("error_flagged");
     const icon = document.createElement("i");
     icon.className = "info_icon";
     icon.setAttribute("aria-hidden", "true");
@@ -41,32 +64,17 @@ function updateStat(stat, tf) {
             errorRow.click();
         }
     };
-    [0, 1, 2, 3].forEach((e) => (document.getElementById("stat_" + tf + "_channel" + e).innerText = stat[tf].channel[e].toLocaleString()));
-
-    document.getElementById("stat_" + tf + "_count").innerText = stat[tf].count.toLocaleString();
-    if (!stat.range_hidden) document.getElementById("stat_" + tf + "_dist").innerText = getDistanceVal(stat[tf].dist) + " " + getDistanceUnit();
-    document.getElementById("stat_" + tf + "_vessel_count").innerText = stat[tf].vessels.toLocaleString();
-    document.getElementById("stat_" + tf + "_msg123").innerText = (stat[tf].msg[0] + stat[tf].msg[1] + stat[tf].msg[2]).toLocaleString();
-    document.getElementById("stat_" + tf + "_msg5").innerText = stat[tf].msg[4].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg18").innerText = stat[tf].msg[17].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg19").innerText = stat[tf].msg[18].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg68").innerText = (stat[tf].msg[5] + stat[tf].msg[7]).toLocaleString();
-    document.getElementById("stat_" + tf + "_msg1214").innerText = (stat[tf].msg[11] + stat[tf].msg[13]).toLocaleString();
-    document.getElementById("stat_" + tf + "_msg24").innerText = stat[tf].msg[23].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg4").innerText = stat[tf].msg[3].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg9").innerText = stat[tf].msg[8].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg21").innerText = (stat[tf].msg[20] + (stat[tf].msg[27] || 0)).toLocaleString();
-    document.getElementById("stat_" + tf + "_msg27").innerText = stat[tf].msg[26].toLocaleString();
-
-    let count_other = 0;
-    [7, 10, 11, 13, 15, 16, 17, 20, 22, 23, 25, 26].forEach((i) => (count_other += stat[tf].msg[i - 1]));
-    document.getElementById("stat_" + tf + "_msgother").innerText = count_other.toLocaleString();
+    [0, 1, 2, 3].forEach((e) => (cell("channel" + e).textContent = s.channel[e].toLocaleString()));
+    cell("count").textContent = s.count.toLocaleString();
+    if (!stat.range_hidden) cell("dist").textContent = getDistanceVal(s.dist) + " " + getDistanceUnit();
+    cell("vessel_count").textContent = s.vessels.toLocaleString();
+    for (const [name, types] of Object.entries(MESSAGES)) cell(name).textContent = types.reduce((n, t) => n + (s.msg[t - 1] || 0), 0).toLocaleString();
 }
 
 function renderDevices(stat) {
     const el = document.getElementById("stat_devices");
     if (!el) return;
-    const prod = stat.product || [], vend = stat.vendor || [], ser = stat.serial || [], mod = stat.model || [], rate = stat.sample_rate || [], dlab = stat.device_label || [];
+    const prod = stat.product || [], vend = stat.vendor || [], ser = stat.serial || [], mod = stat.model || [], rate = stat.sample_rate || [], dlab = stat.device_label || [], dst = stat.device_station || [], dup = stat.device_upstream || [];
     const n = Math.max(prod.length, vend.length, ser.length, mod.length, rate.length, dlab.length);
     el.replaceChildren();
     for (let i = 0; i < n; i++) {
@@ -80,9 +88,13 @@ function renderDevices(stat) {
         label.textContent = i === 0 ? "Device" : "";
         const icon = document.createElement("i");
         icon.className = "info_icon";
+        // the receiver's health, as api/health tells it: receivers count from 1
+        const dot = document.createElement("i");
+        dot.className = "device-dot";
+        dot.dataset.receiver = i + 1;
         const value = document.createElement("span");
         value.className = "device-value";
-        value.append(name, icon);
+        value.append(dot, name, icon);
         const row = document.createElement("div");
         row.className = "device-row";
         row.title = "Show device details";
@@ -92,33 +104,36 @@ function renderDevices(stat) {
         if (engines.length > 1) engines.forEach((e, k) => (info["Engine " + (k + 1)] = e));
         else info.Engine = engines[0];
         info["Sample rate"] = rate[i];
+        if (dst[i] !== undefined && (hasStationChoice() || dup[i])) info.Station = stationLabel(dst[i]) + (dup[i] ? ", or from upstream" : "");
 
         row.onclick = () => showDialogPlain(objectToTableHtml(info));
         el.appendChild(row);
     }
+    fetchHealth().then((h) => {
+        if (!h) return;
+        const receivers = Object.assign({}, ...Object.values(h.stations).map((x) => x.ais.receivers));
+        el.querySelectorAll(".device-dot").forEach((dot) => {
+            const r = receivers[dot.dataset.receiver];
+            if (!r) return;
+            dot.dataset.state = r.status;
+            dot.title = r.input === "streaming" ? `Streaming, ${r.msgs_1m} messages in the last minute` : r.input === "lost" ? "The device is lost" : "Starting";
+        });
+    });
 }
 
-// the station the figures are of, at the end of the tab's row as on the plots
-let scopePicker = null;
+let shown = null;
 
-function syncScope() {
-    const strip = document.getElementById("stat_modes");
-    if (!strip) return;
-    const several = hasStationChoice();
-    strip.style.display = several ? "flex" : "none";
-    if (several && !scopePicker) scopePicker = mountFocusPicker(document.getElementById("stat_scope"), { scope: true });
-}
-
-export async function updateStatistics() {
-    syncScope();
+export async function update() {
     const stat = await fetchStatistics();
 
-    if (stat) {
+    // the same answer as last time is on the page already
+    if (stat && stat !== shown) {
+        shown = stat;
         document.getElementById("stat").classList.toggle("range-hidden", !!stat.range_hidden);
 
         // in bulk....
         const statText = (v) => (Array.isArray(v) ? v.join(", ") : v != null ? v : "");
-        ["os", "tcp_clients", "hardware", "processor", "build_describe", "build_date", "station"].forEach(
+        ["os", "hardware", "processor", "build_describe", "build_date", "station"].forEach(
             (e) => (document.getElementById("stat_" + e).textContent = statText(e === "station" ? decodeHTMLEntities(stat[e]) : stat[e])),
         );
 
@@ -136,12 +151,15 @@ export async function updateStatistics() {
         const statSharingElement = document.getElementById("stat_sharing");
         community.updateSharingState(stat.sharing, stat.sharing_uuid, stat.engine_running);
         const [sharingText, sharingClass] = community.sharingDisplay();
-        statSharingElement.innerHTML = `<a href="${stat.sharing_link}" target="_blank" class="${sharingClass}">${sharingText}</a>`;
+        statSharingElement.innerHTML = `<a href="${isHttpUrl(stat.sharing_link) ? sanitizeString(stat.sharing_link) : "#"}" target="_blank" class="${sharingClass}">${sharingText}</a>`;
 
         document.getElementById("stat_update_time").textContent = Number(refreshIntervalMs / 1000).toFixed(1) + " s";
         let title = document.getElementById("stat_station").textContent;
         if (title != "" && title != null) setPageTitle({ station: title });
+        document.getElementById("stat_wifi_row").style.display = stat.wifi ? "" : "none";
+        if (stat.wifi) document.getElementById("stat_wifi").textContent = stat.wifi.signal_dbm + " dBm (" + stat.wifi.quality + "%)";
         document.getElementById("stat_memory").innerText = stat.memory ? Number(stat.memory / 1000000).toFixed(1) + " MB" : "N/A";
+        document.getElementById("stat_cpu").innerText = stat.cpu != null ? Number(stat.cpu).toFixed(1) + "%" : "N/A";
         if (stat.track_time != null) {
             const t = stat.track_time;
             let age = "unlimited";

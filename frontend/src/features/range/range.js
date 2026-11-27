@@ -12,6 +12,7 @@ import { fromLonLat } from 'ol/proj';
 import { settings } from '../../core/state.js';
 import { calcOffset1M } from '@aiscatcher/core/geo.js';
 import { sanitizeString } from '@aiscatcher/core/text.js';
+import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
 import { rangeGeometry } from '@aiscatcher/map/markers.js';
 import { getDistanceUnit } from '../../core/units.js';
 import { focus } from '../../data.js';
@@ -20,7 +21,7 @@ import { config } from '../../core/config.js';
 import { saveSettings, effects } from '../../settings-store.js';
 import { showDialog } from '../../dialog.js';
 import { register } from '../../actions.js';
-import { hover_feature } from '../hover/hover.js';
+import { hoverFeature as hover_feature } from '../../core/store.js';
 import { stationsOnMap } from '../mapobjects/mapobjects.js';
 
 register({
@@ -56,7 +57,7 @@ function centres() {
     const named = new Set((config.stations || []).map((s) => s.id).filter((id) => id >= 0));
     if (named.size) {
         const shown = stationsOnMap().filter((s) => named.has(s.id) && (focus < 0 || s.id === focus));
-        if (shown.length) return shown;
+        if (shown.length) return shown.map((s) => ({ ...s, label: decodeHTMLEntities(s.label) }));
     }
     return stationHasLocation() ? [{ id: focus, lat: station.lat, lon: station.lon, label: '' }] : [];
 }
@@ -174,7 +175,7 @@ export async function fetchRange(forcefetch = false) {
     const next = [];
     for (const c of at) {
         try {
-            const response = await fetch("api/history_full.json?stations=" + c.id);
+            const response = await fetch("api/history_full.json?second=0&day=30&stations=" + c.id);
             const h = await response.json();
             if (h && !h.range_hidden && h.day && h.day.stat && h.day.stat.length) next.push(ringsOf(h, c));
         } catch {

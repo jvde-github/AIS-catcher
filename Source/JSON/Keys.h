@@ -40,7 +40,7 @@ namespace AIS
 		const char* description;
 		const std::vector<std::string>* lookup_table;
 
-		KeyInfo(const char* u, const char* d, const std::vector<std::string>* lt = nullptr)
+		constexpr KeyInfo(const char* u, const char* d, const std::vector<std::string>* lt = nullptr)
 			: unit(u), description(d), lookup_table(lt) {}
 	};
 
@@ -55,11 +55,12 @@ namespace AIS
 		const char *p;
 		uint16_t n;
 
-		KeyStr() : p(""), n(0) {}
-		KeyStr(const char *s, size_t l) : p(s), n(static_cast<uint16_t>(l)) {}
+		constexpr KeyStr() : p(""), n(0) {}
+		// constexpr, so that KeyMap is constant data and not filled at every start
+		constexpr KeyStr(const char *s, size_t l) : p(s), n(static_cast<uint16_t>(l)) {}
 		KeyStr(const char *s) : p(s), n(static_cast<uint16_t>(strlen(s))) {}
 		template <size_t N>
-		KeyStr(const char (&s)[N]) : p(s), n(N - 1) {}
+		constexpr KeyStr(const char (&s)[N]) : p(s), n(N - 1) {}
 		KeyStr(const std::string &s) : p(s.data()), n(static_cast<uint16_t>(s.size())) {}
 
 		bool empty() const { return n == 0; }
