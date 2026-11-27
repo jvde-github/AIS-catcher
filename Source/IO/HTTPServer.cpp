@@ -295,7 +295,7 @@ namespace IO
 		bool first_line = true;
 		bool seen_content_length = false;
 		bool seen_host = false;
-		bool seen_real_ip = false;
+		bool seen_forwarded_for = false;
 
 		while (line_start < header_end)
 		{
@@ -410,9 +410,9 @@ namespace IO
 				r.forwarded = true;
 				if (key == "X-FORWARDED-HOST")
 					r.forwarded_host = value;
-				else if (key == "X-REAL-IP" || (key == "X-FORWARDED-FOR" && !seen_real_ip))
+				else if (key == "X-FORWARDED-FOR" || (key == "X-REAL-IP" && !seen_forwarded_for))
 				{
-					seen_real_ip = seen_real_ip || key == "X-REAL-IP";
+					seen_forwarded_for = seen_forwarded_for || key == "X-FORWARDED-FOR";
 					std::string last = value.substr(value.rfind(',') + 1);
 					const std::size_t from = last.find_first_not_of(" \t"), to = last.find_last_not_of(" \t");
 					last = from == std::string::npos ? std::string() : last.substr(from, to - from + 1);
