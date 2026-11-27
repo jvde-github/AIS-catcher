@@ -419,11 +419,10 @@ namespace
 			throw std::runtime_error("internal error: no model for -go");
 		}
 
-		// the feed: -X or a file switches it on, by saying so or with a key; none switches it off
 		bool share(bool stated, bool on, const std::string &key)
 		{
 			JSON::Value *sharing = last(doc, AIS::KEY_SETTING_SHARING);
-			const bool feed = on || !key.empty() || (sharing && sharing->getBool()) || last(doc, AIS::KEY_SETTING_SHARING_KEY);
+			const bool feed = on || (sharing && sharing->getBool());
 			if (sharing)
 				sharing->setBool(feed);
 			else if (stated)
@@ -523,12 +522,6 @@ namespace
 				}
 			}
 
-			// as the reader has it: a key that is no UUID counts only where sharing is on
-			if ((shares || last(doc, AIS::KEY_SETTING_SHARING)) && !on && !key.empty() && !Util::Helper::isUUID(key))
-			{
-				said.push_back("Config file: \"sharing_key\" is not a UUID and sharing is off: ignored.");
-				key.clear();
-			}
 			if (share(shares, on, key) && zones)
 			{
 				doc.Remove(AIS::KEY_SETTING_SHARING_ZONE);

@@ -546,8 +546,7 @@ bool Config::normalise(JSON::Document &doc, const std::string &folder, std::vect
 
 void Config::readSharing(const std::vector<JSON::Member> &members, bool managed, Outputs &into)
 {
-
-	bool xchange = false;
+	bool share = false;
 	std::string uuid;
 	std::vector<std::string> zones;
 
@@ -555,7 +554,7 @@ void Config::readSharing(const std::vector<JSON::Member> &members, bool managed,
 	{
 		if (m.Key() == AIS::KEY_SETTING_SHARING)
 		{
-			xchange = Util::Parse::Switch(m.Get().to_string());
+			share = Util::Parse::Switch(m.Get().to_string()) || share;
 			into.sharing_defined = true;
 		}
 		else if (m.Key() == AIS::KEY_SETTING_SHARING_KEY)
@@ -569,12 +568,7 @@ void Config::readSharing(const std::vector<JSON::Member> &members, bool managed,
 		}
 	}
 
-	if (into.sharing_defined && !xchange && !uuid.empty() && !Util::Helper::isUUID(uuid))
-	{
-		Warning() << "Config file: \"sharing_key\" is not a UUID and sharing is off: ignored.";
-		uuid.clear();
-	}
-	if ((!xchange && (uuid.empty() || (managed && into.sharing_defined))) || into.feed)
+	if (!share || into.feed)
 		return;
 
 	into.feed = new IO::HubStreamer();
@@ -582,8 +576,7 @@ void Config::readSharing(const std::vector<JSON::Member> &members, bool managed,
 	if (!uuid.empty())
 		into.feed->SetKey(AIS::KEY_SETTING_UUID, uuid);
 	into.feed->zones = zones;
-	// sharing is opt-in: a feed nobody asked for by name carries what the radios hear
-	into.radios_only = managed ? uuid.empty() : !into.sharing_defined;
+	into.radios_only = managed && uuid.empty();
 	into.told.back() += uuid + (into.radios_only ? ";radios;" : ";");
 	for (const auto &z : zones)
 		into.told.back() += z + ",";
