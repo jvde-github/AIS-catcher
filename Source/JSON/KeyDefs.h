@@ -925,7 +925,7 @@ X(KEY_TURN_UNSCALED, "turn_unscaled", "", "turn_unscaled", "", "", "", "",
   "Raw ROT field (-128..127; ±127=turning faster than 5°/30 s without turn indicator, -128=not available)", nullptr)
 X(KEY_TXRX, "txrx", "", "", "", "", "", "", "Transmit/receive mode",
   &LookupTable_txrx_types)
-X(KEY_TYPE, "type", "", "", "msgtype", "", "", "", "Message type",
+X(KEY_TYPE, "type", "type", "", "msgtype", "", "", "", "Message type",
   &LookupTable_message_types)
 X(KEY_TYPE1_1, "type1_1", "", "", "", "", "", "",
   "First requested message type from station 1 (type 15 interrogation)",
