@@ -111,7 +111,7 @@ struct SystemFacts
 	std::vector<ReceiverState> receivers;
 	std::vector<OutputFacts> outputs;
 	std::vector<ServiceFacts> services;
-	bool sharing = false, sharing_uuid = false;
+	bool sharing = false, sharing_uuid = false, managed = false;
 	// input blocks dropped because decoding fell behind
 	uint32_t overruns = 0;
 };

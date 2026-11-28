@@ -841,6 +841,7 @@ namespace SiteReader
 				   }
 				   else
 					   defaults.name = main->viewer.station;
+				   made.managed = true;
 				   site = made;
 			   });
 	}

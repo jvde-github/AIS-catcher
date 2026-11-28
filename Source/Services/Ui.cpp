@@ -628,7 +628,7 @@ namespace Services
 		w.endArray();
 		w.kv("sharing_link", "https://www.aiscatcher.org/livemap").kv("station", title()).kv("station_link", options.station_link)
 			.kv("vessel_count", keep ? vessels : db.getCount()).kv("vessel_max", db.getMaxCount())
-			.kv("build_date", __DATE__).kv("build_version", VERSION).kv("build_describe", VERSION_DESCRIBE)
+			.kv("build_date", __DATE__).kv("build_version", VERSION).kv("build_describe", VERSION_DESCRIBE).kv("mode", f.managed ? "Managed" : "Classic")
 			.kv("memory", (unsigned long long)sys.memory).kv("cpu", std::round(sys.cpu * 10) / 10.0)
 			.kv("track_time", view.track_time > 0 && (tracking.track_time <= 0 || view.track_time < tracking.track_time) ? view.track_time : tracking.track_time)
 			.kv("track_memory", tracking.track_memory > 0 ? tracking.track_memory : (tracking.server_mode ? 4096 : 1024));

@@ -214,6 +214,7 @@ struct SiteConfig
 	std::vector<ServerSpec> servers;
 	std::vector<WebhookSpec> webhooks;
 	MqttStateSpec mqtt_state;
+	bool managed = false;
 
 	bool wantsTracker() const
 	{

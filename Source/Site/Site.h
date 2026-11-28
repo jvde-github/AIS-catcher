@@ -165,7 +165,7 @@ private:
 				site.poke();
 		}
 	} journal_ping{*this};
-	std::atomic<bool> events_wanted{false};
+	std::atomic<bool> events_wanted{false}, managed{false};
 	std::unique_ptr<Tracker> tracker_;
 	std::vector<std::unique_ptr<Services::Server>> servers;
 	// the servers set up that could not open their port

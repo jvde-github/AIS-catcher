@@ -222,6 +222,7 @@ SystemFacts Site::systemFacts()
 	f.born = born;
 	f.session = session_start;
 	f.received = bytes.received();
+	f.managed = managed;
 	f.devices = engine;
 	f.receivers = receiver_states;
 	f.services = service_states;
@@ -412,6 +413,7 @@ void Site::configure(const SiteConfig &cfg)
 	std::lock_guard<std::mutex> lock(site_mtx);
 	backup_minutes = cfg.backup_minutes;
 #ifdef HASAPI
+	managed = cfg.managed;
 	configureTracker(cfg);
 	configureServers(cfg);
 #endif
