@@ -36,6 +36,7 @@
 #include <mstcpip.h>
 #else
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -44,9 +45,6 @@
 #include <cstring>
 #include <poll.h>
 #include <netinet/tcp.h>
-#ifdef __ANDROID__
-#include <netinet/in.h>
-#endif
 
 #define SOCKET int
 #define SOCKADDR struct sockaddr
@@ -164,15 +162,10 @@ namespace Net
 #if defined(__APPLE__)
 		if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPALIVE, &idle, sizeof(idle)))
 			return false;
-#elif defined(__ANDROID__)
+#else
 		if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)) ||
 			setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) ||
 			setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count)))
-			return false;
-#else
-		if (setsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)) ||
-			setsockopt(sock, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) ||
-			setsockopt(sock, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)))
 			return false;
 #endif
 #endif

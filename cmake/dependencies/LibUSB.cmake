@@ -2,7 +2,7 @@
 if(NOT MSVC)
     pkg_check_modules(PKG_LIBUSB libusb-1.0)
     find_path(LIBUSB_INCLUDE_DIR libusb.h HINTS ${PKG_LIBUSB_INCLUDE_DIRS} PATH_SUFFIXES libusb-1.0)
-    find_library(LIBUSB_LIBRARY usb-1.0 HINTS ${PKG_LIBUSB_LIBRARY_DIRS})
+    find_library(LIBUSB_LIBRARY NAMES usb-1.0 usb HINTS ${PKG_LIBUSB_LIBRARY_DIRS})
 elseif(NOT MSVC_VCPKG)
     find_file(LIBUSB_DLL libusb-1.0.dll HINTS ${WINDOWS_BINARY_DIR})
     find_file(PTHREAD_DLL pthreadVC3.dll HINTS ${WINDOWS_BINARY_DIR})
