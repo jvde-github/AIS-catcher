@@ -90,7 +90,6 @@ readonly LOG_FILE
 readonly CONFIG_DIR="/etc/AIS-catcher"
 readonly PLUGIN_DIR="${CONFIG_DIR}/plugins"
 readonly DBMS_DIR="${CONFIG_DIR}/DBMS"
-readonly README_DIR="${CONFIG_DIR}/README"
 readonly LIB_DIR="/usr/lib/ais-catcher"
 readonly CONFIG_FILE="${CONFIG_DIR}/config.json"
 readonly CMD_FILE="${CONFIG_DIR}/config.cmd"
@@ -111,7 +110,6 @@ readonly MAKE_JOBS
 
 # Global variables
 INSTALL_PACKAGE=false
-BUILT_FROM_SOURCE=false
 PACKAGE_FILE=""
 INTERACTIVE=false
 SKIP_SYSTEMD=false
@@ -402,7 +400,7 @@ pkg_update() {
 
 pkg_install() {
     if [[ "$PKG_MANAGER" == "apt" ]]; then
-        DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold "$@"
     else
         dnf -y install "$@"
@@ -463,7 +461,7 @@ get_system_info() {
 install_source_build_dependencies() {
     local required_deps optional_deps=""
     if [[ "$PKG_MANAGER" == "apt" ]]; then
-        required_deps="git cmake build-essential pkg-config libssl-dev zlib1g-dev libusb-1.0-0-dev curl"
+        required_deps="git cmake build-essential pkg-config libssl-dev zlib1g-dev libusb-1.0-0-dev"
         [[ "$FEATURE_PSQL"     == "ON" ]] && optional_deps+=" libpq-dev"
         [[ "$FEATURE_SQLITE"   == "ON" ]] && optional_deps+=" libsqlite3-dev"
         [[ "$FEATURE_AIRSPY"   == "ON" ]] && optional_deps+=" libairspy-dev"
@@ -471,7 +469,7 @@ install_source_build_dependencies() {
         [[ "$FEATURE_HACKRF"   == "ON" ]] && optional_deps+=" libhackrf-dev"
         [[ "$FEATURE_SOAPYSDR" == "ON" ]] && optional_deps+=" libsoapysdr-dev"
     else
-        required_deps="git cmake gcc-c++ make pkgconf-pkg-config openssl-devel zlib-devel libusb1-devel curl"
+        required_deps="git cmake gcc-c++ make pkgconf-pkg-config openssl-devel zlib-devel libusb1-devel"
         [[ "$FEATURE_PSQL"     == "ON" ]] && optional_deps+=" libpq-devel"
         [[ "$FEATURE_SQLITE"   == "ON" ]] && optional_deps+=" sqlite-devel"
         [[ "$FEATURE_AIRSPY"   == "ON" ]] && optional_deps+=" airspyone_host-devel"
@@ -584,7 +582,7 @@ build_ais_catcher_from_source() {
     install -m 755 AIS-catcher/build/AIS-catcher /usr/bin/AIS-catcher || error_exit "Failed to install AIS-catcher executable"
 }
 
-# Install additional files (plugins, DBMS, README, LICENSE) from source
+# Install additional files (plugins, DBMS) from source
 install_source_additional_files() {
     # Ensure the config directory exists before copying files into it.
     # Do not rely on mkdir -p "$PLUGIN_DIR" creating the parent as a side-effect.
@@ -597,13 +595,6 @@ install_source_additional_files() {
     log "INFO" "Installing DBMS"
     mkdir -p "$DBMS_DIR" || error_exit "Failed to create DBMS directory"
     cp --remove-destination "${TMP_DIR}/AIS-catcher/Source/DBMS/create_pg.sql" "${TMP_DIR}/AIS-catcher/Source/DBMS/create_sqlite.sql" "$DBMS_DIR" || error_exit "Failed to copy DBMS"
-
-    log "INFO" "Installing README"
-    mkdir -p "$README_DIR" || error_exit "Failed to create README directory"
-    cp --remove-destination "${TMP_DIR}/AIS-catcher/README.md" "$README_DIR" || error_exit "Failed to copy README"
-
-    log "INFO" "Copying LICENSE"
-    cp --remove-destination "${TMP_DIR}/AIS-catcher/LICENSE" /etc/AIS-catcher/LICENSE || error_exit "Failed to copy LICENSE"
 }
 
 ################################################################################
@@ -837,6 +828,9 @@ setup_configuration() {
 }
 EOF
     fi
+
+    # managed mode keeps its configuration in aiscatcher.json; a later run without -M writes these two
+    [[ "$MANAGED" == true ]] && return 0
 
     if [[ ! -f "$CONFIG_FILE" && ! -L "$CONFIG_FILE" ]]; then
         echo '{"config":"aiscatcher","version":1,"screen":0,"verbose":true,"verbose_time":60,"sharing":true,"udp":[],"tcp":[],"server":{"active":false,"plugin_dir":"/etc/AIS-catcher/plugins","cdn":"/etc/AIS-catcher/webassets","file":"/etc/AIS-catcher/stat.bin","realtime":false,"geojson":false,"prome":false,"port":"8100","backup":"10","context":"settings"},"rtlsdr":{"tuner":"auto","bandwidth":"192K","sample_rate":"1536K","biastee":false,"rtlagc":true},"airspyhf":{"threshold":"low","preamp":false},"rtltcp":{"protocol":"none","sample_rate":"288K","bandwidth":"0","rtlagc":false}}' | tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
@@ -1201,7 +1195,6 @@ install_from_source_method() {
     install_sdr_libraries_from_source
     build_ais_catcher_from_source
     install_source_additional_files
-    BUILT_FROM_SOURCE=true
 
     log "INFO" "AIS-catcher source installation completed successfully"
 }
@@ -1274,15 +1267,14 @@ display_installation_summary() {
     echo -e "${COLOR_BOLD}INSTALLED FILES:${COLOR_RESET}"
     echo "  • Executable:         /usr/bin/AIS-catcher"
     echo "  • Configuration:      ${CONFIG_DIR}/"
-    echo "    - Main config:      ${CONFIG_FILE}"
-    echo "    - Command options:  ${CMD_FILE}"
+    if [ "$MANAGED" = true ]; then
+        echo "    - Managed config:   ${MANAGED_CONFIG_FILE}"
+    else
+        echo "    - Main config:      ${CONFIG_FILE}"
+        echo "    - Command options:  ${CMD_FILE}"
+    fi
     echo "    - Plugins:          ${PLUGIN_DIR}/"
     echo "    - Database schema:  ${DBMS_DIR}/create_pg.sql, ${DBMS_DIR}/create_sqlite.sql"
-    # only a source build puts these two in place
-    if [ "$BUILT_FROM_SOURCE" = true ]; then
-        echo "    - Documentation:    ${README_DIR}/README.md"
-        echo "    - License:          ${CONFIG_DIR}/LICENSE"
-    fi
     if [ "$SKIP_SYSTEMD" = false ]; then
         echo "  • Service file:       ${SERVICE_FILE}"
         echo "  • Reboot watchdog:    ${REBOOT_SERVICE_FILE}"
@@ -1405,9 +1397,6 @@ display_installation_summary() {
     echo -e "${COLOR_BOLD}DOCUMENTATION:${COLOR_RESET}"
     echo -e "  • Online docs:  ${COLOR_CYAN}https://docs.aiscatcher.org/${COLOR_RESET}"
     echo -e "  • GitHub repo:  ${COLOR_CYAN}https://github.com/jvde-github/AIS-catcher${COLOR_RESET}"
-    if [ "$BUILT_FROM_SOURCE" = true ]; then
-        echo "  • Local README: ${README_DIR}/README.md"
-    fi
     echo ""
     
     echo -e "${COLOR_BOLD_BLUE}${divider}${COLOR_RESET}\n"
