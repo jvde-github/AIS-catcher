@@ -328,31 +328,28 @@ export const Renderer = {
                 }, 200)
             });
         }
-        const isNumber = type === 'number';
+        if (type === 'number') {
+            const decimal = !Number.isInteger(field.step ?? 1);
+            return el('input', `${Styles.input} st-input--mono`, {
+                type: 'text',
+                inputMode: field.min < 0 ? undefined : (decimal ? 'decimal' : 'numeric'),
+                autocomplete: 'off',
+                value: currentValue ?? '',
+                placeholder: field.placeholder || '',
+                onInput: debounce((e) => {
+                    const text = e.target.value.trim();
+                    const n = text === '' ? undefined : parseNumberLike(decimal ? text.replace(',', '.') : text);
+                    const bad = n === null || (n !== undefined && (!(decimal || Number.isInteger(n)) || n < field.min || n > field.max));
+                    e.target.classList.toggle('invalid', bad);
+                    if (!bad) onUpdate(n);
+                }, 200)
+            });
+        }
         return el('input', Styles.input, {
             type: type || 'text',
             value: currentValue !== undefined ? currentValue : '',
             placeholder: field.placeholder || '',
-            min: isNumber ? field.min : undefined,
-            max: isNumber ? field.max : undefined,
-            step: isNumber ? field.step : undefined,
-            onInput: debounce((e) => {
-                let val = e.target.value;
-                if (isNumber) {
-                    // a cleared field removes the key (never NaN -> null in
-                    // the saved JSON); unparsable input keeps the last value
-                    if (val.trim() === '') {
-                        val = undefined;
-                    } else {
-                        let n = parseNumberLike(val);
-                        if (n === null) return;
-                        if (field.min !== undefined && n < field.min) n = field.min;
-                        if (field.max !== undefined && n > field.max) n = field.max;
-                        val = n;
-                    }
-                }
-                onUpdate(val);
-            }, 200)
+            onInput: debounce((e) => onUpdate(e.target.value), 200)
         });
     },
 

@@ -89,6 +89,7 @@
 .st .st-input {width:100%;height:40px;padding:0 12px;border:1px solid var(--color-field-border);border-radius:10px;background-color:var(--color-surface-alt);color:var(--color-text-strong);font-size:14px;box-shadow:none;transition:border-color var(--dur-med) ease,box-shadow var(--dur-med) ease}
 .st .st-input::placeholder {color:var(--color-text-subtle);opacity:1}
 .st .st-input:focus {outline:none;border-color:var(--color-accent);box-shadow:0 0 0 3px var(--color-focus-ring);background-color:var(--color-surface-raised)}
+.st .st-input.invalid {border-color:var(--color-danger);background-color:var(--color-danger-bg);box-shadow:0 0 0 3px var(--color-danger-border)}
 .st .st-input[type="number"] {font-family:var(--font-mono);font-size:13.5px}
 .st .st-input--mono {font-family:var(--font-mono);font-size:13.5px}
 

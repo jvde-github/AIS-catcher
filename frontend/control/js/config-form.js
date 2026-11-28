@@ -3,7 +3,7 @@
 import { el, fromHtml, highlightJson, isActive, moreMenu } from './dom.js';
 import { icon } from './icons.js';
 import { hub } from './hub.js';
-import { App, ConfigStore, getNested, registerEditor, setNested } from './config-store.js';
+import { App, ConfigStore, flushDebounces, getNested, registerEditor, setNested } from './config-store.js';
 import { Renderer } from './config-widgets.js';
 import { zoneCss } from './zones.js';
 
@@ -422,9 +422,12 @@ export class ConfigForm {
     }
 
     async save() {
-        const problem = this.config.check?.(this.data);
+        flushDebounces();
+        const red = [...this.container.querySelectorAll('.invalid')].find(i => i.offsetParent !== null);
+        const problem = red ? 'A field marked red cannot be saved: correct or clear it' : this.config.check?.(this.data);
         if (problem) {
             App.notify('error', problem);
+            red?.focus();
             return;
         }
         // once saved, new rows are no longer fresh

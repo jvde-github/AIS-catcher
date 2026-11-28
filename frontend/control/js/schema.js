@@ -185,7 +185,7 @@ export const receiverSchema = {
             presets: opts([0, 'Off'], [192000, '192K']), tooltip: 'Off uses the device default' },
         sample_rate: { label: 'Sample Rate (Hz)', type: 'integer-select', defaultValue: 1536000, min: 96000, max: 3200000, placeholder: 'in Hz, e.g. 1536000 or 1536K',
             presets: opts([288000, '288K'], [1536000, '1536K (default)']), tooltip: '1536K recommended; 288K saves CPU' },
-        freqoffset: { label: 'Frequency Correction (ppm)', type: 'number', min: -150, max: 150, defaultValue: 0, tooltip: 'Frequency correction' },
+        freqoffset: { label: 'Frequency Correction (ppm)', type: 'number', min: -150, max: 150, step: 0.1, defaultValue: 0, tooltip: 'Frequency correction; the dongle uses whole ppm' },
         biastee: { label: 'Bias tee', type: 'toggle', tooltip: 'Power an external LNA', defaultValue: false, width: 25 },
         rtlagc: { label: 'RTLAGC', type: 'toggle', tooltip: 'RTL2832U internal AGC', defaultValue: true, width: 25 }
     }),
@@ -212,7 +212,7 @@ export const receiverSchema = {
             dependsOn: over('rtltcp'), width: 50 },
         bandwidth: { label: 'Bandwidth (Hz)', type: 'number', min: 0, max: 1000000, defaultValue: 0, placeholder: '0-1,000,000', tooltip: '0 uses the default',
             dependsOn: over('rtltcp'), width: 50 },
-        freqoffset: { label: 'Frequency Offset (PPM)', type: 'number', min: -150, max: 150, defaultValue: 0, placeholder: '-150 to +150', tooltip: 'Frequency correction',
+        freqoffset: { label: 'Frequency Offset (PPM)', type: 'number', min: -150, max: 150, step: 0.1, defaultValue: 0, placeholder: '-150 to +150', tooltip: 'Frequency correction; the dongle uses whole ppm',
             dependsOn: over('rtltcp') },
         tuner: { label: 'Tuner Gain', type: 'auto-float', min: 0, max: 50, step: 0.1, defaultValue: 'auto', tooltip: 'Gain in dB, or auto for AGC', dependsOn: over('rtltcp') },
         rtlagc: { label: 'RTL AGC', type: 'toggle', defaultValue: false, width: 25, tooltip: 'Automatic gain on the dongle', dependsOn: over('rtltcp') },
