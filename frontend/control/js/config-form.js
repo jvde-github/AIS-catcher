@@ -19,6 +19,7 @@ export class ConfigForm {
         if (!this.container) return;
 
         this.editor = registerEditor(config.containerId, () => this.save());
+        this.container.addEventListener('input', e => { if (e.target.classList.contains('invalid')) this.editor.touched(); });
         // settles, never rejects: once the data is drawn or the failure shown
         this.ready = this.load();
     }
@@ -423,10 +424,11 @@ export class ConfigForm {
 
     async save() {
         flushDebounces();
-        const red = [...this.container.querySelectorAll('.invalid')].find(i => i.offsetParent !== null);
+        const red = [...this.container.querySelectorAll('.invalid')].find(i => !i.closest('.hidden'));
         const problem = red ? 'A field marked red cannot be saved: correct or clear it' : this.config.check?.(this.data);
         if (problem) {
             App.notify('error', problem);
+            red?.closest('details')?.setAttribute('open', '');
             red?.focus();
             return;
         }

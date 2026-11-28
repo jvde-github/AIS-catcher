@@ -330,19 +330,20 @@ export const Renderer = {
         }
         if (type === 'number') {
             const decimal = !Number.isInteger(field.step ?? 1);
+            const commit = debounce(onUpdate, 200);
             return el('input', `${Styles.input} st-input--mono`, {
                 type: 'text',
                 inputMode: field.min < 0 ? undefined : (decimal ? 'decimal' : 'numeric'),
                 autocomplete: 'off',
                 value: currentValue ?? '',
                 placeholder: field.placeholder || '',
-                onInput: debounce((e) => {
+                onInput: (e) => {
                     const text = e.target.value.trim();
                     const n = text === '' ? undefined : parseNumberLike(decimal ? text.replace(',', '.') : text);
                     const bad = n === null || (n !== undefined && (!(decimal || Number.isInteger(n)) || n < field.min || n > field.max));
                     e.target.classList.toggle('invalid', bad);
-                    if (!bad) onUpdate(n);
-                }, 200)
+                    if (bad) commit.cancel(); else commit(n);
+                }
             });
         }
         return el('input', Styles.input, {

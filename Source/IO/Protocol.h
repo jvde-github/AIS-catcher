@@ -808,7 +808,7 @@ namespace Protocol
 		void applySettings()
 		{
 			std::cerr << "RTLTCP: setting parameters" << std::endl;
-			sendParam(5, (uint32_t)freq_offset);
+			sendParam(5, (uint32_t)(int32_t)freq_offset);
 			sendParam(3, tuner_AGC ? 0 : 1);
 
 			if (!tuner_AGC)
